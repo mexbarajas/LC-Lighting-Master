@@ -2405,13 +2405,114 @@ function ExamPage({setRoute}) {
 /* ── LESSON CONTENT DATA ───────────────────────────────────────── */
 
 /* ── MODULE LESSON VIEW ── */
+/* ── SHARE BUTTON (used inside ModuleCompleteModal) ── */
+function ShareBtn({icon, label, hoverBg, hoverColor, defaultColor, onClick}){
+  return(
+    <button onClick={onClick}
+      style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,
+        padding:"10px 16px",borderRadius:8,border:`1px solid ${C.rule}`,
+        background:C.paper,color:defaultColor||C.inkSoft,
+        fontFamily:F.display,fontSize:12,fontWeight:600,cursor:"pointer",transition:"all 0.15s"}}
+      onMouseEnter={e=>{e.currentTarget.style.background=hoverBg;e.currentTarget.style.color=hoverColor;e.currentTarget.style.borderColor=hoverBg}}
+      onMouseLeave={e=>{e.currentTarget.style.background=C.paper;e.currentTarget.style.color=defaultColor||C.inkSoft;e.currentTarget.style.borderColor=C.rule}}>
+      <span style={{fontWeight:700,fontSize:13,lineHeight:1}}>{icon}</span>
+      {label}
+    </button>
+  )
+}
+
+/* ── MODULE COMPLETE SHARE MODAL ── */
+function ModuleCompleteModal({module, courseComplete, onClose}){
+  const [copied,setCopied]=useState(false)
+  const shareUrl="https://master-lighting.vercel.app"
+  const shareText=courseComplete
+    ?"I just completed all 12 modules of LC · Lighting Master and I'm ready for my NCQLP exam! 74 lessons, 24 CEU credit hours. 💡 #NCQLP #LightingDesign #LightingCertified #LC"
+    :`I just completed Module ${module.n}: ${module.label} in LC · Lighting Master — studying for my NCQLP exam. ${module.ceu} CEU credit hours earned. 💡 #NCQLP #LightingDesign #LC`
+
+  useEffect(()=>{
+    function onKey(e){ if(e.key==="Escape") onClose() }
+    window.addEventListener("keydown",onKey)
+    return ()=>window.removeEventListener("keydown",onKey)
+  },[onClose])
+
+  const linkedInUrl=`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}&summary=${encodeURIComponent(shareText)}`
+  const twitterUrl=`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`
+  const facebookUrl=`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(shareText)}`
+
+  async function copyLink(){
+    await navigator.clipboard.writeText(shareText+" "+shareUrl)
+    setCopied(true)
+    setTimeout(()=>setCopied(false),2000)
+  }
+
+  return(
+    <div onClick={e=>{if(e.target===e.currentTarget)onClose()}}
+      style={{position:"fixed",inset:0,zIndex:3000,background:"rgba(22,18,14,0.82)",
+        display:"flex",alignItems:"center",justifyContent:"center",padding:"20px",overflowY:"auto"}}>
+      <div style={{background:C.paper,borderRadius:18,padding:"40px 36px",
+        width:"100%",maxWidth:440,position:"relative",
+        border:`1px solid ${C.rule}`,margin:"auto",textAlign:"center"}}>
+
+        <button onClick={onClose} style={{position:"absolute",top:14,right:16,
+          background:"none",border:"none",cursor:"pointer",fontSize:22,color:C.inkMute,lineHeight:1}}>×</button>
+
+        <div style={{fontSize:52,marginBottom:16,lineHeight:1}}>🎓</div>
+
+        <div style={{fontFamily:F.display,fontWeight:700,fontSize:22,
+          letterSpacing:"-0.02em",color:C.ink,marginBottom:4}}>
+          {courseComplete?"Course Complete!":"Module "+module.n+" Complete"}
+        </div>
+        <div style={{fontFamily:F.display,fontSize:14,color:C.inkMute,marginBottom:22}}>
+          {courseComplete?"All 12 modules · 74 lessons · 24 CEU hours":module.label}
+        </div>
+
+        <div style={{background:C.creamWarm,borderRadius:10,padding:"14px 16px",marginBottom:22,textAlign:"left"}}>
+          <p style={{fontFamily:F.body,fontSize:12.5,color:C.inkSoft,lineHeight:1.65,margin:0,fontStyle:"italic"}}>
+            "{shareText}"
+          </p>
+        </div>
+
+        <div style={mono({fontSize:9,letterSpacing:"0.22em",textTransform:"uppercase",color:C.inkMute,marginBottom:12})}>
+          Share your achievement:
+        </div>
+
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:22}}>
+          <ShareBtn icon="in" label="LinkedIn"
+            hoverBg="#0077B5" hoverColor="#fff" defaultColor="#0077B5"
+            onClick={()=>window.open(linkedInUrl,"_blank","width=600,height=600")}/>
+          <ShareBtn icon="𝕏" label="X / Twitter"
+            hoverBg="#000" hoverColor="#fff"
+            onClick={()=>window.open(twitterUrl,"_blank","width=600,height=400")}/>
+          <ShareBtn icon="f" label="Facebook"
+            hoverBg="#1877F2" hoverColor="#fff" defaultColor="#1877F2"
+            onClick={()=>window.open(facebookUrl,"_blank","width=600,height=400")}/>
+          <ShareBtn icon="⎘" label={copied?"Copied! ✓":"Copy link"}
+            hoverBg="#2d4a3e" hoverColor="#fff"
+            onClick={copyLink}/>
+        </div>
+
+        <button onClick={onClose}
+          style={{width:"100%",padding:"12px",borderRadius:99,
+            background:C.ink,color:"#fff",border:"none",
+            fontFamily:F.display,fontWeight:700,fontSize:13,cursor:"pointer",transition:"opacity 0.15s"}}
+          onMouseEnter={e=>e.currentTarget.style.opacity="0.82"}
+          onMouseLeave={e=>e.currentTarget.style.opacity="1"}>
+          Continue to dashboard →
+        </button>
+      </div>
+    </div>
+  )
+}
+
 function LessonPage({lessonRef,setRoute}) {
+  const [showShareModal,setShowShareModal]=useState(false)
   const lesson = ALL_LESSONS.find(l=>l.ref===lessonRef)
   const module = MODULES.find(m=>m.n===lesson?.module)
   if (!lesson||!module) return <div style={{padding:"40px 36px",color:C.inkMute}}>Lesson not found.</div>
   const idx = module.lessons.findIndex(l=>l.ref===lessonRef)
   const prev = module.lessons[idx-1]
   const next = module.lessons[idx+1]
+  const courseComplete = !next && module.n==="12"
   const content = LC_DATA[lessonRef]
   const visual = LC_VISUALS[lessonRef]
   const voiceName = typeof _voices!=='undefined'&&_voices.length?(_voices[_voiceIdx]?.name?.split(' ').slice(0,2).join(' ')||'Default'):'Default'
@@ -2496,8 +2597,23 @@ function LessonPage({lessonRef,setRoute}) {
 
       <div style={{display:"flex",justifyContent:"space-between",gap:12}}>
         {prev?<button onClick={()=>{if(typeof _stopTTS!=='undefined')_stopTTS();setRoute("lesson-"+prev.ref)}} style={{fontFamily:F.display,fontWeight:600,fontSize:13,background:"none",color:C.inkSoft,border:`1px solid ${C.rule}`,borderRadius:99,padding:"9px 18px",cursor:"pointer"}}>← {prev.ref} · {prev.title}</button>:<div/>}
-        {next?<button onClick={()=>{if(typeof _stopTTS!=='undefined')_stopTTS();setRoute("lesson-"+next.ref)}} style={{fontFamily:F.display,fontWeight:700,fontSize:13,background:C.ink,color:"#fff",border:"none",borderRadius:99,padding:"9px 18px",cursor:"pointer"}}>{next.ref} · {next.title} →</button>:<button onClick={()=>{if(typeof _stopTTS!=='undefined')_stopTTS();setRoute("home")}} style={{fontFamily:F.display,fontWeight:700,fontSize:13,background:C.accent,color:"#fff",border:"none",borderRadius:99,padding:"9px 18px",cursor:"pointer"}}>Module complete →</button>}
+        {next?<button onClick={()=>{if(typeof _stopTTS!=='undefined')_stopTTS();setRoute("lesson-"+next.ref)}} style={{fontFamily:F.display,fontWeight:700,fontSize:13,background:C.ink,color:"#fff",border:"none",borderRadius:99,padding:"9px 18px",cursor:"pointer"}}>{next.ref} · {next.title} →</button>:(
+          <button onClick={()=>{if(typeof _stopTTS!=='undefined')_stopTTS();setShowShareModal(true)}}
+            style={{fontFamily:F.display,fontWeight:700,fontSize:13,
+              background:C.accent,color:"#fff",border:"none",
+              borderRadius:99,padding:"9px 18px",cursor:"pointer"}}>
+            Module complete 🎉
+          </button>
+        )}
       </div>
+
+      {showShareModal&&(
+        <ModuleCompleteModal
+          module={module}
+          courseComplete={courseComplete}
+          onClose={()=>{setShowShareModal(false);setRoute("home")}}
+        />
+      )}
     </div>
   )
 }
