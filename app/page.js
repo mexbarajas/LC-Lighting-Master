@@ -1,13 +1,9 @@
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
+'use client'
 
-export default async function HomePage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+import dynamic from 'next/dynamic'
 
-  if (user) {
-    redirect('/dashboard')
-  } else {
-    redirect('/login')
-  }
+const LcApp = dynamic(() => import('@/components/LcApp'), { ssr: false })
+
+export default function Page() {
+  return <LcApp />
 }
