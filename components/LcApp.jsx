@@ -2435,7 +2435,6 @@ function ModuleCompleteModal({module, courseComplete, onClose}){
     return ()=>window.removeEventListener("keydown",onKey)
   },[onClose])
 
-  const linkedInUrl=`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}&summary=${encodeURIComponent(shareText)}`
   const twitterUrl=`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`
   const facebookUrl=`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(shareText)}`
 
@@ -2479,7 +2478,7 @@ function ModuleCompleteModal({module, courseComplete, onClose}){
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:22}}>
           <ShareBtn icon="in" label="LinkedIn"
             hoverBg="#0077B5" hoverColor="#fff" defaultColor="#0077B5"
-            onClick={()=>window.open(linkedInUrl,"_blank","width=600,height=600")}/>
+            onClick={()=>window.open("https://www.linkedin.com/sharing/share-offsite/?url="+encodeURIComponent(shareUrl)+"&summary="+encodeURIComponent(shareText),"_blank","width=600,height=600")}/>
           <ShareBtn icon="𝕏" label="X / Twitter"
             hoverBg="#000" hoverColor="#fff"
             onClick={()=>window.open(twitterUrl,"_blank","width=600,height=400")}/>
