@@ -1,6 +1,9 @@
 'use client'
 
 import React, { useState, useEffect, useRef, useCallback } from "react"
+import { createClient } from '@/lib/supabase/client'
+
+const supabase = createClient()
 
 /* ══ LEARNER APP ══ */
 
@@ -203,61 +206,47 @@ function AuthModal({mode, onClose, onAuth}){
     return true
   }
 
-  // ── TEST CREDENTIALS (remove before production) ──
-  // demo@lightingmaster.com  / Demo@2025!   → free
-  // pro@lightingmaster.com   / Pro@2025!   → Full Course (t2)
-  // exam@lightingmaster.com  / Exam@2025!  → Course + Exam (t3)
-  // admin@gensler-team.com   / Team@2025!  → Team Admin
-  // priya@gensler-team.com   / Member@2025!→ Team Member
-  const TEAM_001_MEMBERS = [
-    {id:"tm1",name:"Priya Kapoor",  email:"p.kapoor@gensler.com", progress:72,modulesCompleted:8, examBestScore:88,lastActive:"2025-06-02",status:"active"},
-    {id:"tm2",name:"Devon Walsh",   email:"d.walsh@gensler.com",  progress:45,modulesCompleted:5, examBestScore:71,lastActive:"2025-05-30",status:"active"},
-    {id:"tm3",name:"Elena Rossi",   email:"e.rossi@gensler.com",  progress:91,modulesCompleted:11,examBestScore:94,lastActive:"2025-06-03",status:"active"},
-    {id:"tm4",name:"Invite pending",email:"c.jones@gensler.com",  progress:0, modulesCompleted:0, examBestScore:null,lastActive:null,      status:"invited"},
-    {id:"tm5",name:"Seat available",email:null,                   progress:0, modulesCompleted:0, examBestScore:null,lastActive:null,      status:"empty"},
-  ]
-  const TEST_USERS = {
-    "demo@lightingmaster.com": { pw:"Demo@2025!",   name:"Demo User",      company:"Luxartmedia",  state:"Florida",    plan:"free" },
-    "pro@lightingmaster.com":  { pw:"Pro@2025!",    name:"Pro Designer",   company:"Gensler",      state:"California", plan:"t2" },
-    "exam@lightingmaster.com": { pw:"Exam@2025!",   name:"Exam Tester",    company:"HLB Lighting", state:"New York",   plan:"t3" },
-    "admin@gensler-team.com":  { pw:"Team@2025!",   name:"Marcus Thompson",company:"Gensler",      state:"California", plan:"team_admin",
-      team:{ id:"team_001",name:"Gensler LA Studio",seats:5,usedSeats:3,members:TEAM_001_MEMBERS } },
-    "priya@gensler-team.com":  { pw:"Member@2025!", name:"Priya Kapoor",   company:"Gensler",      state:"California", plan:"team_member",
-      team:{ id:"team_001",name:"Gensler LA Studio",adminName:"Marcus Thompson",seats:5,usedSeats:3,
-        members:TEAM_001_MEMBERS.filter(m=>m.status==="active") } },
-  }
-
   async function handleSubmit(){
     setError("")
-    if(tab==="signup"   && !validateSignup()) return
-    if(tab==="signin"   && !validateSignin()) return
-    if(tab==="reset"    && !validateReset())  return
+    if(tab==="signup" && !validateSignup()) return
+    if(tab==="signin" && !validateSignin()) return
+    if(tab==="reset"  && !validateReset())  return
     setLoading(true)
-    await new Promise(r=>setTimeout(r,700))
-    setLoading(false)
-    if(tab==="reset"){ setSuccess("Reset link sent — check your inbox."); return }
-
-    if(tab==="signin"){
-      const testUser = TEST_USERS[siEmail.toLowerCase()]
-      if(!testUser){
-        setError("Account not found. Check your email or create a free account.")
-        return
-      }
-      if(testUser.pw !== siPw){
-        setError("Incorrect password. Please try again.")
-        return
-      }
-      onAuth({ name:testUser.name, email:siEmail, company:testUser.company, state:testUser.state, plan:testUser.plan })
+    if(tab==="reset"){
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+        redirectTo: `${window.location.origin}/reset-password`
+      })
+      setLoading(false)
+      if(error){ setError(error.message); return }
+      setSuccess("Reset link sent — check your inbox.")
       return
     }
-
-    // signup flow
-    onAuth({
-      name:`${firstName} ${lastName}`.trim(),
-      email:suEmail,
-      company, state,
-      plan:"free"
+    if(tab==="signin"){
+      const { data, error } = await supabase.auth.signInWithPassword({ email:siEmail, password:siPw })
+      if(error){ setLoading(false); setError(error.message); return }
+      const u = data.user
+      const { data:sub } = await supabase.from("subscriptions").select("*").eq("user_id", u.id).single()
+      setLoading(false)
+      onAuth({ id:u.id, name:u.user_metadata?.name||siEmail.split("@")[0], email:u.email,
+               company:u.user_metadata?.company||"", state:u.user_metadata?.state||"",
+               plan:sub?.plan||"free", examAddon:sub?.exam_addon||false })
+      return
+    }
+    const { data, error } = await supabase.auth.signUp({
+      email: suEmail, password: suPw,
+      options: { data: { name:`${firstName} ${lastName}`.trim(), company, state } }
     })
+    setLoading(false)
+    if(error){ setError(error.message); return }
+    if(data?.user?.identities?.length === 0){ setError("An account already exists with this email. Please sign in."); return }
+    if(data?.session){
+      const u = data.user
+      const { data:sub } = await supabase.from("subscriptions").select("*").eq("user_id", u.id).single()
+      onAuth({ id:u.id, name:u.user_metadata?.name||suEmail.split("@")[0], email:u.email,
+               company, state, plan:sub?.plan||"free", examAddon:sub?.exam_addon||false })
+    } else {
+      setSuccess("Account created! Check your email to confirm, then sign in.")
+    }
   }
 
   return (
@@ -2749,18 +2738,13 @@ function moduleAccess(plan, modFree){
 }
 function examAccess(plan){ return plan==="t1"||plan==="t3" }
 
-/* ── STRIPE PAYMENT LINKS ── swap these from your Stripe dashboard ── */
-const STRIPE = {
-  t1: "https://buy.stripe.com/PLACEHOLDER_TIER1_TEST_ENGINE",
-  t2: "https://buy.stripe.com/PLACEHOLDER_TIER2_FULL_COURSE",
-  t3: "https://buy.stripe.com/PLACEHOLDER_TIER3_COURSE_EXAM",
-}
+/* placeholder removed — checkout handled via /api/stripe/checkout */
 
 function accessExpiry(){ return `December 31, ${new Date().getFullYear()}` }
 function daysLeft(){ return Math.ceil((new Date(new Date().getFullYear(),11,31)-new Date())/(1000*60*60*24)) }
 
 /* ── UPGRADE MODAL ── */
-function UpgradeModal({currentPlan, onClose}){
+function UpgradeModal({currentPlan, user, onClose}){
   const season  = useSeason()
   const meta    = SEASON_META[season]
   const t2Price = season==="earlybird"?395:season==="peak"?495:595
@@ -2774,7 +2758,7 @@ function UpgradeModal({currentPlan, onClose}){
       badgeColor:C.ink,
       desc:"Already studied? Use our LC practice engine as your final accuracy check before exam day.",
       includes:["129 LC practice questions","13 topic breakdown","25-sec timed exam","Speed bonuses & streaks","Per-topic accuracy report","Unlimited attempts"],
-      cta:"Get Test Engine",url:STRIPE.t1,
+      cta:"Get Test Engine",
     }]:[]),
     {
       id:"t2",label:"Full Course",tag:"Tier 2",
@@ -2784,7 +2768,7 @@ function UpgradeModal({currentPlan, onClose}){
       desc:"All 12 modules structured around the LC exam blueprint. Certificate + 24 CEU hours.",
       includes:["All 12 modules · 74 lessons","Audio narration every lesson","Bookmarks & notes hub","Certificate of completion","24 CEU credit hours"],
       addon:"+ Test Engine add-on for $200",
-      cta:"Start Full Course",url:STRIPE.t2,
+      cta:"Start Full Course",
     },
     {
       id:"t3",label:"Course + Exam",tag:"Tier 3",
@@ -2792,14 +2776,20 @@ function UpgradeModal({currentPlan, onClose}){
       badge:"Best value",
       desc:"The complete package — all 12 modules plus the LC practice exam. Best path to passing.",
       includes:["Everything in Full Course","Test engine included","129 LC practice questions","Unlimited exam attempts","Topic accuracy analytics","Priority support"],
-      cta:"Start Course + Exam",url:STRIPE.t3,
+      cta:"Start Course + Exam",
     },
   ]
   const tiers = allTiers.filter(t=>t.id!==currentPlan)
 
-  function goStripe(url, id){
-    // In production: window.location.href = url + "?prefilled_email=user@email.com"
-    window.open(url,"_blank")
+  async function goStripe(tierId){
+    const res = await fetch("/api/stripe/checkout", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ tier:tierId, userId:user?.id, userEmail:user?.email })
+    })
+    const data = await res.json()
+    if(data.contactUs){ alert("Contact us at team@lightingmaster.com for team pricing."); return }
+    if(data.url) window.location.href = data.url
   }
 
   return(
@@ -2857,7 +2847,7 @@ function UpgradeModal({currentPlan, onClose}){
                 ))}
                 {tier.addon&&<div style={{marginTop:8,fontFamily:F.body,fontSize:10.5,color:tier.dark?"rgba(249,244,237,0.38)":C.inkMute,fontStyle:"italic"}}>{tier.addon}</div>}
               </div>
-              <button onClick={()=>goStripe(tier.url,tier.id)}
+              <button onClick={()=>goStripe(tier.id)}
                 style={{width:"100%",padding:"11px",borderRadius:99,
                   border:tier.dark?"none":`1px solid ${C.ruleStrong}`,
                   background:tier.dark?C.accent:"none",
@@ -3061,7 +3051,7 @@ function Dashboard({setRoute, user}){
 
   return(
     <div style={{padding:"40px 36px",minHeight:"100vh"}}>
-      {showUpgrade&&<UpgradeModal currentPlan={plan} onClose={()=>setShowUpgrade(false)}/>}
+      {showUpgrade&&<UpgradeModal currentPlan={plan} user={user} onClose={()=>setShowUpgrade(false)}/>}
       <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:32,flexWrap:"wrap",gap:16}}>
         <div>
           <div style={m({fontSize:9,letterSpacing:"0.24em",textTransform:"uppercase",color:C.accent,marginBottom:8})}>Welcome back</div>
@@ -3172,7 +3162,24 @@ function LearnerRoot({onAdminClick=()=>{}}){
     setAuthMode(null)
     setPage("app")
   }
-  function handleSignOut(){
+  useEffect(()=>{
+    supabase.auth.getSession().then(async ({ data:{ session } })=>{
+      if(!session) return
+      const u = session.user
+      const { data:sub } = await supabase.from("subscriptions").select("*").eq("user_id", u.id).single()
+      setUser({ id:u.id, name:u.user_metadata?.name||u.email.split("@")[0], email:u.email,
+                company:u.user_metadata?.company||"", state:u.user_metadata?.state||"",
+                plan:sub?.plan||"free", examAddon:sub?.exam_addon||false })
+      setPage("app")
+    })
+    const { data:{ subscription } } = supabase.auth.onAuthStateChange(async (event, session)=>{
+      if(event==="SIGNED_OUT"){ setUser(null); setPage("landing") }
+    })
+    return ()=>subscription.unsubscribe()
+  },[])
+
+  async function handleSignOut(){
+    await supabase.auth.signOut()
     setUser(null)
     setPage("landing")
   }
