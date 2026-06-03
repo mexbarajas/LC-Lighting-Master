@@ -2405,6 +2405,37 @@ function ExamPage({setRoute}) {
 /* ── LESSON CONTENT DATA ───────────────────────────────────────── */
 
 /* ── MODULE LESSON VIEW ── */
+/* ── PER-MODULE SHARE COPY ── */
+const MODULE_SHARE_COPY = {
+  '01': "Just completed Module 01 of LC · Lighting Master: Theory, Light, Sight & Color. Covered the visible spectrum, SPD, photopic vs scotopic vision, color rendering (CRI, TM-30), CCT, and the four photometric quantities — lumens, candelas, lux, and luminance. NCQLP prep in progress. 💡",
+  '02': "Module 02 done — Light Sources & Ballasts. Deep dive into fluorescent, HID, HPS, metal halide, and LED fundamentals. Covered efficacy, lumen maintenance, ballast types, and source selection criteria for commercial specs. 2 CEU hrs earned. 💡",
+  '03': "Module 03 complete — LED Technology Deep Dive. Junction physics, phosphor conversion, binning, SDCM, driver types, dimming protocols (0-10V, DALI, PWM), LM-80 lumen maintenance, and TM-21 lifetime projections. The technical backbone of modern lighting. 💡",
+  '04': "Module 04 done — Photometry & IES Files. Covered LM-79 full luminaire testing, LM-63 IES file structure, point-by-point calculations, the cosine law, zonal cavity method, and DLC qualification requirements. NCQLP math section covered. 💡",
+  '05': "Module 05 complete — Lighting Controls. Covered occupancy vs vacancy sensors, photosensors, DALI vs 0-10V, daylight harvesting (closed-loop vs open-loop), ASHRAE 90.1 controls requirements, and LEED v4.1 sDA/ASE metrics. 💡",
+  '06': "Module 06 done — Downlighting & Interior Design. Trim selection, beam spread, spacing criteria, wall washing vs wall grazing, glare control (UGR), layered lighting design, and hospitality vs office application strategies. 💡",
+  '07': "Module 07 complete — Exterior, Emergency & Codes. BUG ratings, light trespass, IESNA RP-8 roadway standards, NFPA 101 emergency lighting (1fc, 90 min, 10 sec), egress path requirements, and Title 24 outdoor LPD. 💡",
+  '08': "Module 08 done — Industrial Lighting & Human Health. High-bay design, IP/IK ratings, hazardous location classifications (Class I/II/III), circadian entrainment, melanopic lux (EML), WELL v2 L04, and flicker standards. 💡",
+  '09': "Module 09 complete — Energy, Environment & Sustainable Design. ASHRAE 90.1 LPD compliance, LEED v4.1 credits, Title 24 whole-building approach, DLC QPL, energy modeling, and sustainable material spec for luminaires. 💡",
+  '10': "Module 10 done — Design Process I: Programming to Design Development. Covered lighting programming, schematic design deliverables, photometric software workflow, mock-up strategy, DD submittal requirements, and client presentation techniques. 💡",
+  '11': "Module 11 complete — Design Process II: Construction Documents to POE. CD set components (RCP, fixture schedule, controls drawings), specification writing (CSI Div 26), construction administration, punch lists, and post-occupancy evaluation. 💡",
+  '12': "All 12 modules of LC · Lighting Master — COMPLETE. 74 lessons, 24 CEU credit hours, and the full NCQLP blueprint covered: photometry, LED tech, controls, codes, energy compliance, and design process. Exam ready. 💡",
+}
+
+const MODULE_HASHTAGS = {
+  '01': "#NCQLP #LightingDesign #ColorRendering #CRI #TM30 #Photometry #LightingCertified #IES #IESNA #LightingEducation #LC #Luxart",
+  '02': "#NCQLP #LightingDesign #LEDLighting #LightSources #HID #MetalHalide #LightingSpec #IES #LightingCertified #LC #Luxart",
+  '03': "#NCQLP #LEDTechnology #DALIDimming #LM80 #TM21 #LumenMaintenance #LEDDrivers #IES #LightingDesign #LightingCertified #LC #Luxart",
+  '04': "#NCQLP #Photometry #IESFile #LM79 #DLC #ZonalCavity #LightingMath #IES #IESNA #LightingDesign #LightingCertified #LC #Luxart",
+  '05': "#NCQLP #LightingControls #DALI #DaylightHarvesting #ASHRAE901 #LEEDv4 #SmartLighting #IES #LightingDesign #LightingCertified #LC #Luxart",
+  '06': "#NCQLP #LightingDesign #Downlighting #UGR #GlareControl #InteriorDesign #WallWash #IES #IESNA #LightingCertified #LC #Luxart",
+  '07': "#NCQLP #ExteriorLighting #BUGRating #NFPA101 #EmergencyLighting #Title24 #LightTrespass #IES #LightingDesign #LightingCertified #LC #Luxart",
+  '08': "#NCQLP #IndustrialLighting #CircadianLighting #WELLBuilding #MelanopicLux #HazardousLocation #HighBay #IES #LightingDesign #LightingCertified #LC #Luxart",
+  '09': "#NCQLP #SustainableLighting #ASHRAE901 #LEEDv4 #DLC #EnergyEfficiency #GreenBuilding #IES #LightingDesign #LightingCertified #LC #Luxart",
+  '10': "#NCQLP #LightingDesign #DesignProcess #Photometrics #LightingSpec #ArchitecturalLighting #IES #IESNA #LightingCertified #LC #Luxart",
+  '11': "#NCQLP #LightingDesign #ConstructionDocuments #CSISpec #LightingCA #RCP #IES #ArchitecturalLighting #LightingCertified #LC #Luxart",
+  '12': "#NCQLP #LightingCertified #LightingDesign #IES #IESNA #DALI #ASHRAE #LEEDv4 #WELLBuilding #DLC #Title24 #LC #Luxart #ExamReady",
+}
+
 /* ── SHARE BUTTON (used inside ModuleCompleteModal) ── */
 function ShareBtn({icon, label, hoverBg, hoverColor, defaultColor, onClick}){
   return(
@@ -2424,10 +2455,11 @@ function ShareBtn({icon, label, hoverBg, hoverColor, defaultColor, onClick}){
 /* ── MODULE COMPLETE SHARE MODAL ── */
 function ModuleCompleteModal({module, courseComplete, onClose}){
   const [copied,setCopied]=useState(false)
+  const moduleKey=String(module.n).padStart(2,"0")
+  const shareBody=MODULE_SHARE_COPY[moduleKey]||`I just completed Module ${module.n}: ${module.title} in LC · Lighting Master. ${module.ceu} CEU credit hours earned. 💡`
+  const hashtags=MODULE_HASHTAGS[moduleKey]||"#NCQLP #LightingDesign #IES #LightingCertified #LC"
+  const shareText=shareBody+"\n\n"+hashtags
   const shareUrl="https://master-lighting.vercel.app"
-  const shareText=courseComplete
-    ?"I just completed all 12 modules of LC · Lighting Master and I'm ready for my NCQLP exam! 74 lessons, 24 CEU credit hours. 💡 #NCQLP #LightingDesign #LightingCertified #LC"
-    :`I just completed Module ${module.n}: ${module.label} in LC · Lighting Master — studying for my NCQLP exam. ${module.ceu} CEU credit hours earned. 💡 #NCQLP #LightingDesign #LC`
 
   useEffect(()=>{
     function onKey(e){ if(e.key==="Escape") onClose() }
@@ -2466,8 +2498,11 @@ function ModuleCompleteModal({module, courseComplete, onClose}){
         </div>
 
         <div style={{background:C.creamWarm,borderRadius:10,padding:"14px 16px",marginBottom:22,textAlign:"left"}}>
-          <p style={{fontFamily:F.body,fontSize:12.5,color:C.inkSoft,lineHeight:1.65,margin:0,fontStyle:"italic"}}>
-            "{shareText}"
+          <p style={{fontFamily:F.body,fontSize:12.5,color:C.inkSoft,lineHeight:1.65,margin:"0 0 10px",fontStyle:"italic"}}>
+            "{shareBody}"
+          </p>
+          <p style={{fontFamily:F.mono,fontSize:9.5,color:C.inkMute,lineHeight:1.7,margin:0,letterSpacing:"0.01em"}}>
+            {hashtags}
           </p>
         </div>
 
