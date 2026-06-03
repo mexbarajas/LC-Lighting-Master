@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react"
 import { createClient } from '@/lib/supabase/client'
+import PricingCard from '@/components/PricingCard'
 
 const supabase = createClient()
 
@@ -2736,61 +2737,20 @@ function moduleAccess(plan, modFree){
   if(plan==="t1") return false
   return modFree
 }
-function examAccess(plan){ return plan==="t1"||plan==="t3" }
+function examAccess(plan, examAddon){ return plan==="t1"||plan==="t3"||(plan==="t2"&&!!examAddon) }
 
 /* placeholder removed — checkout handled via /api/stripe/checkout */
 
 function accessExpiry(){ return `December 31, ${new Date().getFullYear()}` }
 function daysLeft(){ return Math.ceil((new Date(new Date().getFullYear(),11,31)-new Date())/(1000*60*60*24)) }
 
-/* ── UPGRADE MODAL ── */
-function UpgradeModal({currentPlan, user, onClose}){
-  const season  = useSeason()
-  const meta    = SEASON_META[season]
-  const t2Price = season==="earlybird"?395:season==="peak"?495:595
-  const t3Price = season==="earlybird"?595:season==="peak"?695:695
-  const t1Vis   = season==="lastminute"||season==="standard"
-
-  const allTiers = [
-    ...(t1Vis?[{
-      id:"t1",label:"Test Engine",tag:"Tier 1",price:250,dark:false,
-      badge:season==="lastminute"?"🎯 Last-Minute":null,
-      badgeColor:C.ink,
-      desc:"Already studied? Use our LC practice engine as your final accuracy check before exam day.",
-      includes:["129 LC practice questions","13 topic breakdown","25-sec timed exam","Speed bonuses & streaks","Per-topic accuracy report","Unlimited attempts"],
-      cta:"Get Test Engine",
-    }]:[]),
-    {
-      id:"t2",label:"Full Course",tag:"Tier 2",
-      price:t2Price,wasPrice:season==="earlybird"?495:null,dark:false,
-      badge:season==="earlybird"?"Early Bird":season==="peak"?"Peak Season":null,
-      badgeColor:season==="earlybird"?C.forest:C.accent,
-      desc:"All 12 modules structured around the LC exam blueprint. Certificate + 24 CEU hours.",
-      includes:["All 12 modules · 74 lessons","Audio narration every lesson","Bookmarks & notes hub","Certificate of completion","24 CEU credit hours"],
-      addon:"+ Test Engine add-on for $200",
-      cta:"Start Full Course",
-    },
-    {
-      id:"t3",label:"Course + Exam",tag:"Tier 3",
-      price:t3Price,wasPrice:season==="earlybird"?695:null,dark:true,
-      badge:"Best value",
-      desc:"The complete package — all 12 modules plus the LC practice exam. Best path to passing.",
-      includes:["Everything in Full Course","Test engine included","129 LC practice questions","Unlimited exam attempts","Topic accuracy analytics","Priority support"],
-      cta:"Start Course + Exam",
-    },
-  ]
-  const tiers = allTiers.filter(t=>t.id!==currentPlan)
-
-  async function goStripe(tierId){
-    const res = await fetch("/api/stripe/checkout", {
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({ tier:tierId, userId:user?.id, userEmail:user?.email })
-    })
-    const data = await res.json()
-    if(data.contactUs){ alert("Contact us at team@lightingmaster.com for team pricing."); return }
-    if(data.url) window.location.href = data.url
-  }
+/* ── UPGRADE MODAL (wraps PricingCard) ── */
+function UpgradeModal({user, onClose}){
+  useEffect(()=>{
+    function onKey(e){ if(e.key==="Escape") onClose() }
+    window.addEventListener("keydown", onKey)
+    return ()=>window.removeEventListener("keydown", onKey)
+  },[onClose])
 
   return(
     <div onClick={e=>{if(e.target===e.currentTarget)onClose()}}
@@ -2798,76 +2758,18 @@ function UpgradeModal({currentPlan, user, onClose}){
         display:"flex",alignItems:"center",justifyContent:"center",
         padding:"20px 16px",overflowY:"auto"}}>
       <div style={{background:C.paper,borderRadius:18,padding:"32px 28px",
-        width:"100%",maxWidth:700,position:"relative",
+        width:"100%",maxWidth:900,position:"relative",
         border:`1px solid ${C.rule}`,margin:"auto"}}>
-
         <button onClick={onClose} style={{position:"absolute",top:16,right:18,
-          background:"none",border:"none",cursor:"pointer",fontSize:22,color:C.inkMute}}>×</button>
-
-        <div style={{marginBottom:20}}>
+          background:"none",border:"none",cursor:"pointer",fontSize:22,color:C.inkMute,zIndex:1}}>×</button>
+        <div style={{marginBottom:24}}>
           <div style={m({fontSize:9,letterSpacing:"0.24em",textTransform:"uppercase",color:C.accent,marginBottom:8})}>Upgrade your plan</div>
-          <h2 style={{fontFamily:F.display,fontWeight:700,fontSize:22,letterSpacing:"-0.02em",color:C.ink,margin:"0 0 6px"}}>Choose your access tier</h2>
+          <h2 style={{fontFamily:F.display,fontWeight:700,fontSize:22,letterSpacing:"-0.02em",color:C.ink,margin:"0 0 4px"}}>Choose your access tier</h2>
           <p style={{fontFamily:F.body,fontSize:13,color:C.inkMute,margin:0,lineHeight:1.6}}>
-            All paid plans include access through <strong style={{color:C.inkSoft}}>{accessExpiry()}</strong> — <strong style={{color:C.inkSoft}}>{daysLeft()} days</strong> from today. No recurring charges.
+            One-time payment. Access through <strong style={{color:C.inkSoft}}>December 31, {new Date().getFullYear()}</strong>. No recurring charges.
           </p>
         </div>
-
-        <div style={{background:meta.bg,border:`1px solid ${meta.border}`,borderRadius:8,
-          padding:"10px 14px",marginBottom:20,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
-          <div style={{width:7,height:7,borderRadius:"50%",background:meta.color,flexShrink:0}}/>
-          <span style={m({fontSize:9,letterSpacing:"0.2em",textTransform:"uppercase",color:meta.color,fontWeight:700,flexShrink:0})}>{meta.label}</span>
-          {meta.ends&&<span style={{fontFamily:F.body,fontSize:11,color:meta.color,background:"rgba(255,255,255,0.6)",borderRadius:99,padding:"1px 8px",border:`1px solid ${meta.border}`,flexShrink:0}}>ends {meta.ends}</span>}
-          <span style={{fontFamily:F.body,fontSize:12,color:C.inkSoft}}>{meta.msg}</span>
-        </div>
-
-        <div style={{display:"grid",gridTemplateColumns:`repeat(${tiers.length},1fr)`,
-          gap:1,border:`1px solid ${C.rule}`,borderRadius:10,overflow:"hidden",marginBottom:18}}>
-          {tiers.map((tier,i)=>(
-            <div key={tier.id} style={{background:tier.dark?C.ink:C.paper,
-              padding:"22px 18px",borderRight:i<tiers.length-1?`1px solid ${C.rule}`:"none",
-              position:"relative",display:"flex",flexDirection:"column"}}>
-              {tier.badge&&<span style={{position:"absolute",top:12,right:12,background:tier.badgeColor||C.accent,color:"#fff",fontFamily:F.mono,fontSize:8,fontWeight:700,letterSpacing:"0.12em",textTransform:"uppercase",padding:"3px 8px",borderRadius:99,whiteSpace:"nowrap"}}>{tier.badge}</span>}
-              <div style={m({fontSize:8,letterSpacing:"0.2em",textTransform:"uppercase",color:tier.dark?C.tan:C.inkMute,marginBottom:4})}>{tier.tag}</div>
-              <div style={d({fontWeight:700,fontSize:15,color:tier.dark?"#fff":C.ink,marginBottom:10,paddingRight:tier.badge?50:0})}>{tier.label}</div>
-              <div style={{marginBottom:4}}>
-                {tier.wasPrice&&<span style={m({fontSize:11,color:tier.dark?"rgba(249,244,237,0.35)":C.inkMute,textDecoration:"line-through",marginRight:5})}>${tier.wasPrice}</span>}
-                <span style={d({fontWeight:700,fontSize:34,color:tier.dark?"#fff":tier.wasPrice?C.forest:C.ink,letterSpacing:"-0.02em",lineHeight:1})}>${tier.price}</span>
-                <span style={m({fontSize:9,color:tier.dark?"rgba(249,244,237,0.45)":C.inkMute,marginLeft:5})}>one-time</span>
-              </div>
-              <div style={{fontFamily:F.body,fontSize:11,color:tier.dark?"rgba(249,244,237,0.38)":C.inkMute,marginBottom:10}}>
-                Access until Dec 31, {new Date().getFullYear()}
-              </div>
-              <p style={{fontFamily:F.body,fontSize:12,color:tier.dark?"rgba(249,244,237,0.6)":C.inkMute,margin:"0 0 14px",lineHeight:1.6,flex:1}}>{tier.desc}</p>
-              <div style={{marginBottom:16}}>
-                {tier.includes.map((item,j)=>(
-                  <div key={j} style={{display:"flex",alignItems:"flex-start",gap:7,padding:"4px 0",borderBottom:j<tier.includes.length-1?`1px solid ${tier.dark?"rgba(249,244,237,0.07)":C.rule}`:"none"}}>
-                    <span style={{color:tier.dark?"rgba(249,244,237,0.4)":C.forest,fontSize:11,flexShrink:0}}>✓</span>
-                    <span style={{fontFamily:F.display,fontSize:11,color:tier.dark?"rgba(249,244,237,0.75)":C.inkSoft,lineHeight:1.5}}>{item}</span>
-                  </div>
-                ))}
-                {tier.addon&&<div style={{marginTop:8,fontFamily:F.body,fontSize:10.5,color:tier.dark?"rgba(249,244,237,0.38)":C.inkMute,fontStyle:"italic"}}>{tier.addon}</div>}
-              </div>
-              <button onClick={()=>goStripe(tier.id)}
-                style={{width:"100%",padding:"11px",borderRadius:99,
-                  border:tier.dark?"none":`1px solid ${C.ruleStrong}`,
-                  background:tier.dark?C.accent:"none",
-                  color:tier.dark?"#fff":C.inkSoft,
-                  fontFamily:F.display,fontWeight:700,fontSize:13,cursor:"pointer",transition:"all 0.15s"}}
-                onMouseEnter={e=>{if(!tier.dark){e.currentTarget.style.background=C.accent;e.currentTarget.style.color="#fff";e.currentTarget.style.borderColor=C.accent}}}
-                onMouseLeave={e=>{if(!tier.dark){e.currentTarget.style.background="none";e.currentTarget.style.color=C.inkSoft;e.currentTarget.style.borderColor=C.ruleStrong}}}>
-                {tier.cta} — ${tier.price} →
-              </button>
-            </div>
-          ))}
-        </div>
-
-        <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:14,flexWrap:"wrap"}}>
-          <span style={{fontFamily:F.body,fontSize:11,color:C.inkMute}}>🔒 Secure checkout via Stripe</span>
-          <span style={{fontFamily:F.body,fontSize:11,color:C.inkMute}}>·</span>
-          <span style={{fontFamily:F.body,fontSize:11,color:C.inkMute}}>Access expires Dec 31, {new Date().getFullYear()}</span>
-          <span style={{fontFamily:F.body,fontSize:11,color:C.inkMute}}>·</span>
-          <span style={{fontFamily:F.body,fontSize:11,color:C.inkMute}}>No recurring charges</span>
-        </div>
+        <PricingCard userId={user?.id} userEmail={user?.email} />
       </div>
     </div>
   )
@@ -3051,7 +2953,7 @@ function Dashboard({setRoute, user}){
 
   return(
     <div style={{padding:"40px 36px",minHeight:"100vh"}}>
-      {showUpgrade&&<UpgradeModal currentPlan={plan} user={user} onClose={()=>setShowUpgrade(false)}/>}
+      {showUpgrade&&<UpgradeModal user={user} onClose={()=>setShowUpgrade(false)}/>}
       <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:32,flexWrap:"wrap",gap:16}}>
         <div>
           <div style={m({fontSize:9,letterSpacing:"0.24em",textTransform:"uppercase",color:C.accent,marginBottom:8})}>Welcome back</div>
@@ -3154,6 +3056,7 @@ function LearnerRoot({onAdminClick=()=>{}}){
   const [authMode, setAuthMode] = useState(null) // null | signin | signup
   const [user, setUser] = useState(null)
   const [legalDoc, setLegalDoc] = useState(null) // null | privacy | terms | cookies | refund
+  const [successToast, setSuccessToast] = useState(null)
 
   function openAuth(mode){ setAuthMode(mode) }
   function closeAuth(){ setAuthMode(null) }
@@ -3162,6 +3065,7 @@ function LearnerRoot({onAdminClick=()=>{}}){
     setAuthMode(null)
     setPage("app")
   }
+
   useEffect(()=>{
     supabase.auth.getSession().then(async ({ data:{ session } })=>{
       if(!session) return
@@ -3178,6 +3082,28 @@ function LearnerRoot({onAdminClick=()=>{}}){
     return ()=>subscription.unsubscribe()
   },[])
 
+  // Re-fetch subscription on payment=success redirect
+  useEffect(()=>{
+    if(typeof window==="undefined") return
+    const params = new URLSearchParams(window.location.search)
+    if(params.get("payment")!=="success") return
+    // Small delay to allow webhook to process
+    const t = setTimeout(async ()=>{
+      const { data:{ session } } = await supabase.auth.getSession()
+      if(!session) return
+      const u = session.user
+      const { data:sub } = await supabase.from("subscriptions").select("*").eq("user_id", u.id).single()
+      if(sub){
+        setUser(prev=>prev?{...prev,plan:sub.plan,examAddon:sub.exam_addon||false}:prev)
+        setSuccessToast("Access unlocked! Welcome to LC · Lighting Master.")
+        setTimeout(()=>setSuccessToast(null), 6000)
+      }
+      // Remove query param without reload
+      window.history.replaceState({}, "", window.location.pathname)
+    }, 2000)
+    return ()=>clearTimeout(t)
+  },[])
+
   async function handleSignOut(){
     await supabase.auth.signOut()
     setUser(null)
@@ -3187,6 +3113,16 @@ function LearnerRoot({onAdminClick=()=>{}}){
   return(
     <>
       <style>{`@import url('${FONT_URL}');*{box-sizing:border-box;margin:0;padding:0}body{background:${C.cream}}a{text-decoration:none}`}</style>
+
+      {successToast&&(
+        <div style={{position:"fixed",top:20,left:"50%",transform:"translateX(-50%)",
+          zIndex:9999,background:C.forest,color:"#fff",borderRadius:10,
+          padding:"12px 22px",fontFamily:F.display,fontWeight:600,fontSize:13,
+          boxShadow:"0 4px 20px rgba(0,0,0,0.18)",pointerEvents:"none",
+          whiteSpace:"nowrap"}}>
+          ✓ {successToast}
+        </div>
+      )}
 
       {authMode&&(
         <AuthModal mode={authMode} onClose={closeAuth} onAuth={handleAuth}/>

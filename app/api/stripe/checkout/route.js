@@ -1,5 +1,5 @@
 import Stripe from 'stripe'
-import { getPriceForTier, getCurrentSeason, TIER_FEATURES } from '@/lib/pricing'
+import { getPriceForTier, getAccessExpiry } from '@/lib/pricing'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 
@@ -14,29 +14,22 @@ export async function POST(request) {
     return Response.json({ contactUs: true })
   }
 
-  const basePrice = getPriceForTier(tier, Number(seats))
-  const addonPrice = (examAddon && tier === 't2') ? 20000 : 0
-  const totalPrice = basePrice + addonPrice
+  const priceInfo = getPriceForTier(tier, Number(seats), Boolean(examAddon))
+  if (!priceInfo) {
+    return Response.json({ contactUs: true })
+  }
 
-  const tierInfo = TIER_FEATURES[tier] || {}
-  let productName = tierInfo.name || tier.toUpperCase()
-  if (tier === 'team') productName = `Team Access — ${seats} seat${seats > 1 ? 's' : ''}`
-  if (examAddon && tier === 't2') productName += ' + Test Engine Add-on'
-
-  const accessYear = new Date().getFullYear()
+  const { amountCents, label } = priceInfo
 
   const session = await stripe.checkout.sessions.create({
     mode: 'payment',
-    customer_email: userEmail,
+    customer_email: userEmail || undefined,
     line_items: [
       {
         price_data: {
           currency: 'usd',
-          unit_amount: totalPrice,
-          product_data: {
-            name: `LC · Lighting Master — ${productName}`,
-            description: `One-time access through December 31, ${accessYear}`,
-          },
+          unit_amount: amountCents,
+          product_data: { name: label },
         },
         quantity: 1,
       },
@@ -44,9 +37,9 @@ export async function POST(request) {
     metadata: {
       tier,
       seats: String(seats),
-      examAddon: String(!!examAddon),
+      examAddon: String(Boolean(examAddon)),
       userId: userId || '',
-      accessYear: String(accessYear),
+      accessYear: String(new Date().getFullYear()),
     },
     success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?payment=success`,
     cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/pricing?cancelled=true`,

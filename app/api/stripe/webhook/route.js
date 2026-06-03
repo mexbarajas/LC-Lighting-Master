@@ -19,11 +19,12 @@ export async function POST(request) {
     const { tier, seats, examAddon, userId, accessYear } = session.metadata
 
     if (!userId) {
-      return Response.json({ error: 'Missing userId in metadata' }, { status: 400 })
+      console.warn('Webhook: missing userId in metadata, skipping DB write')
+      return Response.json({ received: true })
     }
 
     const year = Number(accessYear) || new Date().getFullYear()
-    const periodEnd = new Date(Date.UTC(year, 11, 31, 23, 59, 59))
+    const periodEnd = new Date(Date.UTC(year, 11, 31, 23, 59, 59)).toISOString()
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -40,7 +41,7 @@ export async function POST(request) {
           stripe_customer_id: session.customer,
           stripe_session_id: session.id,
           exam_addon: examAddon === 'true',
-          current_period_end: periodEnd.toISOString(),
+          current_period_end: periodEnd,
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'user_id' }

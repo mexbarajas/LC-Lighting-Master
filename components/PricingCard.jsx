@@ -1,172 +1,424 @@
 'use client'
 
-import { useState } from 'react'
-import { getPriceForTier, getCurrentSeason, TIER_FEATURES } from '@/lib/pricing'
+import { useState, useCallback } from 'react'
+import { getCurrentSeason, getPriceForTier } from '@/lib/pricing'
 
 const C = {
-  ink:"#16120e", inkSoft:"#352c22", inkMute:"#8a7a6a",
-  cream:"#f8f3ec", paper:"#fdfaf6", creamWarm:"#f0e8db",
-  rule:"#e4d9ca", ruleStrong:"#cfc3b0",
-  accent:"#b85835", accentLight:"rgba(184,88,53,0.08)",
-  forest:"#2a6048", forestLight:"rgba(42,96,72,0.08)",
-  tan:"#c8a97e",
+  ink: '#16120e',
+  inkSoft: '#352c22',
+  inkMute: '#8a7a6a',
+  accent: '#b85835',
+  accentDim: 'rgba(184,88,53,0.08)',
+  cream: '#fdfaf6',
+  creamWarm: '#f5ede0',
+  forest: '#2d4a3e',
+  forestDim: 'rgba(45,74,62,0.08)',
+  amber: '#b88a00',
+  amberDim: 'rgba(184,138,0,0.10)',
+  rule: 'rgba(22,18,14,0.12)',
+  ruleStrong: 'rgba(22,18,14,0.20)',
 }
-const F = { display:"'Space Grotesk',sans-serif", mono:"'JetBrains Mono',monospace", body:"'Inter',sans-serif" }
 
-function fmt(cents){ return `$${(cents/100).toFixed(0)}` }
+const FONT = {
+  display: "'Space Grotesk', sans-serif",
+  mono: "'JetBrains Mono', monospace",
+  body: "'Inter', sans-serif",
+}
 
-export default function PricingCard({ user, onCheckout }) {
+function fmt(cents) {
+  return `$${Math.round(cents / 100)}`
+}
+
+function Badge({ label, color, bg }) {
+  return (
+    <span style={{
+      fontFamily: FONT.mono, fontSize: 8, fontWeight: 700,
+      letterSpacing: '0.14em', textTransform: 'uppercase',
+      padding: '3px 9px', borderRadius: 99,
+      color, background: bg,
+      whiteSpace: 'nowrap', display: 'inline-block',
+    }}>
+      {label}
+    </span>
+  )
+}
+
+function FeatureRow({ item, dark }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'flex-start', gap: 8,
+      padding: '5px 0',
+      borderBottom: `1px solid ${dark ? 'rgba(255,255,255,0.06)' : C.rule}`,
+    }}>
+      <span style={{ color: dark ? 'rgba(255,255,255,0.35)' : C.forest, fontSize: 11, flexShrink: 0 }}>✓</span>
+      <span style={{ fontFamily: FONT.display, fontSize: 11.5, lineHeight: 1.5,
+        color: dark ? 'rgba(255,255,255,0.75)' : C.inkSoft }}>{item}</span>
+    </div>
+  )
+}
+
+export default function PricingCard({ userId, userEmail, onContactUs }) {
   const season = getCurrentSeason()
-  const [teamSeats, setTeamSeats] = useState(3)
+  const [examAddon, setExamAddon] = useState(false)
+  const [teamSeats, setTeamSeats] = useState(4)
   const [loading, setLoading] = useState(null)
+  const [contactModal, setContactModal] = useState(false)
 
-  async function handleBuy(tier, extraData = {}) {
+  const t1Price = getPriceForTier('t1')
+  const t2Price = getPriceForTier('t2', 1, examAddon)
+  const t3Price = getPriceForTier('t3')
+  const teamInfo = teamSeats >= 10 ? null : getPriceForTier('team', teamSeats)
+
+  const t3IndividualTotal = t3Price.amountCents * teamSeats
+  const teamSavings = teamInfo ? t3IndividualTotal - teamInfo.amountCents : null
+
+  const handleCheckout = useCallback(async (tier, seats, addOn) => {
     if (loading) return
     setLoading(tier)
     try {
       const res = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tier, userId: user?.id, userEmail: user?.email, ...extraData }),
+        body: JSON.stringify({ tier, seats, examAddon: addOn, userId, userEmail }),
       })
-      const data = await res.json()
-      if (data.contactUs) {
-        alert('Contact us at team@lightingmaster.com for enterprise pricing.')
-        return
-      }
-      if (data.url) window.location.href = data.url
+      const { url, contactUs } = await res.json()
+      if (contactUs) { setContactModal(true); return }
+      if (url) window.location.href = url
+    } catch {
+      alert('Something went wrong. Please try again.')
     } finally {
       setLoading(null)
     }
-  }
+  }, [loading, userId, userEmail])
 
-  const tiers = [
-    { id:'t1', ...TIER_FEATURES.t1, price: getPriceForTier('t1'), dark:false },
-    { id:'t2', ...TIER_FEATURES.t2, price: getPriceForTier('t2'), wasPrice: season.season==='earlyBird' ? 49500 : null, dark:false, highlight: season.season==='earlyBird' },
-    { id:'t3', ...TIER_FEATURES.t3, price: getPriceForTier('t3'), wasPrice: season.season==='earlyBird' ? 69500 : null, dark:true,  highlight: true },
-  ]
+  // T1 badge by season
+  const t1Badge = season.season === 'peak'
+    ? { label: 'October prep', color: C.amber, bg: C.amberDim }
+    : season.season === 'earlyBird'
+    ? { label: 'Early prep', color: C.forest, bg: C.forestDim }
+    : { label: 'Year-round', color: C.inkMute, bg: C.rule }
 
   return (
-    <div style={{ fontFamily: F.body }}>
+    <div style={{ fontFamily: FONT.body }}>
+
+      {/* Season banner */}
       {season.banner && (
-        <div style={{ background: '#fff8f3', border: `1px solid ${C.ruleStrong}`, borderRadius: 8,
-          padding: '10px 16px', marginBottom: 24, display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ width: 7, height: 7, borderRadius: '50%', background: C.accent, flexShrink: 0, display:'inline-block' }}/>
-          <span style={{ fontFamily: F.mono, fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase', color: C.accent, fontWeight: 700 }}>{season.label}</span>
-          <span style={{ fontFamily: F.body, fontSize: 13, color: C.inkSoft }}>{season.banner}</span>
+        <div style={{
+          background: C.accentDim, border: `1px solid ${C.ruleStrong}`,
+          borderRadius: 8, padding: '10px 16px', marginBottom: 28,
+          display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+        }}>
+          <span style={{ width: 7, height: 7, borderRadius: '50%', background: C.accent,
+            flexShrink: 0, display: 'inline-block' }} />
+          <span style={{ fontFamily: FONT.mono, fontSize: 10, letterSpacing: '0.18em',
+            textTransform: 'uppercase', color: C.accent, fontWeight: 700 }}>{season.label}</span>
+          <span style={{ fontFamily: FONT.body, fontSize: 13, color: C.inkSoft }}>{season.banner}</span>
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 1,
-        border: `1px solid ${C.rule}`, borderRadius: 12, overflow: 'hidden' }}>
-        {tiers.map((tier, i) => (
-          <div key={tier.id} style={{ background: tier.dark ? C.ink : C.paper,
-            padding: '28px 22px', borderRight: i < tiers.length - 1 ? `1px solid ${C.rule}` : 'none',
-            display: 'flex', flexDirection: 'column', position: 'relative' }}>
+      {/* 3-column grid */}
+      <div style={{
+        display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
+        border: `1px solid ${C.rule}`, borderRadius: 12, overflow: 'hidden',
+        marginBottom: 24,
+      }}>
 
-            {tier.highlight && (
-              <span style={{ position: 'absolute', top: 14, right: 14,
-                background: tier.dark ? C.accent : C.forest,
-                color: '#fff', fontFamily: F.mono, fontSize: 8, fontWeight: 700,
-                letterSpacing: '0.14em', textTransform: 'uppercase',
-                padding: '3px 9px', borderRadius: 99 }}>
-                {tier.dark ? 'Best value' : season.label}
+        {/* ── T1 ── */}
+        <div style={{
+          background: C.cream, padding: '26px 22px',
+          borderRight: `1px solid ${C.rule}`,
+          display: 'flex', flexDirection: 'column',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
+            marginBottom: 4, gap: 8 }}>
+            <span style={{ fontFamily: FONT.mono, fontSize: 9, letterSpacing: '0.22em',
+              textTransform: 'uppercase', color: C.inkMute }}>Tier 1</span>
+            <Badge {...t1Badge} />
+          </div>
+          <div style={{ fontFamily: FONT.display, fontWeight: 700, fontSize: 17,
+            color: C.ink, marginBottom: 14 }}>Test Engine</div>
+          <div style={{ marginBottom: 4 }}>
+            <span style={{ fontFamily: FONT.display, fontWeight: 700, fontSize: 36,
+              color: C.ink, letterSpacing: '-0.02em', lineHeight: 1 }}>{fmt(t1Price.amountCents)}</span>
+            <span style={{ fontFamily: FONT.mono, fontSize: 10, color: C.inkMute, marginLeft: 6 }}>one-time</span>
+          </div>
+          <div style={{ fontFamily: FONT.body, fontSize: 11, color: C.inkMute, marginBottom: 14 }}>
+            Access until Dec 31, {new Date().getFullYear()}
+          </div>
+          <p style={{ fontFamily: FONT.body, fontSize: 12, color: C.inkMute,
+            margin: '0 0 14px', lineHeight: 1.65, flex: 1 }}>
+            Already studied? Use our LC practice engine as your final accuracy check before exam day.
+          </p>
+          <div style={{ marginBottom: 18 }}>
+            {['129 LC practice questions', '13 topic breakdown',
+              '25-sec timed exam engine', 'Speed bonuses & streaks', 'Unlimited attempts']
+              .map((f, i) => <FeatureRow key={i} item={f} dark={false} />)}
+          </div>
+          <button onClick={() => handleCheckout('t1', 1, false)}
+            disabled={loading === 't1'}
+            style={{
+              width: '100%', padding: '12px', borderRadius: 99,
+              border: `1px solid ${C.ruleStrong}`, background: 'none',
+              color: C.inkSoft, fontFamily: FONT.display, fontWeight: 700,
+              fontSize: 13, cursor: loading === 't1' ? 'wait' : 'pointer',
+              transition: 'all 0.15s', opacity: loading === 't1' ? 0.55 : 1,
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = C.accent; e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = C.accent }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = C.inkSoft; e.currentTarget.style.borderColor = C.ruleStrong }}>
+            {loading === 't1' ? 'Redirecting…' : `Get Test Engine — ${fmt(t1Price.amountCents)} →`}
+          </button>
+        </div>
+
+        {/* ── T2 ── */}
+        <div style={{
+          background: C.cream, padding: '26px 22px',
+          borderRight: `1px solid ${C.rule}`,
+          display: 'flex', flexDirection: 'column',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
+            marginBottom: 4, gap: 8 }}>
+            <span style={{ fontFamily: FONT.mono, fontSize: 9, letterSpacing: '0.22em',
+              textTransform: 'uppercase', color: C.inkMute }}>Tier 2</span>
+            <Badge label="Most popular" color="#fff" bg={C.accent} />
+          </div>
+          <div style={{ fontFamily: FONT.display, fontWeight: 700, fontSize: 17,
+            color: C.ink, marginBottom: 14 }}>Full Course</div>
+          <div style={{ marginBottom: 4 }}>
+            {season.season === 'earlyBird' && (
+              <span style={{ fontFamily: FONT.mono, fontSize: 12,
+                color: C.inkMute, textDecoration: 'line-through', marginRight: 6 }}>
+                {fmt(49500 + (examAddon ? 20000 : 0))}
               </span>
             )}
-
-            <div style={{ fontFamily: F.mono, fontSize: 9, letterSpacing: '0.22em', textTransform: 'uppercase',
-              color: tier.dark ? C.tan : C.inkMute, marginBottom: 4 }}>{tier.tag}</div>
-            <div style={{ fontFamily: F.display, fontWeight: 700, fontSize: 16, color: tier.dark ? '#fff' : C.ink,
-              marginBottom: 12, paddingRight: tier.highlight ? 56 : 0 }}>{tier.name}</div>
-
-            <div style={{ marginBottom: 4 }}>
-              {tier.wasPrice && (
-                <span style={{ fontFamily: F.mono, fontSize: 12, color: tier.dark ? 'rgba(249,244,237,0.35)' : C.inkMute,
-                  textDecoration: 'line-through', marginRight: 6 }}>{fmt(tier.wasPrice)}</span>
-              )}
-              <span style={{ fontFamily: F.display, fontWeight: 700, fontSize: 36,
-                color: tier.dark ? '#fff' : (tier.wasPrice ? C.forest : C.ink),
-                letterSpacing: '-0.02em', lineHeight: 1 }}>{fmt(tier.price)}</span>
-              <span style={{ fontFamily: F.mono, fontSize: 10, color: tier.dark ? 'rgba(249,244,237,0.45)' : C.inkMute, marginLeft: 6 }}>one-time</span>
+            <span style={{ fontFamily: FONT.display, fontWeight: 700, fontSize: 36,
+              color: season.season === 'earlyBird' ? C.forest : C.ink,
+              letterSpacing: '-0.02em', lineHeight: 1 }}>
+              {fmt(t2Price.amountCents)}
+            </span>
+            <span style={{ fontFamily: FONT.mono, fontSize: 10, color: C.inkMute, marginLeft: 6 }}>one-time</span>
+          </div>
+          <div style={{ fontFamily: FONT.body, fontSize: 11, color: C.inkMute, marginBottom: 14 }}>
+            Access until Dec 31, {new Date().getFullYear()}
+          </div>
+          <p style={{ fontFamily: FONT.body, fontSize: 12, color: C.inkMute,
+            margin: '0 0 14px', lineHeight: 1.65, flex: 1 }}>
+            All 12 modules structured around the LC exam blueprint. Certificate + 24 CEU hours.
+          </p>
+          <div style={{ marginBottom: 14 }}>
+            {['All 12 modules · 74 lessons', 'Audio narration every lesson',
+              'Bookmarks & notes hub', 'Certificate of completion', '24 CEU credit hours']
+              .map((f, i) => <FeatureRow key={i} item={f} dark={false} />)}
+          </div>
+          {/* Exam add-on toggle */}
+          <label style={{
+            display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
+            background: examAddon ? C.accentDim : C.creamWarm,
+            border: `1px solid ${examAddon ? C.accent : C.rule}`,
+            borderRadius: 8, cursor: 'pointer', marginBottom: 14,
+            transition: 'all 0.15s',
+          }}>
+            <input type="checkbox" checked={examAddon} onChange={e => setExamAddon(e.target.checked)}
+              style={{ accentColor: C.accent, width: 14, height: 14, flexShrink: 0 }} />
+            <div>
+              <div style={{ fontFamily: FONT.display, fontWeight: 700, fontSize: 12,
+                color: C.ink }}>+$200 — Add Exam Engine</div>
+              <div style={{ fontFamily: FONT.body, fontSize: 10.5, color: C.inkMute, marginTop: 1 }}>
+                129 practice questions, unlimited attempts
+              </div>
             </div>
+          </label>
+          <button onClick={() => handleCheckout('t2', 1, examAddon)}
+            disabled={loading === 't2'}
+            style={{
+              width: '100%', padding: '12px', borderRadius: 99,
+              border: `1px solid ${C.ruleStrong}`, background: 'none',
+              color: C.inkSoft, fontFamily: FONT.display, fontWeight: 700,
+              fontSize: 13, cursor: loading === 't2' ? 'wait' : 'pointer',
+              transition: 'all 0.15s', opacity: loading === 't2' ? 0.55 : 1,
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = C.accent; e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = C.accent }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = C.inkSoft; e.currentTarget.style.borderColor = C.ruleStrong }}>
+            {loading === 't2' ? 'Redirecting…' : `Enroll in Full Course — ${fmt(t2Price.amountCents)} →`}
+          </button>
+        </div>
 
-            <div style={{ fontFamily: F.body, fontSize: 11, color: tier.dark ? 'rgba(249,244,237,0.38)' : C.inkMute, marginBottom: 12 }}>
-              Access until Dec 31, {new Date().getFullYear()}
+        {/* ── T3 ── */}
+        <div style={{
+          background: C.ink, padding: '26px 22px',
+          display: 'flex', flexDirection: 'column',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
+            marginBottom: 4, gap: 8 }}>
+            <span style={{ fontFamily: FONT.mono, fontSize: 9, letterSpacing: '0.22em',
+              textTransform: 'uppercase', color: 'rgba(255,255,255,0.38)' }}>Tier 3</span>
+            <Badge label="Best value" color="#fff" bg={C.accent} />
+          </div>
+          <div style={{ fontFamily: FONT.display, fontWeight: 700, fontSize: 17,
+            color: '#fff', marginBottom: 14 }}>Course + Exam</div>
+          <div style={{ marginBottom: 4 }}>
+            {season.season === 'earlyBird' && (
+              <span style={{ fontFamily: FONT.mono, fontSize: 12,
+                color: 'rgba(255,255,255,0.3)', textDecoration: 'line-through', marginRight: 6 }}>
+                {fmt(69500)}
+              </span>
+            )}
+            <span style={{ fontFamily: FONT.display, fontWeight: 700, fontSize: 36,
+              color: season.season === 'earlyBird' ? '#7ecb9e' : '#fff',
+              letterSpacing: '-0.02em', lineHeight: 1 }}>
+              {fmt(t3Price.amountCents)}
+            </span>
+            <span style={{ fontFamily: FONT.mono, fontSize: 10,
+              color: 'rgba(255,255,255,0.38)', marginLeft: 6 }}>one-time</span>
+          </div>
+          <div style={{ fontFamily: FONT.body, fontSize: 11,
+            color: 'rgba(255,255,255,0.38)', marginBottom: 8 }}>
+            Price: $595–$695 depending on season
+          </div>
+          <div style={{ fontFamily: FONT.body, fontSize: 11,
+            color: 'rgba(255,255,255,0.38)', marginBottom: 14 }}>
+            Access until Dec 31, {new Date().getFullYear()}
+          </div>
+          <p style={{ fontFamily: FONT.body, fontSize: 12, color: 'rgba(255,255,255,0.55)',
+            margin: '0 0 14px', lineHeight: 1.65, flex: 1 }}>
+            The complete package — all 12 modules plus the LC practice exam bundled together.
+          </p>
+          <div style={{ marginBottom: 18 }}>
+            {['Everything in Full Course', 'Exam engine bundled',
+              '129 LC practice questions', 'Unlimited exam attempts',
+              'Topic accuracy analytics', 'Priority support']
+              .map((f, i) => <FeatureRow key={i} item={f} dark={true} />)}
+          </div>
+          <button onClick={() => handleCheckout('t3', 1, false)}
+            disabled={loading === 't3'}
+            style={{
+              width: '100%', padding: '12px', borderRadius: 99,
+              border: 'none', background: C.accent, color: '#fff',
+              fontFamily: FONT.display, fontWeight: 700, fontSize: 13,
+              cursor: loading === 't3' ? 'wait' : 'pointer',
+              transition: 'opacity 0.15s', opacity: loading === 't3' ? 0.55 : 1,
+            }}>
+            {loading === 't3' ? 'Redirecting…' : `Enroll + Exam Prep — ${fmt(t3Price.amountCents)} →`}
+          </button>
+        </div>
+      </div>
+
+      {/* ── Team section ── */}
+      <div style={{
+        background: C.creamWarm, border: `1px solid ${C.rule}`,
+        borderRadius: 12, padding: '24px 26px',
+      }}>
+        <div style={{ fontFamily: FONT.display, fontWeight: 700, fontSize: 15,
+          color: C.ink, marginBottom: 4 }}>Team Access</div>
+        <p style={{ fontFamily: FONT.body, fontSize: 12, color: C.inkMute,
+          margin: '0 0 18px', lineHeight: 1.6 }}>
+          Enroll your studio. Volume pricing at 6+ seats. Contact us for 10+ seats.
+        </p>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', marginBottom: 12 }}>
+          <label style={{ fontFamily: FONT.mono, fontSize: 10, letterSpacing: '0.14em',
+            textTransform: 'uppercase', color: C.inkMute, flexShrink: 0 }}>
+            Seats: <strong style={{ color: C.ink }}>{teamSeats}</strong>
+          </label>
+          <input type="range" min={2} max={10} value={teamSeats}
+            onChange={e => setTeamSeats(Number(e.target.value))}
+            style={{ flex: 1, maxWidth: 220, accentColor: C.accent }} />
+          <div>
+            {teamInfo ? (
+              <>
+                <span style={{ fontFamily: FONT.display, fontWeight: 700, fontSize: 26,
+                  color: C.ink, letterSpacing: '-0.02em' }}>{fmt(teamInfo.amountCents)}</span>
+                <span style={{ fontFamily: FONT.mono, fontSize: 10, color: C.inkMute, marginLeft: 6 }}>
+                  ({fmt(teamInfo.perSeat)}/seat)
+                </span>
+              </>
+            ) : (
+              <span style={{ fontFamily: FONT.display, fontWeight: 700, fontSize: 16, color: C.inkMute }}>
+                Contact us
+              </span>
+            )}
+          </div>
+        </div>
+
+        {teamInfo && teamSavings > 0 && (
+          <div style={{ fontFamily: FONT.body, fontSize: 11, color: C.forest,
+            marginBottom: 14, background: C.forestDim, borderRadius: 6,
+            padding: '5px 10px', display: 'inline-block' }}>
+            Save {fmt(teamSavings)} vs individual T3 pricing for {teamSeats} people
+          </div>
+        )}
+
+        {teamSeats < 10 ? (
+          <button onClick={() => handleCheckout('team', teamSeats, false)}
+            disabled={loading === 'team'}
+            style={{
+              padding: '11px 28px', borderRadius: 99,
+              border: `1px solid ${C.ruleStrong}`, background: 'none',
+              color: C.inkSoft, fontFamily: FONT.display, fontWeight: 700,
+              fontSize: 13, cursor: loading === 'team' ? 'wait' : 'pointer',
+              transition: 'all 0.15s', opacity: loading === 'team' ? 0.55 : 1,
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = C.ink; e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = C.ink }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = C.inkSoft; e.currentTarget.style.borderColor = C.ruleStrong }}>
+            {loading === 'team' ? 'Redirecting…' : `Get Team License — ${teamSeats} seats →`}
+          </button>
+        ) : (
+          <div>
+            <div style={{ fontFamily: FONT.body, fontSize: 13, color: C.inkMute, marginBottom: 10 }}>
+              10+ seats — enterprise rates available.
             </div>
+            <a href="mailto:team@lightingmaster.com"
+              style={{ display: 'inline-block', padding: '11px 28px', borderRadius: 99,
+                background: C.ink, color: '#fff', fontFamily: FONT.display,
+                fontWeight: 700, fontSize: 13, textDecoration: 'none' }}>
+              Contact us →
+            </a>
+          </div>
+        )}
+      </div>
 
-            <p style={{ fontFamily: F.body, fontSize: 12, color: tier.dark ? 'rgba(249,244,237,0.6)' : C.inkMute,
-              margin: '0 0 16px', lineHeight: 1.6, flex: 1 }}>{tier.desc}</p>
+      {/* Trust row */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center',
+        gap: 18, flexWrap: 'wrap', marginTop: 22 }}>
+        {['🔒 Secure checkout via Stripe', 'No recurring charges',
+          `Access expires Dec 31, ${new Date().getFullYear()}`]
+          .map((t, i) => (
+            <span key={i} style={{ fontFamily: FONT.body, fontSize: 11, color: C.inkMute }}>
+              {i > 0 && <span style={{ marginRight: 18, color: C.rule }}>·</span>}{t}
+            </span>
+          ))}
+      </div>
 
-            <div style={{ marginBottom: 18 }}>
-              {tier.features.map((item, j) => (
-                <div key={j} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '4px 0',
-                  borderBottom: j < tier.features.length - 1 ? `1px solid ${tier.dark ? 'rgba(249,244,237,0.07)' : C.rule}` : 'none' }}>
-                  <span style={{ color: tier.dark ? 'rgba(249,244,237,0.4)' : C.forest, fontSize: 11, flexShrink: 0 }}>✓</span>
-                  <span style={{ fontFamily: F.display, fontSize: 11, color: tier.dark ? 'rgba(249,244,237,0.75)' : C.inkSoft, lineHeight: 1.5 }}>{item}</span>
-                </div>
-              ))}
-              {tier.addon && (
-                <div style={{ marginTop: 8, fontFamily: F.body, fontSize: 10.5,
-                  color: tier.dark ? 'rgba(249,244,237,0.38)' : C.inkMute, fontStyle: 'italic' }}>{tier.addon}</div>
-              )}
-            </div>
-
-            <button
-              onClick={() => handleBuy(tier.id)}
-              disabled={loading === tier.id}
-              style={{ width: '100%', padding: '12px', borderRadius: 99,
-                border: tier.dark ? 'none' : `1px solid ${C.ruleStrong}`,
-                background: tier.dark ? C.accent : 'none',
-                color: tier.dark ? '#fff' : C.inkSoft,
-                fontFamily: F.display, fontWeight: 700, fontSize: 13,
-                cursor: loading === tier.id ? 'wait' : 'pointer', transition: 'all 0.15s',
-                opacity: loading === tier.id ? 0.6 : 1 }}>
-              {loading === tier.id ? 'Redirecting…' : `Get ${tier.name} — ${fmt(tier.price)} →`}
+      {/* Contact modal */}
+      {contactModal && (
+        <div onClick={() => setContactModal(false)}
+          style={{ position: 'fixed', inset: 0, zIndex: 9999,
+            background: 'rgba(22,18,14,0.72)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ background: C.cream, borderRadius: 16, padding: '32px 36px',
+              maxWidth: 400, width: '90%', textAlign: 'center',
+              border: `1px solid ${C.rule}` }}>
+            <div style={{ fontFamily: FONT.display, fontWeight: 700, fontSize: 20,
+              color: C.ink, marginBottom: 10 }}>Enterprise pricing</div>
+            <p style={{ fontFamily: FONT.body, fontSize: 13, color: C.inkMute,
+              lineHeight: 1.6, marginBottom: 20 }}>
+              For 10+ seats, contact us for volume pricing and custom onboarding.
+            </p>
+            <a href="mailto:team@lightingmaster.com"
+              style={{ display: 'inline-block', padding: '11px 28px', borderRadius: 99,
+                background: C.accent, color: '#fff', fontFamily: FONT.display,
+                fontWeight: 700, fontSize: 13, textDecoration: 'none' }}>
+              team@lightingmaster.com →
+            </a>
+            <button onClick={() => setContactModal(false)}
+              style={{ display: 'block', margin: '14px auto 0',
+                background: 'none', border: 'none', cursor: 'pointer',
+                fontFamily: FONT.body, fontSize: 12, color: C.inkMute }}>
+              Close
             </button>
           </div>
-        ))}
-      </div>
-
-      <div style={{ marginTop: 28, padding: '20px 22px', background: C.creamWarm,
-        border: `1px solid ${C.rule}`, borderRadius: 12 }}>
-        <div style={{ fontFamily: F.display, fontWeight: 700, fontSize: 14, color: C.ink, marginBottom: 4 }}>
-          Team access
         </div>
-        <p style={{ fontFamily: F.body, fontSize: 12, color: C.inkMute, margin: '0 0 14px', lineHeight: 1.6 }}>
-          Enroll your studio. Volume pricing applies at 6+ seats. 10+ seats — contact us for enterprise rates.
-        </p>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', marginBottom: 14 }}>
-          <label style={{ fontFamily: F.mono, fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase', color: C.inkMute }}>
-            Seats: {teamSeats}
-          </label>
-          <input type="range" min={2} max={9} value={teamSeats} onChange={e => setTeamSeats(Number(e.target.value))}
-            style={{ flex: 1, maxWidth: 200, accentColor: C.accent }} />
-          <span style={{ fontFamily: F.display, fontWeight: 700, fontSize: 20, color: C.ink }}>
-            {fmt(getPriceForTier('team', teamSeats))}
-          </span>
-          <span style={{ fontFamily: F.body, fontSize: 11, color: C.inkMute }}>
-            ({fmt(getPriceForTier('team', teamSeats) / teamSeats)}/seat)
-          </span>
-        </div>
-        <button
-          onClick={() => handleBuy('team', { seats: teamSeats })}
-          disabled={loading === 'team'}
-          style={{ padding: '10px 24px', borderRadius: 99, border: `1px solid ${C.ruleStrong}`,
-            background: 'none', color: C.inkSoft, fontFamily: F.display, fontWeight: 700, fontSize: 13,
-            cursor: loading === 'team' ? 'wait' : 'pointer', transition: 'all 0.15s',
-            opacity: loading === 'team' ? 0.6 : 1 }}>
-          {loading === 'team' ? 'Redirecting…' : `Get team access — ${teamSeats} seats →`}
-        </button>
-      </div>
-
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16,
-        flexWrap: 'wrap', marginTop: 20 }}>
-        <span style={{ fontFamily: F.body, fontSize: 11, color: C.inkMute }}>🔒 Secure checkout via Stripe</span>
-        <span style={{ color: C.rule }}>·</span>
-        <span style={{ fontFamily: F.body, fontSize: 11, color: C.inkMute }}>No recurring charges</span>
-        <span style={{ color: C.rule }}>·</span>
-        <span style={{ fontFamily: F.body, fontSize: 11, color: C.inkMute }}>Access expires Dec 31, {new Date().getFullYear()}</span>
-      </div>
+      )}
     </div>
   )
 }
