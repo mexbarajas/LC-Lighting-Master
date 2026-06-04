@@ -1692,74 +1692,74 @@ const LC_DATA = {
 "1.4":{body:["CCT describes the perceived hue of white light by analogy to a <strong>blackbody radiator</strong>. At ~2700–3000 K: warm amber-white. At 4000 K: neutral white. At 5000–7000 K: cool bluish-white. CCT describes only colour <em>appearance</em> — it says nothing about spectral composition or colour rendering ability.","The <strong>Kruithof principle</strong>: warm CCT (2700–3000 K) pairs comfortably with lower illuminance (50–300 lux), mirroring evening daylight. Cool CCT (4000–6500 K) pairs with higher illuminance (300–1000+ lux), mirroring midday daylight. Crossing these pairings typically feels unnatural — very cool light at low illuminance, or very warm light at very high illuminance.","Two supplementary specifications always accompany CCT. <strong>Duv</strong> measures deviation from the Planckian locus: positive = greenish cast; negative = pinkish. ANSI requires |Duv| ≤ 0.006. <strong>SDCM bins</strong> (MacAdam ellipses) quantify manufacturing variation — 3-step SDCM is the threshold for visually consistent adjacent fixtures."],lp:["CCT describes colour appearance only — not rendering. <3000K = warm. 3500–4000K = neutral. >4500K = cool.","Kruithof: warm CCT + low lux comfortable; cool CCT + high lux comfortable. Mismatching often feels wrong.","Always specify Duv (≤±0.006) and SDCM ≤ 3-step alongside CCT."],tts:"Lesson 1.4. Correlated Colour Temperature. CCT describes colour appearance only — not rendering. Below 3000 Kelvin is warm. 3500 to 4000 Kelvin is neutral. Above 4500 Kelvin is cool. Kruithof principle: warm CCT with low illuminance, cool CCT with high illuminance. Always specify Duv at plus or minus 0.006 maximum and SDCM of 3-step or better."},
 "1.5":{body:["<strong>CRI (Ra)</strong> averages the colour shift of eight muted test colour samples (R1–R8) on a 0–100 scale. Ra ≥ 80 adequate; Ra ≥ 90 required for surgical, galleries, premium retail. Critical weakness: all eight samples are muted pastels — vivid saturated colours are ignored. <strong>R9 (saturated red)</strong> must always be specified separately. R9 ≥ 50 is the standard minimum for colour-critical applications.","IES <strong>TM-30</strong> uses 99 colour evaluation samples spanning the full real-world gamut. It produces two metrics: <strong>Rf (Fidelity Index)</strong> — accuracy on 0–100 scale, analogous to Ra but more rigorous — and <strong>Rg (Gamut Index)</strong>, which measures whether the source makes colours appear more or less saturated. Rg > 100 means more vivid; Rg < 100 means flatter. Always specify and report both.","A grocery store might target Rf 85 / Rg 108 for vivid produce. A museum targets Rf 95 / Rg 100 for faithful reproduction. LEED v4.1 EQ Interior Lighting requires CRI ≥ 90 and R9 ≥ 50 for the quality credit. Always verify from independent third-party LM-79 test reports."],lp:["CRI (Ra): average of 8 muted colours, 0–100. Ra ≥ 80 adequate; Ra ≥ 90 excellent. R9 (saturated red) NOT in Ra — specify R9 ≥ 50 separately.","TM-30 Rf = fidelity (99 samples). Rg = gamut (>100 vivid, <100 flat). Specify and report both together.","Metamerism: surfaces match under one source, differ under another. Control with broadspectrum sources and Ra ≥ 90 in critical spaces."],tts:"Lesson 1.5. Colour Rendering — CRI and TM-30. CRI or Ra averages 8 muted test colours on a scale of 0 to 100. Ra 80 is adequate; Ra 90 is excellent. R9 for saturated red is not included in Ra — always specify R9 of 50 or greater. TM-30 uses 99 samples and gives Rf for fidelity and Rg for gamut. Rg above 100 means more vivid; below 100 means flatter. Specify both together."},
 "1.6":{body:["The rendering hierarchy: <strong>Ra ≥ 95+</strong> for surgical and gemological work. <strong>Ra ≥ 90</strong> for museums, galleries, fashion retail, healthcare exam rooms. <strong>Ra ≥ 80</strong> for general offices and standard retail. <strong>Ra ≥ 70</strong> for warehouses and industrial. Specifying Ra 95 throughout an office is wasteful; Ra 70 in a paint showroom is a design error.","<strong>Metamerism</strong> occurs when two surfaces match under one source but diverge under another — caused by different spectral reflectance curves reacting differently to different SPDs. Engineering controls: specify broadspectrum sources; Ra ≥ 90 for colour-critical QC spaces; evaluate colour matches under D65 illumination.","A complete colour rendering specification bundles four items: <strong>CCT + minimum Ra + minimum R9 + SDCM ≤ 3-step</strong>. Each controls a different dimension of colour quality — none alone is sufficient. For tunable white, verify Ra and Rg stability across the full CCT range. Confirm Ra and R9 from independent LM-79 test data."],lp:["Hierarchy: Ra ≥ 95 surgical → Ra ≥ 90 museum/retail/healthcare → Ra ≥ 80 offices → Ra ≥ 70 warehouse. Match to task — don't over-specify.","Complete spec = CCT + min Ra + min R9 + SDCM ≤ 3-step. Each controls a different dimension.","Always verify Ra and R9 from independent LM-79 test data. Confirm rendering stability for tunable white."],tts:"Lesson 1.6. Colour Rendering in Practice. Match rendering to task: Ra 95 for surgical, Ra 90 for museum and healthcare, Ra 80 for offices, Ra 70 for industrial. Metamerism is two surfaces matching under one source but not another. Specify CCT plus minimum Ra plus minimum R9 plus SDCM of 3-step or better. Verify from independent LM-79 test data."},
-"2.1":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 2.1."},
-"2.2":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 2.2."},
-"2.3":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 2.3."},
-"2.4":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 2.4."},
-"2.5":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 2.5."},
-"2.6":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 2.6."},
-"3.1":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 3.1."},
-"3.2":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 3.2."},
-"3.3":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 3.3."},
-"3.4":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 3.4."},
-"3.5":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 3.5."},
-"3.6":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 3.6."},
-"3.7":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 3.7."},
-"3.8":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 3.8."},
-"4.1":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 4.1."},
-"4.2":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 4.2."},
-"4.3":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 4.3."},
-"4.4":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 4.4."},
-"4.5":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 4.5."},
-"4.6":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 4.6."},
-"5.1":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 5.1."},
-"5.2":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 5.2."},
-"5.3":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 5.3."},
-"5.4":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 5.4."},
-"5.5":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 5.5."},
-"5.6":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 5.6."},
-"6.1":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 6.1."},
-"6.2":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 6.2."},
-"6.3":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 6.3."},
-"6.4":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 6.4."},
-"6.5":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 6.5."},
-"6.6":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 6.6."},
-"7.1":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 7.1."},
-"7.2":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 7.2."},
-"7.3":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 7.3."},
-"7.4":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 7.4."},
-"7.5":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 7.5."},
-"7.6":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 7.6."},
-"8.1":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 8.1."},
-"8.2":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 8.2."},
-"8.3":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 8.3."},
-"8.4":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 8.4."},
-"8.5":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 8.5."},
-"8.6":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 8.6."},
-"9.1":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 9.1."},
-"9.2":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 9.2."},
-"9.3":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 9.3."},
-"9.4":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 9.4."},
-"9.5":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 9.5."},
-"9.6":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 9.6."},
-"10.1":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 10.1."},
-"10.2":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 10.2."},
-"10.3":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 10.3."},
-"10.4":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 10.4."},
-"10.5":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 10.5."},
-"10.6":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 10.6."},
-"11.1":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 11.1."},
-"11.2":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 11.2."},
-"11.3":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 11.3."},
-"11.4":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 11.4."},
-"11.5":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 11.5."},
-"11.6":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 11.6."},
-"12.1":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 12.1."},
-"12.2":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 12.2."},
-"12.3":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 12.3."},
-"12.4":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 12.4."},
-"12.5":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 12.5."},
-"12.6":{"body":["Full lesson content in production build."],"lp":["Key concept 1","Key concept 2"],"tts":"Lesson 12.6."}
+"2.1":{"body":[],"lp":[],"tts":"Lesson 2.1."},
+"2.2":{"body":[],"lp":[],"tts":"Lesson 2.2."},
+"2.3":{"body":[],"lp":[],"tts":"Lesson 2.3."},
+"2.4":{"body":[],"lp":[],"tts":"Lesson 2.4."},
+"2.5":{"body":[],"lp":[],"tts":"Lesson 2.5."},
+"2.6":{"body":[],"lp":[],"tts":"Lesson 2.6."},
+"3.1":{"body":[],"lp":[],"tts":"Lesson 3.1."},
+"3.2":{"body":[],"lp":[],"tts":"Lesson 3.2."},
+"3.3":{"body":[],"lp":[],"tts":"Lesson 3.3."},
+"3.4":{"body":[],"lp":[],"tts":"Lesson 3.4."},
+"3.5":{"body":[],"lp":[],"tts":"Lesson 3.5."},
+"3.6":{"body":[],"lp":[],"tts":"Lesson 3.6."},
+"3.7":{"body":[],"lp":[],"tts":"Lesson 3.7."},
+"3.8":{"body":[],"lp":[],"tts":"Lesson 3.8."},
+"4.1":{"body":[],"lp":[],"tts":"Lesson 4.1."},
+"4.2":{"body":[],"lp":[],"tts":"Lesson 4.2."},
+"4.3":{"body":[],"lp":[],"tts":"Lesson 4.3."},
+"4.4":{"body":[],"lp":[],"tts":"Lesson 4.4."},
+"4.5":{"body":[],"lp":[],"tts":"Lesson 4.5."},
+"4.6":{"body":[],"lp":[],"tts":"Lesson 4.6."},
+"5.1":{"body":[],"lp":[],"tts":"Lesson 5.1."},
+"5.2":{"body":[],"lp":[],"tts":"Lesson 5.2."},
+"5.3":{"body":[],"lp":[],"tts":"Lesson 5.3."},
+"5.4":{"body":[],"lp":[],"tts":"Lesson 5.4."},
+"5.5":{"body":[],"lp":[],"tts":"Lesson 5.5."},
+"5.6":{"body":[],"lp":[],"tts":"Lesson 5.6."},
+"6.1":{"body":[],"lp":[],"tts":"Lesson 6.1."},
+"6.2":{"body":[],"lp":[],"tts":"Lesson 6.2."},
+"6.3":{"body":[],"lp":[],"tts":"Lesson 6.3."},
+"6.4":{"body":[],"lp":[],"tts":"Lesson 6.4."},
+"6.5":{"body":[],"lp":[],"tts":"Lesson 6.5."},
+"6.6":{"body":[],"lp":[],"tts":"Lesson 6.6."},
+"7.1":{"body":[],"lp":[],"tts":"Lesson 7.1."},
+"7.2":{"body":[],"lp":[],"tts":"Lesson 7.2."},
+"7.3":{"body":[],"lp":[],"tts":"Lesson 7.3."},
+"7.4":{"body":[],"lp":[],"tts":"Lesson 7.4."},
+"7.5":{"body":[],"lp":[],"tts":"Lesson 7.5."},
+"7.6":{"body":[],"lp":[],"tts":"Lesson 7.6."},
+"8.1":{"body":[],"lp":[],"tts":"Lesson 8.1."},
+"8.2":{"body":[],"lp":[],"tts":"Lesson 8.2."},
+"8.3":{"body":[],"lp":[],"tts":"Lesson 8.3."},
+"8.4":{"body":[],"lp":[],"tts":"Lesson 8.4."},
+"8.5":{"body":[],"lp":[],"tts":"Lesson 8.5."},
+"8.6":{"body":[],"lp":[],"tts":"Lesson 8.6."},
+"9.1":{"body":[],"lp":[],"tts":"Lesson 9.1."},
+"9.2":{"body":[],"lp":[],"tts":"Lesson 9.2."},
+"9.3":{"body":[],"lp":[],"tts":"Lesson 9.3."},
+"9.4":{"body":[],"lp":[],"tts":"Lesson 9.4."},
+"9.5":{"body":[],"lp":[],"tts":"Lesson 9.5."},
+"9.6":{"body":[],"lp":[],"tts":"Lesson 9.6."},
+"10.1":{"body":[],"lp":[],"tts":"Lesson 10.1."},
+"10.2":{"body":[],"lp":[],"tts":"Lesson 10.2."},
+"10.3":{"body":[],"lp":[],"tts":"Lesson 10.3."},
+"10.4":{"body":[],"lp":[],"tts":"Lesson 10.4."},
+"10.5":{"body":[],"lp":[],"tts":"Lesson 10.5."},
+"10.6":{"body":[],"lp":[],"tts":"Lesson 10.6."},
+"11.1":{"body":[],"lp":[],"tts":"Lesson 11.1."},
+"11.2":{"body":[],"lp":[],"tts":"Lesson 11.2."},
+"11.3":{"body":[],"lp":[],"tts":"Lesson 11.3."},
+"11.4":{"body":[],"lp":[],"tts":"Lesson 11.4."},
+"11.5":{"body":[],"lp":[],"tts":"Lesson 11.5."},
+"11.6":{"body":[],"lp":[],"tts":"Lesson 11.6."},
+"12.1":{"body":[],"lp":[],"tts":"Lesson 12.1."},
+"12.2":{"body":[],"lp":[],"tts":"Lesson 12.2."},
+"12.3":{"body":[],"lp":[],"tts":"Lesson 12.3."},
+"12.4":{"body":[],"lp":[],"tts":"Lesson 12.4."},
+"12.5":{"body":[],"lp":[],"tts":"Lesson 12.5."},
+"12.6":{"body":[],"lp":[],"tts":"Lesson 12.6."}
 };
 
 /* ══════════════════════════════════════════
@@ -2751,19 +2751,29 @@ function LessonPage({lessonRef,setRoute,user,setShowUpgrade}) {
         <>
           <div style={{background:C.paper,border:`1px solid ${C.rule}`,borderRadius:6,padding:"24px 28px",marginBottom:14}}>
             <div style={mono({fontSize:9,letterSpacing:"0.2em",textTransform:"uppercase",color:C.inkMute,marginBottom:14})}>Lesson content</div>
-            {content.body.map((p,i)=>(
-              <p key={i} style={{fontFamily:F.body,fontSize:14,lineHeight:1.78,color:C.inkSoft,marginTop:i>0?15:0}} dangerouslySetInnerHTML={{__html:p}}/>
-            ))}
-          </div>
-          <div style={{background:C.creamWarm,border:`1px solid ${C.rule}`,borderRadius:6,padding:"16px 20px",marginBottom:18}}>
-            <div style={mono({fontSize:9,letterSpacing:"0.2em",textTransform:"uppercase",color:C.inkMute,marginBottom:11})}>Key learning points</div>
-            {content.lp.map((t,i)=>(
-              <div key={i} style={{display:"flex",gap:10,alignItems:"flex-start",padding:"7px 0",borderBottom:i<content.lp.length-1?`1px solid ${C.rule}`:"none"}}>
-                <span style={{width:6,height:6,borderRadius:"50%",background:C.accent,flexShrink:0,marginTop:6}}/>
-                <span style={{fontFamily:F.display,fontSize:13,lineHeight:1.6,color:C.ink,fontWeight:600}}>{t}</span>
+            {content?.body?.length > 0 ? (
+              content.body.map((para, i) => (
+                <div key={i} style={{fontFamily:F.body,fontSize:14,lineHeight:1.8,color:C.ink,marginBottom:18}}
+                  dangerouslySetInnerHTML={{__html:para}}
+                />
+              ))
+            ) : (
+              <div style={{fontFamily:F.mono,fontSize:12,color:C.inkMute,padding:"20px 0"}}>
+                Content coming soon for this lesson.
               </div>
-            ))}
+            )}
           </div>
+          {content.lp?.length > 0 && (
+            <div style={{background:C.creamWarm,border:`1px solid ${C.rule}`,borderRadius:6,padding:"16px 20px",marginBottom:18}}>
+              <div style={mono({fontSize:9,letterSpacing:"0.2em",textTransform:"uppercase",color:C.inkMute,marginBottom:11})}>Key learning points</div>
+              {content.lp.map((t,i)=>(
+                <div key={i} style={{display:"flex",gap:10,alignItems:"flex-start",padding:"7px 0",borderBottom:i<content.lp.length-1?`1px solid ${C.rule}`:"none"}}>
+                  <span style={{width:6,height:6,borderRadius:"50%",background:C.accent,flexShrink:0,marginTop:6}}/>
+                  <span style={{fontFamily:F.display,fontSize:13,lineHeight:1.6,color:C.ink,fontWeight:600}}>{t}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </>
       ):(
         <div style={{background:C.paper,border:`1px solid ${C.rule}`,borderRadius:6,padding:"28px 32px",marginBottom:18}}>
