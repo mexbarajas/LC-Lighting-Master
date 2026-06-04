@@ -2538,6 +2538,96 @@ function ModuleCompleteModal({module, courseComplete, onClose}){
   )
 }
 
+/* ── LESSON MEDIA MAP ── */
+const CLOUDINARY_BASE = 'https://res.cloudinary.com/dreuglb2j/image/upload'
+
+const LC_MEDIA = {
+  // MODULE 1
+  "1.1": `${CLOUDINARY_BASE}/v1780595398/101.png`,
+  "1.2": `${CLOUDINARY_BASE}/102.png`,
+  "1.3": `${CLOUDINARY_BASE}/103.png`,
+  "1.4": `${CLOUDINARY_BASE}/104.png`,
+  "1.5": `${CLOUDINARY_BASE}/105.png`,
+  "1.6": `${CLOUDINARY_BASE}/106.png`,
+  // MODULE 2
+  "2.1": `${CLOUDINARY_BASE}/v1780595964/201_qtqfiq.png`,
+  "2.2": `${CLOUDINARY_BASE}/v1780595963/202_u1phtz.png`,
+  "2.3": `${CLOUDINARY_BASE}/203.png`,
+  "2.4": `${CLOUDINARY_BASE}/v1780595963/204_id0evl.png`,
+  "2.5": `${CLOUDINARY_BASE}/v1780595963/205_t8bdsj.png`,
+  "2.6": `${CLOUDINARY_BASE}/206.png`,
+  // MODULE 3
+  "3.1": `${CLOUDINARY_BASE}/v1780595832/301_z5fxzi.png`,
+  "3.2": `${CLOUDINARY_BASE}/302.png`,
+  "3.3": `${CLOUDINARY_BASE}/303.png`,
+  "3.4": `${CLOUDINARY_BASE}/v1780595833/304_zyyr3m.png`,
+  "3.5": `${CLOUDINARY_BASE}/305.png`,
+  "3.6": `${CLOUDINARY_BASE}/306.png`,
+  // MODULE 4
+  "4.1": `${CLOUDINARY_BASE}/401.png`,
+  "4.2": `${CLOUDINARY_BASE}/402.png`,
+  "4.3": `${CLOUDINARY_BASE}/403.png`,
+  "4.4": `${CLOUDINARY_BASE}/404.png`,
+  "4.5": `${CLOUDINARY_BASE}/405.png`,
+  "4.6": `${CLOUDINARY_BASE}/406.png`,
+  // MODULE 5
+  "5.1": `${CLOUDINARY_BASE}/501.png`,
+  "5.2": `${CLOUDINARY_BASE}/502.png`,
+  "5.3": `${CLOUDINARY_BASE}/503.png`,
+  "5.4": `${CLOUDINARY_BASE}/504.png`,
+  "5.5": `${CLOUDINARY_BASE}/505.png`,
+  "5.6": `${CLOUDINARY_BASE}/506.png`,
+  // MODULE 6
+  "6.1": `${CLOUDINARY_BASE}/601.png`,
+  "6.2": `${CLOUDINARY_BASE}/602.png`,
+  "6.3": `${CLOUDINARY_BASE}/603.png`,
+  "6.4": `${CLOUDINARY_BASE}/604.png`,
+  "6.5": `${CLOUDINARY_BASE}/605.png`,
+  "6.6": `${CLOUDINARY_BASE}/606.png`,
+  // MODULE 7
+  "7.1": `${CLOUDINARY_BASE}/701.png`,
+  "7.2": `${CLOUDINARY_BASE}/702.png`,
+  "7.3": `${CLOUDINARY_BASE}/703.png`,
+  "7.4": `${CLOUDINARY_BASE}/704.png`,
+  "7.5": `${CLOUDINARY_BASE}/705.png`,
+  "7.6": `${CLOUDINARY_BASE}/706.png`,
+  // MODULE 8
+  "8.1": `${CLOUDINARY_BASE}/801.png`,
+  "8.2": `${CLOUDINARY_BASE}/802.png`,
+  "8.3": `${CLOUDINARY_BASE}/803.png`,
+  "8.4": `${CLOUDINARY_BASE}/804.png`,
+  "8.5": `${CLOUDINARY_BASE}/805.png`,
+  "8.6": `${CLOUDINARY_BASE}/806.png`,
+  // MODULE 9
+  "9.1": `${CLOUDINARY_BASE}/901.png`,
+  "9.2": `${CLOUDINARY_BASE}/902.png`,
+  "9.3": `${CLOUDINARY_BASE}/903.png`,
+  "9.4": `${CLOUDINARY_BASE}/904.png`,
+  "9.5": `${CLOUDINARY_BASE}/905.png`,
+  "9.6": `${CLOUDINARY_BASE}/906.png`,
+  // MODULE 10
+  "10.1": `${CLOUDINARY_BASE}/1001.png`,
+  "10.2": `${CLOUDINARY_BASE}/1002.png`,
+  "10.3": `${CLOUDINARY_BASE}/1003.png`,
+  "10.4": `${CLOUDINARY_BASE}/1004.png`,
+  "10.5": `${CLOUDINARY_BASE}/1005.png`,
+  "10.6": `${CLOUDINARY_BASE}/1006.png`,
+  // MODULE 11
+  "11.1": `${CLOUDINARY_BASE}/1101.png`,
+  "11.2": `${CLOUDINARY_BASE}/1102.png`,
+  "11.3": `${CLOUDINARY_BASE}/1103.png`,
+  "11.4": `${CLOUDINARY_BASE}/1104.png`,
+  "11.5": `${CLOUDINARY_BASE}/1105.png`,
+  "11.6": `${CLOUDINARY_BASE}/1106.png`,
+  // MODULE 12
+  "12.1": `${CLOUDINARY_BASE}/1201.png`,
+  "12.2": `${CLOUDINARY_BASE}/1202.png`,
+  "12.3": `${CLOUDINARY_BASE}/1203.png`,
+  "12.4": `${CLOUDINARY_BASE}/1204.png`,
+  "12.5": `${CLOUDINARY_BASE}/1205.png`,
+  "12.6": `${CLOUDINARY_BASE}/1206.png`,
+}
+
 function LessonPage({lessonRef,setRoute}) {
   const [showShareModal,setShowShareModal]=useState(false)
   const lesson = ALL_LESSONS.find(l=>l.ref===lessonRef)
@@ -2581,20 +2671,32 @@ function LessonPage({lessonRef,setRoute}) {
         <button id="_pvc" onClick={()=>window._cycleVoice()} style={mono({fontSize:9,color:C.inkMute,padding:"3px 8px",borderRadius:99,border:`1px solid ${C.rule}`,background:"none",cursor:"pointer",maxWidth:90,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"})}>{voiceName}</button>
       </div>
 
-      {/* Media placeholder */}
-      <div style={{border:`1.5px dashed ${C.rule}`,borderRadius:6,marginBottom:14,overflow:"hidden",background:C.creamWarm}}>
-        <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:200,gap:10,padding:"28px 24px"}}>
-          <div style={{width:48,height:48,borderRadius:"50%",border:`1.5px dashed ${C.ruleStrong}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-            <svg viewBox="0 0 24 24" style={{width:22,height:22,fill:"none",stroke:C.inkMute,strokeWidth:1.5,strokeLinecap:"round",strokeLinejoin:"round"}}>
-              <rect x="2" y="2" width="20" height="20" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/><path d="M14 8l3 3"/>
-            </svg>
-          </div>
-          <div style={{textAlign:"center"}}>
-            <div style={{fontFamily:F.display,fontSize:13,fontWeight:600,color:C.inkMute,marginBottom:4}}>Photo or video</div>
-            <div style={mono({fontSize:9,letterSpacing:"0.14em",textTransform:"uppercase",color:C.inkMute})}>Add media for lesson {lessonRef}</div>
+      {/* Lesson image */}
+      {LC_MEDIA[lessonRef]?(
+        <div style={{borderRadius:6,marginBottom:14,overflow:"hidden",background:C.creamWarm}}
+          onError={()=>{}}>
+          <img
+            src={LC_MEDIA[lessonRef]}
+            alt={`Lesson ${lessonRef} — ${lesson.title}`}
+            style={{width:"100%",display:"block",maxHeight:480,objectFit:"cover"}}
+            onError={e=>{ e.target.parentElement.style.display="none" }}
+          />
+        </div>
+      ):(
+        <div style={{border:`1.5px dashed ${C.rule}`,borderRadius:6,marginBottom:14,overflow:"hidden",background:C.creamWarm}}>
+          <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:200,gap:10,padding:"28px 24px"}}>
+            <div style={{width:48,height:48,borderRadius:"50%",border:`1.5px dashed ${C.ruleStrong}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+              <svg viewBox="0 0 24 24" style={{width:22,height:22,fill:"none",stroke:C.inkMute,strokeWidth:1.5,strokeLinecap:"round",strokeLinejoin:"round"}}>
+                <rect x="2" y="2" width="20" height="20" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/><path d="M14 8l3 3"/>
+              </svg>
+            </div>
+            <div style={{textAlign:"center"}}>
+              <div style={{fontFamily:F.display,fontSize:13,fontWeight:600,color:C.inkMute,marginBottom:4}}>Photo or video</div>
+              <div style={mono({fontSize:9,letterSpacing:"0.14em",textTransform:"uppercase",color:C.inkMute})}>Add media for lesson {lessonRef}</div>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Visual */}
       {visual&&(
