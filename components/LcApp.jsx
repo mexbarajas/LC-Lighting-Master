@@ -1991,7 +1991,7 @@ function SearchPage({setRoute, user, setShowUpgrade}) {
               const locked = isLessonLocked(l.ref, user)
               const preview = getLessonPreview(l.ref)
               return (
-                <div key={l.ref} onClick={()=>{ if(locked){ setShowUpgrade(true); return } setRoute("lesson-"+l.ref) }}
+                <div key={l.ref} onClick={()=>{ if(locked){ setShowUpgrade(true); return } window.scrollTo({top:0,behavior:'smooth'}); setRoute("lesson-"+l.ref) }}
                   style={{display:"grid",gridTemplateColumns:"52px 1fr auto",gap:14,alignItems:"center",background:C.cream,padding:"14px 16px",cursor:"pointer",transition:"background 140ms",opacity:locked?0.6:1}}
                   onMouseEnter={e=>e.currentTarget.style.background=C.creamWarm} onMouseLeave={e=>e.currentTarget.style.background=C.cream}>
                   <span style={{fontFamily:F.display,fontWeight:700,fontSize:17,letterSpacing:"-0.02em",color:l.done?C.inkMute:C.forest}}>{l.ref}</span>
@@ -2028,7 +2028,7 @@ function BookmarksPage({setRoute}) {
       <p style={{fontFamily:F.body,fontSize:14,lineHeight:1.55,color:C.inkMute,margin:"20px 0 24px",maxWidth:620}}>Lessons you starred to revisit before the exam. These are the concepts that earned a second look.</p>
       <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:16}}>
         {items.map(({ref,note,lesson:l})=>(
-          <article key={ref} onClick={()=>setRoute("lesson-"+ref)} style={{display:"flex",flexDirection:"column",background:C.paper,border:`1px solid ${C.rule}`,borderRadius:4,overflow:"hidden",cursor:"pointer",transition:"border-color 150ms,transform 150ms"}}
+          <article key={ref} onClick={()=>{window.scrollTo({top:0,behavior:'smooth'});setRoute("lesson-"+ref)}} style={{display:"flex",flexDirection:"column",background:C.paper,border:`1px solid ${C.rule}`,borderRadius:4,overflow:"hidden",cursor:"pointer",transition:"border-color 150ms,transform 150ms"}}
             onMouseEnter={e=>{e.currentTarget.style.borderColor=C.inkMute;e.currentTarget.style.transform="translateY(-2px)"}}
             onMouseLeave={e=>{e.currentTarget.style.borderColor=C.rule;e.currentTarget.style.transform="translateY(0)"}}>
             <div style={{display:"grid",gridTemplateColumns:"auto 1fr auto",gap:14,alignItems:"start",padding:"20px 22px 16px"}}>
@@ -2099,7 +2099,7 @@ function NotesPage({setRoute}) {
         {sorted.map((n,i)=>{
           const l=n.lesson
           return (
-            <article key={i} onClick={()=>l&&setRoute("lesson-"+l.ref)} style={{breakInside:"avoid",marginBottom:16,background:C.paper,border:`1px solid ${C.rule}`,borderRadius:4,borderLeft:`3px solid ${l?.done?C.forest:C.accent}`,padding:"18px 20px",cursor:"pointer",transition:"box-shadow 150ms"}}
+            <article key={i} onClick={()=>l&&(window.scrollTo({top:0,behavior:'smooth'}),setRoute("lesson-"+l.ref))} style={{breakInside:"avoid",marginBottom:16,background:C.paper,border:`1px solid ${C.rule}`,borderRadius:4,borderLeft:`3px solid ${l?.done?C.forest:C.accent}`,padding:"18px 20px",cursor:"pointer",transition:"box-shadow 150ms"}}
               onMouseEnter={e=>e.currentTarget.style.boxShadow="0 6px 20px -12px rgba(40,30,20,0.3)"}
               onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}>
               <div style={{display:"flex",alignItems:"baseline",justifyContent:"space-between",gap:12,marginBottom:10}}>
@@ -2705,6 +2705,7 @@ function UpgradePrompt({onUpgrade, setRoute}){
 
 function LessonPage({lessonRef,setRoute,user,setShowUpgrade}) {
   const [showShareModal,setShowShareModal]=useState(false)
+  useEffect(()=>{ window.scrollTo({top:0,behavior:'instant'}) },[lessonRef])
   const lesson = ALL_LESSONS.find(l=>l.ref===lessonRef)
   const module = MODULES.find(m=>m.n===lesson?.module)
   if (!lesson||!module) return <div style={{padding:"40px 36px",color:C.inkMute}}>Lesson not found.</div>
@@ -2746,6 +2747,13 @@ function LessonPage({lessonRef,setRoute,user,setShowUpgrade}) {
         <button id="_pspd" onClick={()=>window._cycleSpeed()} style={mono({fontSize:10,color:C.inkMute,padding:"3px 8px",borderRadius:99,border:`1px solid ${C.rule}`,background:"none",cursor:"pointer",minWidth:34,textAlign:"center"})}>{_speeds[_spdIdx]}×</button>
         <button id="_pvc" onClick={()=>window._cycleVoice()} style={mono({fontSize:9,color:C.inkMute,padding:"3px 8px",borderRadius:99,border:`1px solid ${C.rule}`,background:"none",cursor:"pointer",maxWidth:90,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"})}>{voiceName}</button>
       </div>
+
+      {/* Top next button */}
+      {next&&(
+        <div style={{display:"flex",justifyContent:"flex-end",marginBottom:14}}>
+          <button onClick={()=>{if(typeof _stopTTS!=='undefined')_stopTTS();window.scrollTo({top:0,behavior:'smooth'});setRoute("lesson-"+next.ref)}} style={{fontFamily:F.display,fontWeight:700,fontSize:13,background:C.ink,color:"#fff",border:"none",borderRadius:99,padding:"9px 18px",cursor:"pointer"}}>Next lesson →</button>
+        </div>
+      )}
 
       {/* Lesson image */}
       {LC_MEDIA[lessonRef]?(
@@ -2818,8 +2826,8 @@ function LessonPage({lessonRef,setRoute,user,setShowUpgrade}) {
       )}
 
       <div style={{display:"flex",justifyContent:"space-between",gap:12}}>
-        {prev?<button onClick={()=>{if(typeof _stopTTS!=='undefined')_stopTTS();setRoute("lesson-"+prev.ref)}} style={{fontFamily:F.display,fontWeight:600,fontSize:13,background:"none",color:C.inkSoft,border:`1px solid ${C.rule}`,borderRadius:99,padding:"9px 18px",cursor:"pointer"}}>← {prev.ref} · {prev.title}</button>:<div/>}
-        {next?<button onClick={()=>{if(typeof _stopTTS!=='undefined')_stopTTS();setRoute("lesson-"+next.ref)}} style={{fontFamily:F.display,fontWeight:700,fontSize:13,background:C.ink,color:"#fff",border:"none",borderRadius:99,padding:"9px 18px",cursor:"pointer"}}>{next.ref} · {next.title} →</button>:(
+        {prev?<button onClick={()=>{if(typeof _stopTTS!=='undefined')_stopTTS();window.scrollTo({top:0,behavior:'smooth'});setRoute("lesson-"+prev.ref)}} style={{fontFamily:F.display,fontWeight:600,fontSize:13,background:"none",color:C.inkSoft,border:`1px solid ${C.rule}`,borderRadius:99,padding:"9px 18px",cursor:"pointer"}}>← {prev.ref} · {prev.title}</button>:<div/>}
+        {next?<button onClick={()=>{if(typeof _stopTTS!=='undefined')_stopTTS();window.scrollTo({top:0,behavior:'smooth'});setRoute("lesson-"+next.ref)}} style={{fontFamily:F.display,fontWeight:700,fontSize:13,background:C.ink,color:"#fff",border:"none",borderRadius:99,padding:"9px 18px",cursor:"pointer"}}>{next.ref} · {next.title} →</button>:(
           <button onClick={()=>{if(typeof _stopTTS!=='undefined')_stopTTS();setShowShareModal(true)}}
             style={{fontFamily:F.display,fontWeight:700,fontSize:13,
               background:C.accent,color:"#fff",border:"none",
@@ -2846,7 +2854,7 @@ function ContinuePage({setRoute}) {
   return (
     <div style={{padding:"0 36px 48px"}}>
       <PageHead eyebrow="My progress · Resume" title="Resume" em="Module 3."/>
-      <div style={{background:C.ink,borderRadius:6,padding:"32px 36px",margin:"28px 0 0",cursor:"pointer"}} onClick={()=>setRoute("lesson-3.4")}>
+      <div style={{background:C.ink,borderRadius:6,padding:"32px 36px",margin:"28px 0 0",cursor:"pointer"}} onClick={()=>{window.scrollTo({top:0,behavior:'smooth'});setRoute("lesson-3.4")}}>
         <div style={mono({fontSize:9,letterSpacing:"0.24em",textTransform:"uppercase",color:C.tan,marginBottom:12})}>— pick up where you left off</div>
         <h2 style={{fontFamily:F.display,fontWeight:700,fontSize:26,letterSpacing:"-0.02em",lineHeight:1.1,margin:"0 0 12px",color:"#fff"}}>Module 03 · Lesson 3.4 — <em style={{fontStyle:"normal",color:C.accent}}>CC vs CV drivers.</em></h2>
         <p style={{fontFamily:F.body,fontSize:14,lineHeight:1.6,color:"rgba(248,243,236,0.72)",margin:"0 0 20px",maxWidth:500}}>You read through 3.3 yesterday. Next: how constant-current vs constant-voltage drivers shape your fixture choice.</p>
@@ -2861,7 +2869,7 @@ function ContinuePage({setRoute}) {
         <div style={mono({fontSize:9,letterSpacing:"0.22em",textTransform:"uppercase",color:C.inkMute,marginBottom:14})}>Module 3 lessons</div>
         <div style={{display:"grid",gap:1,background:C.rule,border:`1px solid ${C.rule}`,borderRadius:4,overflow:"hidden"}}>
           {MODULES[2].lessons.map(l=>(
-            <div key={l.ref} onClick={()=>setRoute("lesson-"+l.ref)} style={{display:"grid",gridTemplateColumns:"52px 1fr auto",gap:14,alignItems:"center",background:l.active?`color-mix(in srgb,${C.accent} 5%,${C.cream})`:C.cream,padding:"13px 18px",cursor:"pointer",transition:"background 140ms"}}
+            <div key={l.ref} onClick={()=>{window.scrollTo({top:0,behavior:'smooth'});setRoute("lesson-"+l.ref)}} style={{display:"grid",gridTemplateColumns:"52px 1fr auto",gap:14,alignItems:"center",background:l.active?`color-mix(in srgb,${C.accent} 5%,${C.cream})`:C.cream,padding:"13px 18px",cursor:"pointer",transition:"background 140ms"}}
               onMouseEnter={e=>e.currentTarget.style.background=C.creamWarm}
               onMouseLeave={e=>e.currentTarget.style.background=l.active?`color-mix(in srgb,${C.accent} 5%,${C.cream})`:C.cream}>
               <span style={{fontFamily:F.display,fontWeight:700,fontSize:17,color:l.done?C.inkMute:l.active?C.accent:C.forest}}>{l.ref}</span>
@@ -2964,7 +2972,7 @@ function useBeam(){const ref=useRef(null);const [b,setB]=useState({x:"50%",on:fa
 function DarkCard({children,style,onClick}){const{ref,beam,onMove,onLeave}=useBeam();return(<div ref={ref} onMouseMove={onMove} onMouseLeave={onLeave} onClick={onClick} style={{background:C.ink,borderRadius:6,position:"relative",overflow:"hidden",...style}}><div style={{position:"absolute",inset:0,pointerEvents:"none",background:`conic-gradient(from -12deg at ${beam.x} -20%,transparent 0deg,rgba(255,255,255,0.09) 22deg,transparent 44deg)`,opacity:beam.on?1:0,transition:"opacity 280ms ease"}}/>{children}</div>)}
 function LessonDots({lessons,hoveredIdx,setHoveredIdx}){return(<div style={{display:"flex",flexWrap:"wrap",gap:4}}>{lessons.map((l,i)=>(<div key={i} onMouseEnter={()=>setHoveredIdx(i)} onMouseLeave={()=>setHoveredIdx(null)} style={{width:9,height:9,borderRadius:"50%",cursor:"pointer",background:l.done?C.forest:l.active?C.accent:hoveredIdx===i?C.tan:C.rule,transition:"background 160ms,box-shadow 160ms",boxShadow:l.active?`0 0 0 3px rgba(184,88,53,0.28),0 0 8px rgba(184,88,53,0.55)`:l.done&&hoveredIdx===i?`0 0 0 3px rgba(42,96,72,0.3)`:"none",animation:l.active?"bulbPulse 2s ease-in-out infinite":"none"}}/>))}</div>)}
 
-function ModuleRow({mod,oddCol,setRoute}){const[hov,setHov]=useState(false);const[dotIdx,setDotIdx]=useState(null);const{ref,beam,onMove,onLeave:bLeave}=useBeam();const numColor=mod.done?hov?"#4a9068":C.forest:mod.active?hov?C.amber:C.accent:hov?"rgba(232,160,32,0.80)":"rgba(232,160,32,0.11)";const barColor=mod.done?C.forest:mod.active?C.accent:C.ruleStrong;const hovL=dotIdx!==null?mod.lessons[dotIdx]:null;return(<div ref={ref} onMouseMove={e=>{onMove(e);setHov(true)}} onMouseEnter={()=>setHov(true)} onMouseLeave={e=>{bLeave(e);setHov(false)}} onClick={()=>setRoute("lesson-"+mod.lessons[0].ref)} style={{display:"grid",gridTemplateColumns:"80px 1fr auto",gap:20,padding:`24px 24px 24px ${hov?30:24}px`,borderBottom:`1px solid ${C.rule}`,borderRight:oddCol?`1px solid ${C.rule}`:"none",background:hov?mod.active?`color-mix(in srgb,${C.accent} 5%,${C.cream})`:C.creamWarm:"transparent",transition:"background 200ms,padding-left 180ms",cursor:"pointer",position:"relative",overflow:"hidden"}}>
+function ModuleRow({mod,oddCol,setRoute}){const[hov,setHov]=useState(false);const[dotIdx,setDotIdx]=useState(null);const{ref,beam,onMove,onLeave:bLeave}=useBeam();const numColor=mod.done?hov?"#4a9068":C.forest:mod.active?hov?C.amber:C.accent:hov?"rgba(232,160,32,0.80)":"rgba(232,160,32,0.11)";const barColor=mod.done?C.forest:mod.active?C.accent:C.ruleStrong;const hovL=dotIdx!==null?mod.lessons[dotIdx]:null;return(<div ref={ref} onMouseMove={e=>{onMove(e);setHov(true)}} onMouseEnter={()=>setHov(true)} onMouseLeave={e=>{bLeave(e);setHov(false)}} onClick={()=>{window.scrollTo({top:0,behavior:'smooth'});setRoute("lesson-"+mod.lessons[0].ref)}} style={{display:"grid",gridTemplateColumns:"80px 1fr auto",gap:20,padding:`24px 24px 24px ${hov?30:24}px`,borderBottom:`1px solid ${C.rule}`,borderRight:oddCol?`1px solid ${C.rule}`:"none",background:hov?mod.active?`color-mix(in srgb,${C.accent} 5%,${C.cream})`:C.creamWarm:"transparent",transition:"background 200ms,padding-left 180ms",cursor:"pointer",position:"relative",overflow:"hidden"}}>
   {hov&&<div style={{position:"absolute",inset:0,pointerEvents:"none",background:`radial-gradient(ellipse 55% 80% at ${beam.x} -5%,rgba(232,160,32,0.07) 0%,transparent 65%)`}}/>}
   <div style={{fontFamily:F.display,fontWeight:800,fontSize:56,lineHeight:0.9,letterSpacing:"-0.04em",color:numColor,transition:"color 220ms ease",position:"relative",flexShrink:0,textShadow:hov&&!mod.done&&!mod.active?`0 0 24px rgba(232,160,32,0.45),0 0 48px rgba(232,160,32,0.18)`:"none"}}>
     {mod.n}
@@ -3239,7 +3247,7 @@ function TeamMemberView({user,setRoute}){
             {Array.from({length:12},(_,i)=>{
               const done=i<me.modulesCompleted
               const current=i===me.modulesCompleted
-              return(<div key={i} onClick={()=>setRoute(`lesson-${i+1}.1`)} style={{background:done?C.forest+"18":current?C.accentLight:C.creamWarm,border:`1px solid ${done?C.forest:current?C.accent:C.rule}`,borderRadius:8,padding:"10px 8px",textAlign:"center",cursor:"pointer",transition:"all 0.15s"}} onMouseEnter={e=>e.currentTarget.style.background=done?C.forestLight:C.accentLight} onMouseLeave={e=>e.currentTarget.style.background=done?C.forest+"18":current?C.accentLight:C.creamWarm}>
+              return(<div key={i} onClick={()=>{window.scrollTo({top:0,behavior:'smooth'});setRoute(`lesson-${i+1}.1`)}} style={{background:done?C.forest+"18":current?C.accentLight:C.creamWarm,border:`1px solid ${done?C.forest:current?C.accent:C.rule}`,borderRadius:8,padding:"10px 8px",textAlign:"center",cursor:"pointer",transition:"all 0.15s"}} onMouseEnter={e=>e.currentTarget.style.background=done?C.forestLight:C.accentLight} onMouseLeave={e=>e.currentTarget.style.background=done?C.forest+"18":current?C.accentLight:C.creamWarm}>
                 <div style={{fontFamily:F.display,fontWeight:700,fontSize:11,color:done?C.forest:current?C.accent:C.inkMute}}>M{String(i+1).padStart(2,"0")}</div>
                 <div style={{fontSize:14,marginTop:2}}>{done?"✓":current?"▶":"○"}</div>
               </div>)
@@ -3329,7 +3337,7 @@ function Dashboard({setRoute, user}){
       <div style={{display:"grid",gap:1,border:`1px solid ${C.rule}`,borderRadius:6,overflow:"hidden"}}>
         {APP_MODULES.map((mod,i)=>{
           const unlocked=moduleAccess(plan,mod.free),locked=!unlocked
-          return(<div key={mod.n} onClick={locked?()=>setShowUpgrade(true):()=>setRoute(`lesson-${parseInt(mod.n)}.1`)}
+          return(<div key={mod.n} onClick={locked?()=>setShowUpgrade(true):()=>{window.scrollTo({top:0,behavior:'smooth'});setRoute(`lesson-${parseInt(mod.n)}.1`)}}
             style={{display:"grid",gridTemplateColumns:"48px 1fr 80px 100px",gap:16,alignItems:"center",padding:"14px 20px",background:mod.active&&!locked?C.accentLight:locked?"rgba(0,0,0,0.02)":C.paper,borderBottom:i<APP_MODULES.length-1?`1px solid ${C.rule}`:"none",cursor:"pointer",transition:"background 140ms",opacity:locked?0.5:1}}
             onMouseEnter={e=>e.currentTarget.style.background=locked?C.accentLight:C.creamWarm}
             onMouseLeave={e=>{e.currentTarget.style.background=mod.active&&!locked?C.accentLight:locked?"rgba(0,0,0,0.02)":C.paper}}>
