@@ -2678,7 +2678,7 @@ function LessonPage({lessonRef,setRoute}) {
           <img
             src={LC_MEDIA[lessonRef]}
             alt={`Lesson ${lessonRef} — ${lesson.title}`}
-            style={{width:"100%",display:"block",maxHeight:480,objectFit:"cover"}}
+            style={{width:"100%",height:"auto",display:"block",objectFit:"contain",background:C.creamWarm}}
             onError={e=>{ e.target.parentElement.style.display="none" }}
           />
         </div>
