@@ -2705,7 +2705,14 @@ function UpgradePrompt({onUpgrade, setRoute}){
 
 function LessonPage({lessonRef,setRoute,user,setShowUpgrade}) {
   const [showShareModal,setShowShareModal]=useState(false)
+  const [imgFullscreen,setImgFullscreen]=useState(false)
   useEffect(()=>{ window.scrollTo({top:0,behavior:'instant'}) },[lessonRef])
+  useEffect(()=>{
+    if(!imgFullscreen)return
+    const handler=(e)=>{if(e.key==='Escape')setImgFullscreen(false)}
+    window.addEventListener('keydown',handler)
+    return()=>window.removeEventListener('keydown',handler)
+  },[imgFullscreen])
   const lesson = ALL_LESSONS.find(l=>l.ref===lessonRef)
   const module = MODULES.find(m=>m.n===lesson?.module)
   if (!lesson||!module) return <div style={{padding:"40px 36px",color:C.inkMute}}>Lesson not found.</div>
@@ -2738,7 +2745,7 @@ function LessonPage({lessonRef,setRoute,user,setShowUpgrade}) {
           <svg viewBox="0 0 24 24" style={{width:14,height:14,fill:"currentColor"}}><path d="M8 5v14l11-7z"/></svg>
         </button>
         <div style={{flex:1,minWidth:0}}>
-          <div style={{fontFamily:F.display,fontSize:12,fontWeight:600,color:C.ink,lineHeight:1.2}}>Audio narration</div>
+          <div style={{fontFamily:F.display,fontSize:13,fontWeight:700,color:C.ink,letterSpacing:'0.06em',textTransform:'uppercase',marginBottom:10}}>Audio narration</div>
           <div id="_ttsst" style={mono({fontSize:9,color:C.inkMute,marginTop:2})}>Click to listen</div>
         </div>
         <div style={{width:120,height:3,background:C.rule,borderRadius:99,overflow:"hidden",flexShrink:0}}>
@@ -2757,14 +2764,20 @@ function LessonPage({lessonRef,setRoute,user,setShowUpgrade}) {
 
       {/* Lesson image */}
       {LC_MEDIA[lessonRef]?(
-        <div style={{borderRadius:6,marginBottom:14,overflow:"hidden",background:C.creamWarm}}
-          onError={()=>{}}>
-          <img
-            src={LC_MEDIA[lessonRef]}
-            alt={`Lesson ${lessonRef} — ${lesson.title}`}
-            style={{width:"100%",height:"auto",display:"block",objectFit:"contain",background:C.creamWarm,borderRadius:6}}
-            onError={e=>{ e.target.parentElement.style.display="none" }}
-          />
+        <div style={{borderRadius:6,marginBottom:14,overflow:"hidden",background:C.creamWarm}}>
+          <div style={{position:"relative"}}>
+            <img
+              src={LC_MEDIA[lessonRef]}
+              alt={`Lesson ${lessonRef} — ${lesson.title}`}
+              style={{width:"100%",height:"auto",display:"block",objectFit:"contain",background:C.creamWarm,borderRadius:6}}
+              onError={e=>{ e.target.parentElement.parentElement.style.display="none" }}
+            />
+            <button
+              onClick={()=>setImgFullscreen(true)}
+              title="View fullscreen"
+              style={{position:"absolute",top:8,right:8,background:"rgba(22,18,14,0.7)",border:"none",borderRadius:6,padding:"6px 8px",cursor:"pointer",color:"#fdfaf6",fontSize:14,lineHeight:1,backdropFilter:"blur(4px)"}}
+            >⛶</button>
+          </div>
         </div>
       ):(
         <div style={{border:`1.5px dashed ${C.rule}`,borderRadius:6,marginBottom:14,overflow:"hidden",background:C.creamWarm}}>
@@ -2775,7 +2788,7 @@ function LessonPage({lessonRef,setRoute,user,setShowUpgrade}) {
               </svg>
             </div>
             <div style={{textAlign:"center"}}>
-              <div style={{fontFamily:F.display,fontSize:13,fontWeight:600,color:C.inkMute,marginBottom:4}}>Photo or video</div>
+              <div style={{fontFamily:F.display,fontSize:13,fontWeight:700,color:C.ink,letterSpacing:'0.06em',textTransform:'uppercase',marginBottom:10}}>Photo or video</div>
               <div style={mono({fontSize:9,letterSpacing:"0.14em",textTransform:"uppercase",color:C.inkMute})}>Add media for lesson {lessonRef}</div>
             </div>
           </div>
@@ -2785,7 +2798,7 @@ function LessonPage({lessonRef,setRoute,user,setShowUpgrade}) {
       {/* Visual */}
       {visual&&(
         <div style={{background:C.paper,border:`1px solid ${C.rule}`,borderRadius:6,padding:"16px 18px",marginBottom:14,overflow:"hidden"}}>
-          <div style={mono({fontSize:9,letterSpacing:"0.2em",textTransform:"uppercase",color:C.inkMute,marginBottom:12})}>Visual overview</div>
+          <div style={{fontFamily:F.display,fontSize:13,fontWeight:700,color:C.ink,letterSpacing:'0.06em',textTransform:'uppercase',marginBottom:10}}>Visual overview</div>
           <div dangerouslySetInnerHTML={{__html:visual}}/>
         </div>
       )}
@@ -2794,7 +2807,7 @@ function LessonPage({lessonRef,setRoute,user,setShowUpgrade}) {
       {content?(
         <>
           <div style={{background:C.paper,border:`1px solid ${C.rule}`,borderRadius:6,padding:"24px 28px",marginBottom:14}}>
-            <div style={mono({fontSize:9,letterSpacing:"0.2em",textTransform:"uppercase",color:C.inkMute,marginBottom:14})}>Lesson content</div>
+            <div style={{fontFamily:F.display,fontSize:13,fontWeight:700,color:C.ink,letterSpacing:'0.06em',textTransform:'uppercase',marginBottom:10}}>Lesson content</div>
             {content?.body?.length > 0 ? (
               content.body.map((para, i) => (
                 <div key={i} style={{fontFamily:F.body,fontSize:14,lineHeight:1.8,color:C.ink,marginBottom:18}}
@@ -2809,7 +2822,7 @@ function LessonPage({lessonRef,setRoute,user,setShowUpgrade}) {
           </div>
           {content.lp?.length > 0 && (
             <div style={{background:C.creamWarm,border:`1px solid ${C.rule}`,borderRadius:6,padding:"16px 20px",marginBottom:18}}>
-              <div style={mono({fontSize:9,letterSpacing:"0.2em",textTransform:"uppercase",color:C.inkMute,marginBottom:11})}>Key learning points</div>
+              <div style={{fontFamily:F.display,fontSize:13,fontWeight:700,color:C.ink,letterSpacing:'0.06em',textTransform:'uppercase',marginBottom:10}}>Key learning points</div>
               {content.lp.map((t,i)=>(
                 <div key={i} style={{display:"flex",gap:10,alignItems:"flex-start",padding:"7px 0",borderBottom:i<content.lp.length-1?`1px solid ${C.rule}`:"none"}}>
                   <span style={{width:6,height:6,borderRadius:"50%",background:C.accent,flexShrink:0,marginTop:6}}/>
@@ -2836,6 +2849,19 @@ function LessonPage({lessonRef,setRoute,user,setShowUpgrade}) {
           </button>
         )}
       </div>
+
+      {imgFullscreen&&(
+        <div onClick={()=>setImgFullscreen(false)} style={{position:"fixed",inset:0,zIndex:9999,background:"rgba(0,0,0,0.95)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"zoom-out",padding:20}}>
+          <img
+            src={LC_MEDIA[lessonRef]}
+            alt="Fullscreen"
+            style={{maxWidth:"100%",maxHeight:"100vh",objectFit:"contain",borderRadius:8,boxShadow:"0 8px 48px rgba(0,0,0,0.8)"}}
+            onClick={e=>e.stopPropagation()}
+          />
+          <button onClick={()=>setImgFullscreen(false)} style={{position:"fixed",top:20,right:20,background:"rgba(255,255,255,0.15)",border:"none",borderRadius:99,width:40,height:40,fontSize:20,color:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",backdropFilter:"blur(8px)"}}>✕</button>
+          <div style={{position:"fixed",bottom:20,left:"50%",transform:"translateX(-50%)",color:"rgba(255,255,255,0.4)",fontSize:12,fontFamily:"monospace"}}>Click anywhere to close</div>
+        </div>
+      )}
 
       {showShareModal&&(
         <ModuleCompleteModal
