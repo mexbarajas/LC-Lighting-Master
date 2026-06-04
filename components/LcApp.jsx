@@ -1878,8 +1878,23 @@ function FilamentBar({pct,color,glow,h=5}) {
   )
 }
 
+function isLessonLocked(lessonRef, user) {
+  const plan = user?.plan || 'free'
+  if (plan === 't2' || plan === 't3') return false
+  if (plan === 't1') return true
+  const moduleNum = parseInt(lessonRef.split('.')[0])
+  return moduleNum !== 1
+}
+
+function getLessonPreview(lessonRef) {
+  const content = LC_DATA[lessonRef]
+  if (!content || !content.body || !content.body[0]) return ''
+  const plain = content.body[0].replace(/<[^>]+>/g, '')
+  return plain.length > 120 ? plain.slice(0, 120) + '…' : plain
+}
+
 /* ── SEARCH PAGE ─────────────────────────────────────────────── */
-function SearchPage({setRoute}) {
+function SearchPage({setRoute, user, setShowUpgrade}) {
   const [q,setQ] = useState("")
   const [filter,setFilter] = useState("all")
   const results = ALL_LESSONS.filter(l=>{
@@ -1920,17 +1935,25 @@ function SearchPage({setRoute}) {
             <span style={mono({fontSize:9,color:C.inkMute})}>{p.lessons.length} {p.lessons.length===1?"lesson":"lessons"}</span>
           </div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:1,background:C.rule,border:`1px solid ${C.rule}`,borderRadius:4,overflow:"hidden"}}>
-            {p.lessons.map(l=>(
-              <div key={l.ref} onClick={()=>setRoute("lesson-"+l.ref)} style={{display:"grid",gridTemplateColumns:"52px 1fr auto",gap:14,alignItems:"center",background:C.cream,padding:"14px 16px",cursor:"pointer",transition:"background 140ms"}}
-                onMouseEnter={e=>e.currentTarget.style.background=C.creamWarm} onMouseLeave={e=>e.currentTarget.style.background=C.cream}>
-                <span style={{fontFamily:F.display,fontWeight:700,fontSize:17,letterSpacing:"-0.02em",color:l.done?C.inkMute:C.forest}}>{l.ref}</span>
-                <span>
-                  <span style={{display:"block",fontFamily:F.display,fontWeight:600,fontSize:14,color:C.ink,lineHeight:1.25}}><Mark text={l.title} q={q}/></span>
-                  <span style={mono({display:"block",fontSize:9,letterSpacing:"0.14em",textTransform:"uppercase",color:C.inkMute,marginTop:4})}><em style={{fontStyle:"normal",color:C.accent}}>M{l.module}</em> · {l.moduleTitle?.slice(0,28)} · <Mark text={l.tag} q={q}/></span>
-                </span>
-                <span style={mono({fontSize:9,letterSpacing:"0.16em",textTransform:"uppercase",color:l.done?C.forest:C.inkMute,whiteSpace:"nowrap"})}>{l.done?"✓ Done":"Open →"}</span>
-              </div>
-            ))}
+            {p.lessons.map(l=>{
+              const locked = isLessonLocked(l.ref, user)
+              const preview = getLessonPreview(l.ref)
+              return (
+                <div key={l.ref} onClick={()=>{ if(locked){ setShowUpgrade(true); return } setRoute("lesson-"+l.ref) }}
+                  style={{display:"grid",gridTemplateColumns:"52px 1fr auto",gap:14,alignItems:"center",background:C.cream,padding:"14px 16px",cursor:"pointer",transition:"background 140ms",opacity:locked?0.6:1}}
+                  onMouseEnter={e=>e.currentTarget.style.background=C.creamWarm} onMouseLeave={e=>e.currentTarget.style.background=C.cream}>
+                  <span style={{fontFamily:F.display,fontWeight:700,fontSize:17,letterSpacing:"-0.02em",color:l.done?C.inkMute:C.forest}}>{l.ref}</span>
+                  <span>
+                    <span style={{display:"block",fontFamily:F.display,fontWeight:600,fontSize:14,color:C.ink,lineHeight:1.25}}>
+                      <Mark text={l.title} q={q}/>{locked&&<span style={{marginLeft:6}}>🔒</span>}
+                    </span>
+                    <span style={mono({display:"block",fontSize:9,letterSpacing:"0.14em",textTransform:"uppercase",color:C.inkMute,marginTop:4})}><em style={{fontStyle:"normal",color:C.accent}}>M{l.module}</em> · {l.moduleTitle?.slice(0,28)} · <Mark text={l.tag} q={q}/></span>
+                    {preview&&<span style={{display:"block",fontFamily:F.body,fontSize:11,color:C.inkMute,marginTop:4,lineHeight:1.45,fontStyle:"italic"}}>{preview}</span>}
+                  </span>
+                  <span style={mono({fontSize:9,letterSpacing:"0.16em",textTransform:"uppercase",color:locked?C.accent:l.done?C.forest:C.inkMute,whiteSpace:"nowrap"})}>{locked?"🔒 Locked":l.done?"✓ Done":"Open →"}</span>
+                </div>
+              )
+            })}
           </div>
         </div>
       ))}
@@ -2628,11 +2651,28 @@ const LC_MEDIA = {
   "12.6": `${CLOUDINARY_BASE}/1206.png`,
 }
 
-function LessonPage({lessonRef,setRoute}) {
+function UpgradePrompt({onUpgrade, setRoute}){
+  return(
+    <div style={{display:"flex",alignItems:"center",justifyContent:"center",minHeight:"60vh",padding:"40px 36px"}}>
+      <div style={{textAlign:"center",maxWidth:420}}>
+        <div style={{fontSize:48,marginBottom:20}}>🔒</div>
+        <h2 style={d({fontWeight:700,fontSize:24,letterSpacing:"-0.02em",color:C.ink,margin:"0 0 10px"})}>This lesson requires a paid plan</h2>
+        <p style={{fontFamily:F.body,fontSize:14,color:C.inkMute,margin:"0 0 28px",lineHeight:1.6}}>Unlock all 12 modules and 74 lessons</p>
+        <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>
+          <button onClick={onUpgrade} style={{fontFamily:F.display,fontWeight:700,fontSize:14,background:C.accent,color:"#fff",border:"none",borderRadius:99,padding:"13px 28px",cursor:"pointer"}}>View plans →</button>
+          <button onClick={()=>setRoute("home")} style={{fontFamily:F.display,fontWeight:600,fontSize:14,background:"none",color:C.inkSoft,border:`1px solid ${C.ruleStrong}`,borderRadius:99,padding:"13px 28px",cursor:"pointer"}}>← Back to modules</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function LessonPage({lessonRef,setRoute,user,setShowUpgrade}) {
   const [showShareModal,setShowShareModal]=useState(false)
   const lesson = ALL_LESSONS.find(l=>l.ref===lessonRef)
   const module = MODULES.find(m=>m.n===lesson?.module)
   if (!lesson||!module) return <div style={{padding:"40px 36px",color:C.inkMute}}>Lesson not found.</div>
+  if (isLessonLocked(lessonRef, user)) return <UpgradePrompt onUpgrade={()=>setShowUpgrade(true)} setRoute={setRoute}/>
   const idx = module.lessons.findIndex(l=>l.ref===lessonRef)
   const prev = module.lessons[idx-1]
   const next = module.lessons[idx+1]
@@ -3278,23 +3318,25 @@ function PlaceholderPage({title, subtitle}){
 
 function AppShell({user, onSignOut}){
   const [route, setRoute] = useState("home")
+  const [showUpgrade, setShowUpgrade] = useState(false)
   return(
     <div style={{display:"grid",gridTemplateColumns:"220px 1fr",minHeight:"100vh",
       fontFamily:F.body,background:C.cream}}>
       <style>{`@import url('${FONT_URL}');*{box-sizing:border-box}code{font-family:${F.mono};font-size:0.9em;background:rgba(0,0,0,0.06);padding:1px 5px;border-radius:3px}`}</style>
+      {showUpgrade && <UpgradeModal user={user} onClose={()=>setShowUpgrade(false)}/>}
       <Sidebar route={route} setRoute={setRoute} user={user} onSignOut={onSignOut}/>
       <main style={{background:C.cream,minHeight:"100vh",overflowX:"hidden"}}>
         {route==="home"&&user?.plan==="team_admin"  && <TeamAdminDashboard user={user} setRoute={setRoute}/>}
         {route==="home"&&user?.plan==="team_member" && <TeamMemberView user={user} setRoute={setRoute}/>}
         {route==="home"&&user?.plan!=="team_admin"&&user?.plan!=="team_member" && <Dashboard setRoute={setRoute} user={user}/>}
-        {route==="search"    && <SearchPage setRoute={setRoute}/>}
+        {route==="search"    && <SearchPage setRoute={setRoute} user={user} setShowUpgrade={setShowUpgrade}/>}
         {route==="bookmarks" && <BookmarksPage setRoute={setRoute}/>}
         {route==="notes"     && <NotesPage setRoute={setRoute}/>}
         {route==="continue"  && <ContinuePage setRoute={setRoute}/>}
         {route==="exam"      && <ExamPage setRoute={setRoute}/>}
         {route==="cert"      && <CertPage/>}
         {route==="account"   && <AccountPage/>}
-        {route.startsWith("lesson-") && <LessonPage lessonRef={route.replace("lesson-","")} setRoute={setRoute}/>}
+        {route.startsWith("lesson-") && <LessonPage lessonRef={route.replace("lesson-","")} setRoute={setRoute} user={user} setShowUpgrade={setShowUpgrade}/>}
       </main>
     </div>
   )
