@@ -2122,9 +2122,12 @@ function NotesPage({setRoute}) {
 
 
 /* ── CERTIFICATE PAGE ────────────────────────────────────────── */
-function CertPage() {
+function CertPage({completedLessons=new Set()}) {
+  const totalCompleted = completedLessons.size
+  const totalLessons = 74
+  const overallPct = Math.round((totalCompleted / totalLessons) * 100)
   const reqs = [
-    {label:"Complete all 74 lessons",detail:"23 of 74 lessons done across all 12 modules",pct:31,done:false},
+    {label:"Complete all 74 lessons",detail:`${totalCompleted} of ${totalLessons} lessons done across all 12 modules`,pct:overallPct,done:totalCompleted===totalLessons},
     {label:"Earn 24 CEU contact hours",detail:"7.5 of 24 hours logged",pct:31,done:false},
     {label:"Pass practice exam (≥ 85%)",detail:"No attempts recorded yet",pct:0,done:false},
     {label:"Within access window",detail:"97 days remaining in 6-month window",pct:100,done:true},
@@ -2703,7 +2706,7 @@ function UpgradePrompt({onUpgrade, setRoute}){
   )
 }
 
-function LessonPage({lessonRef,setRoute,user,setShowUpgrade}) {
+function LessonPage({lessonRef,setRoute,user,setShowUpgrade,completedLessons=new Set(),markLessonComplete=async()=>{}}) {
   const [showShareModal,setShowShareModal]=useState(false)
   const [imgFullscreen,setImgFullscreen]=useState(false)
   useEffect(()=>{ window.scrollTo({top:0,behavior:'instant'}) },[lessonRef])
@@ -2758,7 +2761,7 @@ function LessonPage({lessonRef,setRoute,user,setShowUpgrade}) {
       {/* Top next button */}
       {next&&(
         <div style={{display:"flex",justifyContent:"flex-end",marginBottom:14}}>
-          <button onClick={()=>{if(typeof _stopTTS!=='undefined')_stopTTS();window.scrollTo({top:0,behavior:'smooth'});setRoute("lesson-"+next.ref)}} style={{fontFamily:F.display,fontWeight:700,fontSize:13,background:C.ink,color:"#fff",border:"none",borderRadius:99,padding:"9px 18px",cursor:"pointer"}}>Next lesson →</button>
+          <button onClick={()=>{if(typeof _stopTTS!=='undefined')_stopTTS();markLessonComplete(lessonRef);window.scrollTo({top:0,behavior:'smooth'});setRoute("lesson-"+next.ref)}} style={{fontFamily:F.display,fontWeight:700,fontSize:13,background:C.ink,color:"#fff",border:"none",borderRadius:99,padding:"9px 18px",cursor:"pointer"}}>Next lesson →</button>
         </div>
       )}
 
@@ -2840,8 +2843,8 @@ function LessonPage({lessonRef,setRoute,user,setShowUpgrade}) {
 
       <div style={{display:"flex",justifyContent:"space-between",gap:12}}>
         {prev?<button onClick={()=>{if(typeof _stopTTS!=='undefined')_stopTTS();window.scrollTo({top:0,behavior:'smooth'});setRoute("lesson-"+prev.ref)}} style={{fontFamily:F.display,fontWeight:600,fontSize:13,background:"none",color:C.inkSoft,border:`1px solid ${C.rule}`,borderRadius:99,padding:"9px 18px",cursor:"pointer"}}>← {prev.ref} · {prev.title}</button>:<div/>}
-        {next?<button onClick={()=>{if(typeof _stopTTS!=='undefined')_stopTTS();window.scrollTo({top:0,behavior:'smooth'});setRoute("lesson-"+next.ref)}} style={{fontFamily:F.display,fontWeight:700,fontSize:13,background:C.ink,color:"#fff",border:"none",borderRadius:99,padding:"9px 18px",cursor:"pointer"}}>{next.ref} · {next.title} →</button>:(
-          <button onClick={()=>{if(typeof _stopTTS!=='undefined')_stopTTS();setShowShareModal(true)}}
+        {next?<button onClick={()=>{if(typeof _stopTTS!=='undefined')_stopTTS();markLessonComplete(lessonRef);window.scrollTo({top:0,behavior:'smooth'});setRoute("lesson-"+next.ref)}} style={{fontFamily:F.display,fontWeight:700,fontSize:13,background:C.ink,color:"#fff",border:"none",borderRadius:99,padding:"9px 18px",cursor:"pointer"}}>{next.ref} · {next.title} →</button>:(
+          <button onClick={()=>{if(typeof _stopTTS!=='undefined')_stopTTS();markLessonComplete(lessonRef);setShowShareModal(true)}}
             style={{fontFamily:F.display,fontWeight:700,fontSize:13,
               background:C.accent,color:"#fff",border:"none",
               borderRadius:99,padding:"9px 18px",cursor:"pointer"}}>
@@ -2876,33 +2879,51 @@ function LessonPage({lessonRef,setRoute,user,setShowUpgrade}) {
 
 
 /* ── CONTINUE PAGE ───────────────────────────────────────────── */
-function ContinuePage({setRoute}) {
+function ContinuePage({setRoute, completedLessons=new Set()}) {
+  const nextLesson = getNextLesson(completedLessons)
+  const curModule = nextLesson ? MODULES.find(m=>m.n===nextLesson.module) : null
+  if(!nextLesson || !curModule) return(
+    <div style={{padding:"40px 36px"}}>
+      <PageHead eyebrow="My progress · Resume" title="Course" em="complete."/>
+      <div style={{background:C.paper,border:`1px solid ${C.rule}`,borderRadius:6,padding:"32px",textAlign:"center",marginTop:28}}>
+        <div style={{fontFamily:F.display,fontWeight:700,fontSize:24,color:C.forest,marginBottom:8}}>All lessons complete!</div>
+        <p style={{fontFamily:F.body,fontSize:14,color:C.inkMute,lineHeight:1.6}}>You have finished all lessons. Head to the exam page to test your readiness.</p>
+      </div>
+    </div>
+  )
+  const doneLessons = curModule.lessons.filter(l=>completedLessons.has(l.ref)).length
+  const totalLessons = curModule.lessons.length
+  const progressBars = curModule.lessons.map(l=>completedLessons.has(l.ref)?1:l.ref===nextLesson.ref?0.5:0)
   return (
     <div style={{padding:"0 36px 48px"}}>
-      <PageHead eyebrow="My progress · Resume" title="Resume" em="Module 3."/>
-      <div style={{background:C.ink,borderRadius:6,padding:"32px 36px",margin:"28px 0 0",cursor:"pointer"}} onClick={()=>{window.scrollTo({top:0,behavior:'smooth'});setRoute("lesson-3.4")}}>
+      <PageHead eyebrow="My progress · Resume" title="Resume" em={`Module ${parseInt(curModule.n)}.`}/>
+      <div style={{background:C.ink,borderRadius:6,padding:"32px 36px",margin:"28px 0 0",cursor:"pointer"}} onClick={()=>{window.scrollTo({top:0,behavior:'smooth'});setRoute("lesson-"+nextLesson.ref)}}>
         <div style={mono({fontSize:9,letterSpacing:"0.24em",textTransform:"uppercase",color:C.tan,marginBottom:12})}>— pick up where you left off</div>
-        <h2 style={{fontFamily:F.display,fontWeight:700,fontSize:26,letterSpacing:"-0.02em",lineHeight:1.1,margin:"0 0 12px",color:"#fff"}}>Module 03 · Lesson 3.4 — <em style={{fontStyle:"normal",color:C.accent}}>CC vs CV drivers.</em></h2>
-        <p style={{fontFamily:F.body,fontSize:14,lineHeight:1.6,color:"rgba(248,243,236,0.72)",margin:"0 0 20px",maxWidth:500}}>You read through 3.3 yesterday. Next: how constant-current vs constant-voltage drivers shape your fixture choice.</p>
+        <h2 style={{fontFamily:F.display,fontWeight:700,fontSize:26,letterSpacing:"-0.02em",lineHeight:1.1,margin:"0 0 12px",color:"#fff"}}>Module {curModule.n} · Lesson {nextLesson.ref} — <em style={{fontStyle:"normal",color:C.accent}}>{nextLesson.title}.</em></h2>
+        <p style={{fontFamily:F.body,fontSize:14,lineHeight:1.6,color:"rgba(248,243,236,0.72)",margin:"0 0 20px",maxWidth:500}}>{doneLessons} of {totalLessons} lessons complete in this module.</p>
         <div style={{display:"flex",gap:3,maxWidth:380,marginBottom:20}}>
-          {[1,1,1,0.5,0,0,0,0].map((v,i)=><span key={i} style={{flex:1,height:4,borderRadius:2,background:v===1?"rgba(248,243,236,0.85)":v===0.5?C.accent:"rgba(248,243,236,0.14)",boxShadow:v===0.5?`0 0 7px ${C.accent}`:"none"}}/>)}
+          {progressBars.map((v,i)=><span key={i} style={{flex:1,height:4,borderRadius:2,background:v===1?"rgba(248,243,236,0.85)":v===0.5?C.accent:"rgba(248,243,236,0.14)",boxShadow:v===0.5?`0 0 7px ${C.accent}`:"none"}}/>)}
         </div>
         <button style={{fontFamily:F.display,fontWeight:700,fontSize:14,background:C.accent,color:"#fff",border:"none",borderRadius:99,padding:"11px 22px",cursor:"pointer",display:"inline-flex",alignItems:"center",gap:8}}>
           <span style={{width:7,height:7,borderRadius:"50%",background:"#fff",flexShrink:0}}/>Resume lesson →
         </button>
       </div>
       <div style={{margin:"24px 0 0"}}>
-        <div style={mono({fontSize:9,letterSpacing:"0.22em",textTransform:"uppercase",color:C.inkMute,marginBottom:14})}>Module 3 lessons</div>
+        <div style={mono({fontSize:9,letterSpacing:"0.22em",textTransform:"uppercase",color:C.inkMute,marginBottom:14})}>Module {parseInt(curModule.n)} lessons</div>
         <div style={{display:"grid",gap:1,background:C.rule,border:`1px solid ${C.rule}`,borderRadius:4,overflow:"hidden"}}>
-          {MODULES[2].lessons.map(l=>(
-            <div key={l.ref} onClick={()=>{window.scrollTo({top:0,behavior:'smooth'});setRoute("lesson-"+l.ref)}} style={{display:"grid",gridTemplateColumns:"52px 1fr auto",gap:14,alignItems:"center",background:l.active?`color-mix(in srgb,${C.accent} 5%,${C.cream})`:C.cream,padding:"13px 18px",cursor:"pointer",transition:"background 140ms"}}
-              onMouseEnter={e=>e.currentTarget.style.background=C.creamWarm}
-              onMouseLeave={e=>e.currentTarget.style.background=l.active?`color-mix(in srgb,${C.accent} 5%,${C.cream})`:C.cream}>
-              <span style={{fontFamily:F.display,fontWeight:700,fontSize:17,color:l.done?C.inkMute:l.active?C.accent:C.forest}}>{l.ref}</span>
-              <span style={{fontFamily:F.display,fontWeight:600,fontSize:14,color:C.ink}}>{l.title}</span>
-              <span style={mono({fontSize:9,letterSpacing:"0.14em",textTransform:"uppercase",color:l.done?C.forest:l.active?C.accent:C.inkMute,whiteSpace:"nowrap"})}>{l.done?"✓ Done":l.active?"▶ Active":"Open →"}</span>
-            </div>
-          ))}
+          {curModule.lessons.map(l=>{
+            const done=completedLessons.has(l.ref)
+            const active=l.ref===nextLesson.ref
+            return(
+              <div key={l.ref} onClick={()=>{window.scrollTo({top:0,behavior:'smooth'});setRoute("lesson-"+l.ref)}} style={{display:"grid",gridTemplateColumns:"52px 1fr auto",gap:14,alignItems:"center",background:active?`color-mix(in srgb,${C.accent} 5%,${C.cream})`:C.cream,padding:"13px 18px",cursor:"pointer",transition:"background 140ms"}}
+                onMouseEnter={e=>e.currentTarget.style.background=C.creamWarm}
+                onMouseLeave={e=>e.currentTarget.style.background=active?`color-mix(in srgb,${C.accent} 5%,${C.cream})`:C.cream}>
+                <span style={{fontFamily:F.display,fontWeight:700,fontSize:17,color:done?C.inkMute:active?C.accent:C.forest}}>{l.ref}</span>
+                <span style={{fontFamily:F.display,fontWeight:600,fontSize:14,color:C.ink}}>{l.title}</span>
+                <span style={mono({fontSize:9,letterSpacing:"0.14em",textTransform:"uppercase",color:done?C.forest:active?C.accent:C.inkMute,whiteSpace:"nowrap"})}>{done?"✓ Done":active?"▶ Active":"Open →"}</span>
+              </div>
+            )
+          })}
         </div>
       </div>
     </div>
@@ -3315,7 +3336,7 @@ function TeamMemberView({user,setRoute}){
 }
 
 /* ── DASHBOARD ── */
-function Dashboard({setRoute, user}){
+function Dashboard({setRoute, user, completedLessons=new Set()}){
   const plan   = user?.plan||"free"
   const isFree = plan==="free"
   const isT1   = plan==="t1"
@@ -3361,10 +3382,10 @@ function Dashboard({setRoute, user}){
         {canUpgrade&&(<button onClick={()=>setShowUpgrade(true)} style={{fontFamily:F.display,fontWeight:600,fontSize:12,background:"none",border:`1px solid ${C.ruleStrong}`,borderRadius:99,padding:"6px 16px",cursor:"pointer",color:C.inkSoft}} onMouseEnter={e=>{e.currentTarget.style.borderColor=C.accent;e.currentTarget.style.color=C.accent}} onMouseLeave={e=>{e.currentTarget.style.borderColor=C.ruleStrong;e.currentTarget.style.color=C.inkSoft}}>Unlock all modules →</button>)}
       </div>
       <div style={{display:"grid",gap:1,border:`1px solid ${C.rule}`,borderRadius:6,overflow:"hidden"}}>
-        {APP_MODULES.map((mod,i)=>{
+        {computeModules(completedLessons).map((mod,i)=>{
           const unlocked=moduleAccess(plan,mod.free),locked=!unlocked
           return(<div key={mod.n} onClick={locked?()=>setShowUpgrade(true):()=>{window.scrollTo({top:0,behavior:'smooth'});setRoute(`lesson-${parseInt(mod.n)}.1`)}}
-            style={{display:"grid",gridTemplateColumns:"48px 1fr 80px 100px",gap:16,alignItems:"center",padding:"14px 20px",background:mod.active&&!locked?C.accentLight:locked?"rgba(0,0,0,0.02)":C.paper,borderBottom:i<APP_MODULES.length-1?`1px solid ${C.rule}`:"none",cursor:"pointer",transition:"background 140ms",opacity:locked?0.5:1}}
+            style={{display:"grid",gridTemplateColumns:"48px 1fr 80px 100px",gap:16,alignItems:"center",padding:"14px 20px",background:mod.active&&!locked?C.accentLight:locked?"rgba(0,0,0,0.02)":C.paper,borderBottom:i<MODULES.length-1?`1px solid ${C.rule}`:"none",cursor:"pointer",transition:"background 140ms",opacity:locked?0.5:1}}
             onMouseEnter={e=>e.currentTarget.style.background=locked?C.accentLight:C.creamWarm}
             onMouseLeave={e=>{e.currentTarget.style.background=mod.active&&!locked?C.accentLight:locked?"rgba(0,0,0,0.02)":C.paper}}>
             <span style={d({fontWeight:700,fontSize:16,color:locked?C.inkMute:C.accent})}>M{mod.n}</span>
@@ -3396,9 +3417,34 @@ function PlaceholderPage({title, subtitle}){
   )
 }
 
-function AppShell({user, onSignOut}){
+function computeModules(completedLessons) {
+  return MODULES.map(mod => {
+    const appMod = APP_MODULES.find(a => a.n === mod.n) || {}
+    const completedCount = mod.lessons.filter(l => completedLessons.has(l.ref)).length
+    const total = mod.lessons.length
+    const pct = Math.round((completedCount / total) * 100)
+    const done = completedCount === total
+    const active = !done && completedCount > 0
+    return { ...mod, done, active, pct, count:`${completedCount}/${total}`, free:appMod.free||false }
+  })
+}
+function isNextIncompleteLesson(lessonRef, completedLessons) {
+  const next = ALL_LESSONS.find(l => !completedLessons.has(l.ref))
+  return next?.ref === lessonRef
+}
+function getNextLesson(completedLessons) {
+  return ALL_LESSONS.find(l => !completedLessons.has(l.ref))
+}
+
+function AppShell({user, onSignOut, completedLessons=new Set(), markLessonComplete=async()=>{}}){
   const [route, setRoute] = useState("home")
   const [showUpgrade, setShowUpgrade] = useState(false)
+  useEffect(()=>{
+    if(route==='continue'){
+      const next = getNextLesson(completedLessons)
+      if(next) setRoute('lesson-'+next.ref)
+    }
+  },[route])
   return(
     <div style={{display:"grid",gridTemplateColumns:"220px 1fr",minHeight:"100vh",
       fontFamily:F.body,background:C.cream}}>
@@ -3408,15 +3454,15 @@ function AppShell({user, onSignOut}){
       <main style={{background:C.cream,minHeight:"100vh",overflowX:"hidden"}}>
         {route==="home"&&user?.plan==="team_admin"  && <TeamAdminDashboard user={user} setRoute={setRoute}/>}
         {route==="home"&&user?.plan==="team_member" && <TeamMemberView user={user} setRoute={setRoute}/>}
-        {route==="home"&&user?.plan!=="team_admin"&&user?.plan!=="team_member" && <Dashboard setRoute={setRoute} user={user}/>}
+        {route==="home"&&user?.plan!=="team_admin"&&user?.plan!=="team_member" && <Dashboard setRoute={setRoute} user={user} completedLessons={completedLessons}/>}
         {route==="search"    && <SearchPage setRoute={setRoute} user={user} setShowUpgrade={setShowUpgrade}/>}
         {route==="bookmarks" && <BookmarksPage setRoute={setRoute}/>}
         {route==="notes"     && <NotesPage setRoute={setRoute}/>}
-        {route==="continue"  && <ContinuePage setRoute={setRoute}/>}
+        {route==="continue"  && <ContinuePage setRoute={setRoute} completedLessons={completedLessons}/>}
         {route==="exam"      && <ExamPage setRoute={setRoute}/>}
-        {route==="cert"      && <CertPage/>}
+        {route==="cert"      && <CertPage completedLessons={completedLessons}/>}
         {route==="account"   && <AccountPage/>}
-        {route.startsWith("lesson-") && <LessonPage lessonRef={route.replace("lesson-","")} setRoute={setRoute} user={user} setShowUpgrade={setShowUpgrade}/>}
+        {route.startsWith("lesson-") && <LessonPage lessonRef={route.replace("lesson-","")} setRoute={setRoute} user={user} setShowUpgrade={setShowUpgrade} completedLessons={completedLessons} markLessonComplete={markLessonComplete}/>}
       </main>
     </div>
   )
@@ -3429,6 +3475,7 @@ function LearnerRoot({onAdminClick=()=>{}}){
   const [page, setPage] = useState("landing")   // landing | app
   const [authMode, setAuthMode] = useState(null) // null | signin | signup
   const [user, setUser] = useState(null)
+  const [completedLessons, setCompletedLessons] = useState(new Set())
   const [legalDoc, setLegalDoc] = useState(null) // null | privacy | terms | cookies | refund
   const [successToast, setSuccessToast] = useState(null)
 
@@ -3478,9 +3525,28 @@ function LearnerRoot({onAdminClick=()=>{}}){
     return ()=>clearTimeout(t)
   },[])
 
+  useEffect(()=>{
+    if(!user) return
+    async function loadProgress(){
+      const { data } = await supabase.from('progress').select('lesson_ref').eq('user_id', user.id)
+      if(data) setCompletedLessons(new Set(data.map(r=>r.lesson_ref)))
+    }
+    loadProgress()
+  },[user])
+
+  async function markLessonComplete(lessonRef){
+    if(!user || completedLessons.has(lessonRef)) return
+    setCompletedLessons(prev=>new Set([...prev, lessonRef]))
+    await supabase.from('progress').upsert(
+      { user_id:user.id, lesson_ref:lessonRef, completed_at:new Date().toISOString() },
+      { onConflict:'user_id,lesson_ref' }
+    )
+  }
+
   async function handleSignOut(){
     await supabase.auth.signOut()
     setUser(null)
+    setCompletedLessons(new Set())
     setPage("landing")
   }
 
@@ -3523,7 +3589,7 @@ function LearnerRoot({onAdminClick=()=>{}}){
       )}
 
       {page==="app"&&(
-        <AppShell user={user} onSignOut={handleSignOut}/>
+        <AppShell user={user} onSignOut={handleSignOut} completedLessons={completedLessons} markLessonComplete={markLessonComplete}/>
       )}
     </>
   )
