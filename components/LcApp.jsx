@@ -2015,41 +2015,55 @@ function SearchPage({setRoute, user, setShowUpgrade}) {
 
 
 /* ── BOOKMARKS PAGE ──────────────────────────────────────────── */
-function BookmarksPage({setRoute}) {
-  const items = BOOKMARKS.map(bm=>({...bm,lesson:ALL_LESSONS.find(l=>l.ref===bm.ref)})).filter(b=>b.lesson)
+function BookmarksPage({setRoute, bookmarks=new Set(), toggleBookmark=async()=>{}}) {
+  const items = Array.from(bookmarks)
+    .map(ref=>({ref,lesson:ALL_LESSONS.find(l=>l.ref===ref)}))
+    .filter(b=>b.lesson)
+    .sort((a,b)=>a.ref.localeCompare(b.ref,undefined,{numeric:true}))
   return (
     <div style={{padding:"0 36px 48px"}}>
       <PageHead eyebrow="Library · Saved for review" title="Your" em="bookmarks."
         right={<div style={{textAlign:"right"}}>
-          <div style={{fontFamily:F.display,fontWeight:700,fontSize:32,letterSpacing:"-0.02em",color:C.forest,lineHeight:1}}>{items.length}</div>
+          <div style={{fontFamily:F.display,fontWeight:700,fontSize:32,letterSpacing:"-0.02em",color:C.forest,lineHeight:1}}>{bookmarks.size}</div>
           <div style={mono({fontSize:9,letterSpacing:"0.18em",textTransform:"uppercase",color:C.inkMute,marginTop:6})}>lessons flagged</div>
         </div>}
       />
       <p style={{fontFamily:F.body,fontSize:14,lineHeight:1.55,color:C.inkMute,margin:"20px 0 24px",maxWidth:620}}>Lessons you starred to revisit before the exam. These are the concepts that earned a second look.</p>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:16}}>
-        {items.map(({ref,note,lesson:l})=>(
-          <article key={ref} onClick={()=>{window.scrollTo({top:0,behavior:'smooth'});setRoute("lesson-"+ref)}} style={{display:"flex",flexDirection:"column",background:C.paper,border:`1px solid ${C.rule}`,borderRadius:4,overflow:"hidden",cursor:"pointer",transition:"border-color 150ms,transform 150ms"}}
-            onMouseEnter={e=>{e.currentTarget.style.borderColor=C.inkMute;e.currentTarget.style.transform="translateY(-2px)"}}
-            onMouseLeave={e=>{e.currentTarget.style.borderColor=C.rule;e.currentTarget.style.transform="translateY(0)"}}>
-            <div style={{display:"grid",gridTemplateColumns:"auto 1fr auto",gap:14,alignItems:"start",padding:"20px 22px 16px"}}>
-              <span style={{fontFamily:F.display,fontWeight:700,fontSize:28,letterSpacing:"-0.03em",color:C.forest,lineHeight:0.9}}>{l.ref}</span>
-              <span>
-                <span style={mono({display:"block",fontSize:9,letterSpacing:"0.16em",textTransform:"uppercase",color:C.inkMute,marginBottom:6})}><em style={{fontStyle:"normal",color:C.accent}}>M{l.module}</em> · {l.moduleTitle}</span>
-                <span style={{display:"block",fontFamily:F.display,fontWeight:700,fontSize:18,letterSpacing:"-0.01em",color:C.ink,lineHeight:1.15}}>{l.title}</span>
-              </span>
-              <span style={{fontSize:15,color:C.accent}}>★</span>
-            </div>
-            <p style={{fontFamily:F.body,fontSize:13,lineHeight:1.55,color:C.inkSoft,padding:"0 22px 14px",margin:0}}>"{note}"</p>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 22px",borderTop:`1px solid ${C.rule}`,marginTop:"auto",background:`color-mix(in srgb,${C.creamWarm} 60%,transparent)`}}>
-              <span style={{display:"flex",alignItems:"center",gap:7,fontFamily:F.mono,fontSize:9,letterSpacing:"0.18em",textTransform:"uppercase",color:C.inkMute}}>
-                <span style={{width:7,height:7,borderRadius:"50%",background:l.done?C.forest:C.accent}}/>
-                {l.done?"Completed":"Not started"} · {l.tag}
-              </span>
-              <span style={{fontFamily:F.display,fontWeight:600,fontSize:13,color:C.ink}}>Open lesson →</span>
-            </div>
-          </article>
-        ))}
-      </div>
+      {bookmarks.size===0?(
+        <div style={{textAlign:'center',padding:'60px 20px',color:C.inkMute}}>
+          <div style={{fontSize:40,marginBottom:16}}>☆</div>
+          <div style={{fontFamily:F.display,fontWeight:700,fontSize:18,color:C.ink,marginBottom:8}}>No bookmarks yet</div>
+          <div style={{fontFamily:F.body,fontSize:14,lineHeight:1.6,maxWidth:320,margin:'0 auto'}}>Star any lesson while studying to save it here for quick review before exam day.</div>
+        </div>
+      ):(
+        <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:16}}>
+          {items.map(({ref,lesson:l})=>{
+            const preview = LC_DATA[ref]?.lp?.[0]||''
+            return (
+              <article key={ref} onClick={()=>{window.scrollTo({top:0,behavior:'smooth'});setRoute("lesson-"+ref)}} style={{display:"flex",flexDirection:"column",background:C.paper,border:`1px solid ${C.rule}`,borderRadius:4,overflow:"hidden",cursor:"pointer",transition:"border-color 150ms,transform 150ms"}}
+                onMouseEnter={e=>{e.currentTarget.style.borderColor=C.inkMute;e.currentTarget.style.transform="translateY(-2px)"}}
+                onMouseLeave={e=>{e.currentTarget.style.borderColor=C.rule;e.currentTarget.style.transform="translateY(0)"}}>
+                <div style={{display:"grid",gridTemplateColumns:"auto 1fr auto",gap:14,alignItems:"start",padding:"20px 22px 16px"}}>
+                  <span style={{fontFamily:F.display,fontWeight:700,fontSize:28,letterSpacing:"-0.03em",color:C.forest,lineHeight:0.9}}>{l.ref}</span>
+                  <span>
+                    <span style={mono({display:"block",fontSize:9,letterSpacing:"0.16em",textTransform:"uppercase",color:C.inkMute,marginBottom:6})}><em style={{fontStyle:"normal",color:C.accent}}>M{l.module}</em> · {l.moduleTitle}</span>
+                    <span style={{display:"block",fontFamily:F.display,fontWeight:700,fontSize:18,letterSpacing:"-0.01em",color:C.ink,lineHeight:1.15}}>{l.title}</span>
+                  </span>
+                  <button onClick={e=>{e.stopPropagation();toggleBookmark(ref)}} style={{background:'none',border:'none',cursor:'pointer',fontSize:16,color:C.accent,padding:'2px 6px',borderRadius:4}} title="Remove bookmark">★</button>
+                </div>
+                {preview&&<p style={{fontFamily:F.body,fontSize:13,lineHeight:1.55,color:C.inkSoft,padding:"0 22px 14px",margin:0}}>{preview}</p>}
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 22px",borderTop:`1px solid ${C.rule}`,marginTop:"auto",background:`color-mix(in srgb,${C.creamWarm} 60%,transparent)`}}>
+                  <span style={{display:"flex",alignItems:"center",gap:7,fontFamily:F.mono,fontSize:9,letterSpacing:"0.18em",textTransform:"uppercase",color:C.inkMute}}>
+                    <span style={{width:7,height:7,borderRadius:"50%",background:l.done?C.forest:C.accent}}/>
+                    {l.done?"Completed":"Not started"} · {l.tag}
+                  </span>
+                  <span style={{fontFamily:F.display,fontWeight:600,fontSize:13,color:C.ink}}>Open lesson →</span>
+                </div>
+              </article>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
@@ -2706,7 +2720,7 @@ function UpgradePrompt({onUpgrade, setRoute}){
   )
 }
 
-function LessonPage({lessonRef,setRoute,user,setShowUpgrade,completedLessons=new Set(),markLessonComplete=async()=>{}}) {
+function LessonPage({lessonRef,setRoute,user,setShowUpgrade,completedLessons=new Set(),markLessonComplete=async()=>{},bookmarks=new Set(),toggleBookmark=async()=>{}}) {
   const [showShareModal,setShowShareModal]=useState(false)
   const [imgFullscreen,setImgFullscreen]=useState(false)
   useEffect(()=>{ window.scrollTo({top:0,behavior:'instant'}) },[lessonRef])
@@ -2727,6 +2741,7 @@ function LessonPage({lessonRef,setRoute,user,setShowUpgrade,completedLessons=new
   const content = LC_DATA[lessonRef]
   const visual = LC_VISUALS[lessonRef]
   const voiceName = typeof _voices!=='undefined'&&_voices.length?(_voices[_voiceIdx]?.name?.split(' ').slice(0,2).join(' ')||'Default'):'Default'
+  const isBookmarked = bookmarks.has(lessonRef)
 
   return (
     <div style={{padding:"0 36px 48px"}}>
@@ -2736,6 +2751,13 @@ function LessonPage({lessonRef,setRoute,user,setShowUpgrade,completedLessons=new
         <span style={mono({fontSize:9,letterSpacing:"0.12em",textTransform:"uppercase",color:C.inkMute})}>{module.ceu} CEU hrs</span>
         {lesson.done&&<span style={mono({fontSize:9,letterSpacing:"0.12em",textTransform:"uppercase",color:C.forest})}>✓ Complete</span>}
         {lesson.active&&<span style={mono({fontSize:9,letterSpacing:"0.12em",textTransform:"uppercase",color:C.accent})}>▶ In progress</span>}
+        <button
+          onClick={()=>toggleBookmark(lessonRef)}
+          title={isBookmarked?'Remove bookmark':'Bookmark this lesson'}
+          style={{background:isBookmarked?`color-mix(in srgb,${C.accent} 8%,transparent)`:'transparent',border:`1.5px solid ${isBookmarked?C.accent:C.rule}`,borderRadius:8,padding:'6px 12px',cursor:'pointer',display:'flex',alignItems:'center',gap:6,fontFamily:F.display,fontSize:12,fontWeight:600,color:isBookmarked?C.accent:C.inkMute,transition:'all 150ms',marginLeft:'auto'}}
+          onMouseEnter={e=>e.currentTarget.style.borderColor=C.accent}
+          onMouseLeave={e=>e.currentTarget.style.borderColor=isBookmarked?C.accent:C.rule}
+        ><span style={{fontSize:14}}>{isBookmarked?'★':'☆'}</span>{isBookmarked?'Bookmarked':'Bookmark'}</button>
       </div>
 
       {/* Hidden ref store for TTS */}
@@ -3043,7 +3065,7 @@ function ModuleRow({mod,oddCol,setRoute}){const[hov,setHov]=useState(false);cons
 
 
 
-function Sidebar({route, setRoute, user, onSignOut}){
+function Sidebar({route, setRoute, user, onSignOut, bookmarks=new Set()}){
   const nav = [
     {section:"Library", items:[
       {glyph:"▤",label:"Course home",route:"home"},
@@ -3087,7 +3109,11 @@ function Sidebar({route, setRoute, user, onSignOut}){
               <span style={m({fontSize:11,color:route===item.route?C.accent:"rgba(255,255,255,0.45)",
                 flexShrink:0,width:14,textAlign:"center"})}>{item.glyph}</span>
               <span style={{fontFamily:F.display,fontSize:13,fontWeight:route===item.route?600:400,
-                color:route===item.route?"#fff":"rgba(255,255,255,0.65)"}}>{item.label}</span>
+                color:route===item.route?"#fff":"rgba(255,255,255,0.65)",display:"flex",alignItems:"center",gap:6,flex:1}}>{item.label}
+                {item.route==="bookmarks"&&bookmarks.size>0&&(
+                  <span style={{fontFamily:F.mono,fontSize:9,background:C.accent,color:"#fff",borderRadius:99,padding:"1px 6px",lineHeight:1.6}}>{bookmarks.size}</span>
+                )}
+              </span>
             </button>
           ))}
         </div>
@@ -3436,7 +3462,7 @@ function getNextLesson(completedLessons) {
   return ALL_LESSONS.find(l => !completedLessons.has(l.ref))
 }
 
-function AppShell({user, onSignOut, completedLessons=new Set(), markLessonComplete=async()=>{}}){
+function AppShell({user, onSignOut, completedLessons=new Set(), markLessonComplete=async()=>{}, bookmarks=new Set(), toggleBookmark=async()=>{}}){
   const [route, setRoute] = useState("home")
   const [showUpgrade, setShowUpgrade] = useState(false)
   useEffect(()=>{
@@ -3450,19 +3476,19 @@ function AppShell({user, onSignOut, completedLessons=new Set(), markLessonComple
       fontFamily:F.body,background:C.cream}}>
       <style>{`@import url('${FONT_URL}');*{box-sizing:border-box}code{font-family:${F.mono};font-size:0.9em;background:rgba(0,0,0,0.06);padding:1px 5px;border-radius:3px}`}</style>
       {showUpgrade && <UpgradeModal user={user} onClose={()=>setShowUpgrade(false)}/>}
-      <Sidebar route={route} setRoute={setRoute} user={user} onSignOut={onSignOut}/>
+      <Sidebar route={route} setRoute={setRoute} user={user} onSignOut={onSignOut} bookmarks={bookmarks}/>
       <main style={{background:C.cream,minHeight:"100vh",overflowX:"hidden"}}>
         {route==="home"&&user?.plan==="team_admin"  && <TeamAdminDashboard user={user} setRoute={setRoute}/>}
         {route==="home"&&user?.plan==="team_member" && <TeamMemberView user={user} setRoute={setRoute}/>}
         {route==="home"&&user?.plan!=="team_admin"&&user?.plan!=="team_member" && <Dashboard setRoute={setRoute} user={user} completedLessons={completedLessons}/>}
         {route==="search"    && <SearchPage setRoute={setRoute} user={user} setShowUpgrade={setShowUpgrade}/>}
-        {route==="bookmarks" && <BookmarksPage setRoute={setRoute}/>}
+        {route==="bookmarks" && <BookmarksPage setRoute={setRoute} bookmarks={bookmarks} toggleBookmark={toggleBookmark}/>}
         {route==="notes"     && <NotesPage setRoute={setRoute}/>}
         {route==="continue"  && <ContinuePage setRoute={setRoute} completedLessons={completedLessons}/>}
         {route==="exam"      && <ExamPage setRoute={setRoute}/>}
         {route==="cert"      && <CertPage completedLessons={completedLessons}/>}
         {route==="account"   && <AccountPage/>}
-        {route.startsWith("lesson-") && <LessonPage lessonRef={route.replace("lesson-","")} setRoute={setRoute} user={user} setShowUpgrade={setShowUpgrade} completedLessons={completedLessons} markLessonComplete={markLessonComplete}/>}
+        {route.startsWith("lesson-") && <LessonPage lessonRef={route.replace("lesson-","")} setRoute={setRoute} user={user} setShowUpgrade={setShowUpgrade} completedLessons={completedLessons} markLessonComplete={markLessonComplete} bookmarks={bookmarks} toggleBookmark={toggleBookmark}/>}
       </main>
     </div>
   )
@@ -3476,6 +3502,7 @@ function LearnerRoot({onAdminClick=()=>{}}){
   const [authMode, setAuthMode] = useState(null) // null | signin | signup
   const [user, setUser] = useState(null)
   const [completedLessons, setCompletedLessons] = useState(new Set())
+  const [bookmarks, setBookmarks] = useState(new Set())
   const [legalDoc, setLegalDoc] = useState(null) // null | privacy | terms | cookies | refund
   const [successToast, setSuccessToast] = useState(null)
 
@@ -3534,6 +3561,15 @@ function LearnerRoot({onAdminClick=()=>{}}){
     loadProgress()
   },[user])
 
+  useEffect(()=>{
+    if(!user) return
+    async function loadBookmarks(){
+      const { data } = await supabase.from('bookmarks').select('lesson_ref').eq('user_id', user.id)
+      if(data) setBookmarks(new Set(data.map(r=>r.lesson_ref)))
+    }
+    loadBookmarks()
+  },[user])
+
   async function markLessonComplete(lessonRef){
     if(!user || completedLessons.has(lessonRef)) return
     setCompletedLessons(prev=>new Set([...prev, lessonRef]))
@@ -3543,10 +3579,30 @@ function LearnerRoot({onAdminClick=()=>{}}){
     )
   }
 
+  async function toggleBookmark(lessonRef){
+    if(!user) return
+    const isBookmarked = bookmarks.has(lessonRef)
+    setBookmarks(prev=>{
+      const next = new Set(prev)
+      if(isBookmarked) next.delete(lessonRef)
+      else next.add(lessonRef)
+      return next
+    })
+    if(isBookmarked){
+      await supabase.from('bookmarks').delete().eq('user_id', user.id).eq('lesson_ref', lessonRef)
+    } else {
+      await supabase.from('bookmarks').upsert(
+        { user_id:user.id, lesson_ref:lessonRef, created_at:new Date().toISOString() },
+        { onConflict:'user_id,lesson_ref' }
+      )
+    }
+  }
+
   async function handleSignOut(){
     await supabase.auth.signOut()
     setUser(null)
     setCompletedLessons(new Set())
+    setBookmarks(new Set())
     setPage("landing")
   }
 
@@ -3589,7 +3645,7 @@ function LearnerRoot({onAdminClick=()=>{}}){
       )}
 
       {page==="app"&&(
-        <AppShell user={user} onSignOut={handleSignOut} completedLessons={completedLessons} markLessonComplete={markLessonComplete}/>
+        <AppShell user={user} onSignOut={handleSignOut} completedLessons={completedLessons} markLessonComplete={markLessonComplete} bookmarks={bookmarks} toggleBookmark={toggleBookmark}/>
       )}
     </>
   )
