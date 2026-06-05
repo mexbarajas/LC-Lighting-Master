@@ -2653,7 +2653,7 @@ const LC_MEDIA = {
   "6.4":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780602462/604_eczkfc.png",
   "6.5":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780602461/605_m4ytj1.png",
   "6.6":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780602461/606_tqrbgk.png",
-  "7.2":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780602463/702_iquzfm.png",
+  "7.2":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780608819/702_h9ziic.png",
   "7.3":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780602641/703_ttdgrh.png",
   "7.4":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780602960/704_g1hche.png",
   "7.5":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780602960/705_pbwfnh.png",
