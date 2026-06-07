@@ -2635,7 +2635,10 @@ const LC_MEDIA = {
   "1.2":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780865748/102_nnsmym.png",
   "1.3":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780595958/103_ckaelp.png",
   "1.4":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780595956/104_qkcg5v.png",
-  "1.5":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780595957/105_pxh0ew.png",
+  "1.5":  [
+    "https://res.cloudinary.com/dreuglb2j/image/upload/v1780595957/105_pxh0ew.png",
+    "https://res.cloudinary.com/dreuglb2j/image/upload/v1780867246/10505_ii1zw9.png"
+  ],
   "1.6":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780595957/106_kzy9sm.png",
   "2.1":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780595964/201_qtqfiq.png",
   "2.2":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780595963/202_u1phtz.png",
@@ -2722,10 +2725,10 @@ function UpgradePrompt({onUpgrade, setRoute}){
 
 function LessonPage({lessonRef,setRoute,user,setShowUpgrade,completedLessons=new Set(),markLessonComplete=async()=>{},bookmarks=new Set(),toggleBookmark=async()=>{}}) {
   const [showShareModal,setShowShareModal]=useState(false)
-  const [imgFullscreen,setImgFullscreen]=useState(false)
+  const [imgFullscreen,setImgFullscreen]=useState(null)
   useEffect(()=>{ window.scrollTo({top:0,behavior:'instant'}) },[lessonRef])
   useEffect(()=>{
-    if(!imgFullscreen)return
+    if(imgFullscreen===null)return
     const handler=(e)=>{if(e.key==='Escape')setImgFullscreen(false)}
     window.addEventListener('keydown',handler)
     return()=>window.removeEventListener('keydown',handler)
@@ -2788,23 +2791,26 @@ function LessonPage({lessonRef,setRoute,user,setShowUpgrade,completedLessons=new
       )}
 
       {/* Lesson image */}
-      {LC_MEDIA[lessonRef]?(
-        <div style={{borderRadius:6,marginBottom:14,overflow:"hidden",background:C.creamWarm}}>
-          <div style={{position:"relative"}}>
-            <img
-              src={LC_MEDIA[lessonRef]}
-              alt={`Lesson ${lessonRef} — ${lesson.title}`}
-              style={{width:"100%",height:"auto",display:"block",objectFit:"contain",background:C.creamWarm,borderRadius:6}}
-              onError={e=>{ e.target.parentElement.parentElement.style.display="none" }}
-            />
-            <button
-              onClick={()=>setImgFullscreen(true)}
-              title="View fullscreen"
-              style={{position:"absolute",top:8,right:8,background:"rgba(22,18,14,0.7)",border:"none",borderRadius:6,padding:"6px 8px",cursor:"pointer",color:"#fdfaf6",fontSize:14,lineHeight:1,backdropFilter:"blur(4px)"}}
-            >⛶</button>
-          </div>
-        </div>
-      ):(
+      {LC_MEDIA[lessonRef]?(<>
+        {(()=>{
+          const imgs=Array.isArray(LC_MEDIA[lessonRef])?LC_MEDIA[lessonRef]:[LC_MEDIA[lessonRef]]
+          return imgs.map((src,i)=>(
+            <div key={i} style={{position:'relative',marginBottom:12}}>
+              <img
+                src={src}
+                alt={`Lesson ${lessonRef} illustration ${i+1}`}
+                style={{width:'100%',height:'auto',display:'block',objectFit:'contain',background:C.creamWarm,borderRadius:6}}
+                onError={e=>{e.target.parentElement.style.display='none'}}
+              />
+              <button
+                onClick={()=>setImgFullscreen(src)}
+                title="View fullscreen"
+                style={{position:'absolute',top:8,right:8,background:'rgba(22,18,14,0.7)',border:'none',borderRadius:6,padding:'6px 8px',cursor:'pointer',color:'#fdfaf6',fontSize:14,lineHeight:1,backdropFilter:'blur(4px)'}}
+              >⛶</button>
+            </div>
+          ))
+        })()}
+      </>):(
         <div style={{border:`1.5px dashed ${C.rule}`,borderRadius:6,marginBottom:14,overflow:"hidden",background:C.creamWarm}}>
           <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:200,gap:10,padding:"28px 24px"}}>
             <div style={{width:48,height:48,borderRadius:"50%",border:`1.5px dashed ${C.ruleStrong}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
@@ -2875,15 +2881,15 @@ function LessonPage({lessonRef,setRoute,user,setShowUpgrade,completedLessons=new
         )}
       </div>
 
-      {imgFullscreen&&(
-        <div onClick={()=>setImgFullscreen(false)} style={{position:"fixed",inset:0,zIndex:9999,background:"rgba(0,0,0,0.95)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"zoom-out",padding:20}}>
+      {imgFullscreen!==null&&(
+        <div onClick={()=>setImgFullscreen(null)} style={{position:"fixed",inset:0,zIndex:9999,background:"rgba(0,0,0,0.95)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"zoom-out",padding:20}}>
           <img
-            src={LC_MEDIA[lessonRef]}
+            src={imgFullscreen}
             alt="Fullscreen"
             style={{maxWidth:"100%",maxHeight:"100vh",objectFit:"contain",borderRadius:8,boxShadow:"0 8px 48px rgba(0,0,0,0.8)"}}
             onClick={e=>e.stopPropagation()}
           />
-          <button onClick={()=>setImgFullscreen(false)} style={{position:"fixed",top:20,right:20,background:"rgba(255,255,255,0.15)",border:"none",borderRadius:99,width:40,height:40,fontSize:20,color:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",backdropFilter:"blur(8px)"}}>✕</button>
+          <button onClick={()=>setImgFullscreen(null)} style={{position:"fixed",top:20,right:20,background:"rgba(255,255,255,0.15)",border:"none",borderRadius:99,width:40,height:40,fontSize:20,color:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",backdropFilter:"blur(8px)"}}>✕</button>
           <div style={{position:"fixed",bottom:20,left:"50%",transform:"translateX(-50%)",color:"rgba(255,255,255,0.4)",fontSize:12,fontFamily:"monospace"}}>Click anywhere to close</div>
         </div>
       )}
