@@ -2632,7 +2632,7 @@ function ModuleCompleteModal({module, courseComplete, onClose}){
 
 const LC_MEDIA = {
   "1.1":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780595398/101.png",
-  "1.2":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780595959/102_kye8ru.png",
+  "1.2":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780865748/102_nnsmym.png",
   "1.3":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780595958/103_ckaelp.png",
   "1.4":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780595956/104_qkcg5v.png",
   "1.5":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780595957/105_pxh0ew.png",
