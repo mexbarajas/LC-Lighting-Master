@@ -149,7 +149,7 @@ function PwField({value,onChange,onBlur,showPw,setShowPw,err,placeholder="Min. 8
   )
 }
 
-function AuthModal({mode, onClose, onAuth}){
+function AuthModal({mode, onClose, onAuth, initialError=null, onErrorShown=()=>{}}){
   const [tab, setTab] = useState(mode||"signin")
   // sign-in fields
   const [siEmail, setSiEmail] = useState("")
@@ -168,9 +168,14 @@ function AuthModal({mode, onClose, onAuth}){
   const [resetEmail, setResetEmail] = useState("")
   // shared
   const [loading, setLoading] = useState(false)
-  const [error,   setError]   = useState("")
+  const [error,   setError]   = useState(initialError||"")
   const [success, setSuccess] = useState("")
   const [touched, setTouched] = useState({})
+
+  useEffect(()=>{
+    if(initialError){ onErrorShown() }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[])
 
   useEffect(()=>{ setError(""); setSuccess(""); setTouched({}) },[tab])
 
@@ -227,6 +232,9 @@ function AuthModal({mode, onClose, onAuth}){
       if(error){ setLoading(false); setError(error.message); return }
       const u = data.user
       const { data:sub } = await supabase.from("subscriptions").select("*").eq("user_id", u.id).single()
+      const sessionToken = crypto.randomUUID()
+      localStorage.setItem('lc_session_token', sessionToken)
+      await supabase.from('subscriptions').update({ session_token: sessionToken, session_created_at: new Date().toISOString() }).eq('user_id', u.id)
       setLoading(false)
       onAuth({ id:u.id, name:u.user_metadata?.name||siEmail.split("@")[0], email:u.email,
                company:u.user_metadata?.company||"", state:u.user_metadata?.state||"",
@@ -3847,6 +3855,7 @@ function LearnerRoot({onAdminClick=()=>{}}){
   const [bookmarks, setBookmarks] = useState(new Set())
   const [legalDoc, setLegalDoc] = useState(null) // null | privacy | terms | cookies | refund
   const [successToast, setSuccessToast] = useState(null)
+  const [sessionConflict, setSessionConflict] = useState(null)
 
   function openAuth(mode){ setAuthMode(mode) }
   function closeAuth(){ setAuthMode(null) }
@@ -3861,6 +3870,14 @@ function LearnerRoot({onAdminClick=()=>{}}){
       if(!session) return
       const u = session.user
       const { data:sub } = await supabase.from("subscriptions").select("*").eq("user_id", u.id).single()
+      const storedToken = localStorage.getItem('lc_session_token')
+      if(sub?.session_token && storedToken !== sub.session_token){
+        await supabase.auth.signOut()
+        localStorage.removeItem('lc_session_token')
+        setSessionConflict('Your session was ended because another device signed in to this account. Please log in again.')
+        setAuthMode('signin')
+        return
+      }
       setUser({ id:u.id, name:u.user_metadata?.name||u.email.split("@")[0], email:u.email,
                 company:u.user_metadata?.company||"", state:u.user_metadata?.state||"",
                 plan:sub?.plan||"free", examAddon:sub?.exam_addon||false })
@@ -3941,6 +3958,10 @@ function LearnerRoot({onAdminClick=()=>{}}){
   }
 
   async function handleSignOut(){
+    if(user?.id){
+      localStorage.removeItem('lc_session_token')
+      await supabase.from('subscriptions').update({ session_token: null }).eq('user_id', user.id)
+    }
     await supabase.auth.signOut()
     setUser(null)
     setCompletedLessons(new Set())
@@ -3963,7 +3984,7 @@ function LearnerRoot({onAdminClick=()=>{}}){
       )}
 
       {authMode&&(
-        <AuthModal mode={authMode} onClose={closeAuth} onAuth={handleAuth}/>
+        <AuthModal mode={authMode} onClose={closeAuth} onAuth={handleAuth} initialError={sessionConflict} onErrorShown={()=>setSessionConflict(null)}/>
       )}
 
       {legalDoc&&(
