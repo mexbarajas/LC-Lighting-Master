@@ -2707,6 +2707,10 @@ const LC_MEDIA = {
   "12.6": "https://res.cloudinary.com/dreuglb2j/image/upload/v1780608220/1206_ohv3bl.png",
 }
 
+const LC_AUDIO = {
+  "1.1": "https://res.cloudinary.com/dreuglb2j/video/upload/v1780936730/Lesson_101_qfxduz.mp4",
+}
+
 function UpgradePrompt({onUpgrade, setRoute}){
   return(
     <div style={{display:"flex",alignItems:"center",justifyContent:"center",minHeight:"60vh",padding:"40px 36px"}}>
@@ -2719,6 +2723,98 @@ function UpgradePrompt({onUpgrade, setRoute}){
           <button onClick={()=>setRoute("home")} style={{fontFamily:F.display,fontWeight:600,fontSize:14,background:"none",color:C.inkSoft,border:`1px solid ${C.ruleStrong}`,borderRadius:99,padding:"13px 28px",cursor:"pointer"}}>← Back to modules</button>
         </div>
       </div>
+    </div>
+  )
+}
+
+function PodcastPlayer({url,lessonRef}){
+  const audioRef=useRef(null)
+  const [playing,setPlaying]=useState(false)
+  const [progress,setProgress]=useState(0)
+  const [duration,setDuration]=useState(0)
+  const [currentTime,setCurrentTime]=useState(0)
+  const [speed,setSpeed]=useState(1)
+
+  function togglePlay(){
+    if(!audioRef.current)return
+    if(playing){audioRef.current.pause()}else{audioRef.current.play()}
+    setPlaying(!playing)
+  }
+  function handleTimeUpdate(){
+    if(!audioRef.current)return
+    const ct=audioRef.current.currentTime
+    const dur=audioRef.current.duration||1
+    setCurrentTime(ct)
+    setProgress((ct/dur)*100)
+  }
+  function handleLoadedMetadata(){if(audioRef.current)setDuration(audioRef.current.duration)}
+  function handleEnded(){setPlaying(false);setProgress(0)}
+  function handleSeek(e){
+    if(!audioRef.current)return
+    const rect=e.currentTarget.getBoundingClientRect()
+    const pct=(e.clientX-rect.left)/rect.width
+    audioRef.current.currentTime=pct*audioRef.current.duration
+  }
+  function cycleSpeed(){
+    const speeds=[0.75,1,1.25,1.5,2]
+    const next=speeds[(speeds.indexOf(speed)+1)%speeds.length]
+    setSpeed(next)
+    if(audioRef.current)audioRef.current.playbackRate=next
+  }
+  function formatTime(s){
+    if(!s||isNaN(s))return'0:00'
+    const m=Math.floor(s/60)
+    const sec=Math.floor(s%60)
+    return`${m}:${sec.toString().padStart(2,'0')}`
+  }
+
+  return(
+    <div style={{background:`linear-gradient(135deg,${C.ink} 0%,#2a1f16 100%)`,borderRadius:12,padding:'20px 24px',border:`1px solid rgba(184,88,53,0.3)`,boxShadow:'0 4px 24px rgba(22,18,14,0.15)'}}>
+      <audio ref={audioRef} src={url} onTimeUpdate={handleTimeUpdate} onLoadedMetadata={handleLoadedMetadata} onEnded={handleEnded} preload="metadata"/>
+      <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:16}}>
+        <div style={{background:C.accent,borderRadius:99,padding:'3px 10px',display:'flex',alignItems:'center',gap:5}}>
+          <span style={{fontSize:9}}>🎙</span>
+          <span style={{fontFamily:F.mono,fontSize:9,fontWeight:600,letterSpacing:'0.14em',textTransform:'uppercase',color:'#fff'}}>Podcast Narration</span>
+        </div>
+        <span style={{fontFamily:F.display,fontSize:12,color:'rgba(253,250,246,0.5)'}}>Professional audio · Lesson {lessonRef}</span>
+      </div>
+      <div onClick={handleSeek} style={{width:'100%',height:4,background:'rgba(255,255,255,0.12)',borderRadius:99,marginBottom:16,cursor:'pointer',position:'relative'}}>
+        <div style={{width:`${progress}%`,height:'100%',background:C.accent,borderRadius:99,transition:'width 0.1s linear'}}/>
+      </div>
+      <div style={{display:'flex',alignItems:'center',gap:16}}>
+        <button onClick={togglePlay} style={{width:44,height:44,borderRadius:'50%',background:C.accent,border:'none',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,color:'#fff',flexShrink:0,boxShadow:'0 2px 12px rgba(184,88,53,0.4)',transition:'transform 100ms'}}
+          onMouseEnter={e=>e.currentTarget.style.transform='scale(1.08)'} onMouseLeave={e=>e.currentTarget.style.transform='scale(1)'}>
+          {playing?'⏸':'▶'}
+        </button>
+        <span style={{fontFamily:F.mono,fontSize:11,color:'rgba(253,250,246,0.6)',minWidth:80}}>{formatTime(currentTime)} / {formatTime(duration)}</span>
+        <button onClick={cycleSpeed} style={{background:'rgba(255,255,255,0.08)',border:'1px solid rgba(255,255,255,0.12)',borderRadius:6,padding:'4px 10px',cursor:'pointer',fontFamily:F.mono,fontSize:11,fontWeight:600,color:speed!==1?C.accent:'rgba(253,250,246,0.7)',letterSpacing:'0.04em'}}>{speed}×</button>
+        <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:2,opacity:playing?1:0.3,transition:'opacity 300ms'}}>
+          {[3,5,8,6,10,7,4,9,5,6,8,4].map((h,i)=>(
+            <div key={i} style={{width:2,height:h,background:C.accent,borderRadius:99,animation:playing?`wave ${0.4+i*0.07}s ease-in-out infinite alternate`:'none'}}/>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function TtsPlayer({lessonRef}){
+  const voiceName=typeof _voices!=='undefined'&&_voices.length?(_voices[_voiceIdx]?.name?.split(' ').slice(0,2).join(' ')||'Default'):'Default'
+  return(
+    <div style={{display:"flex",alignItems:"center",gap:10,border:`1px solid ${C.rule}`,borderRadius:6,padding:"10px 14px",background:C.paper}}>
+      <span id="_lesson_ref" data-ref={lessonRef} style={{display:"none"}}/>
+      <button id="_ttsbtn" onClick={()=>window._toggleTTS()} style={{width:34,height:34,borderRadius:"50%",border:"none",background:C.accent,color:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"opacity 140ms"}}
+        onMouseEnter={e=>e.currentTarget.style.opacity=".82"} onMouseLeave={e=>e.currentTarget.style.opacity="1"}>
+        <svg viewBox="0 0 24 24" style={{width:14,height:14,fill:"currentColor"}}><path d="M8 5v14l11-7z"/></svg>
+      </button>
+      <div style={{flex:1,minWidth:0}}>
+        <div id="_ttsst" style={mono({fontSize:9,color:C.inkMute,marginTop:2})}>Click to listen</div>
+      </div>
+      <div style={{width:120,height:3,background:C.rule,borderRadius:99,overflow:"hidden",flexShrink:0}}>
+        <div id="_pfill" style={{height:"100%",background:C.accent,width:"0%",borderRadius:99,transition:"width .4s linear"}}/>
+      </div>
+      <button id="_pspd" onClick={()=>window._cycleSpeed()} style={mono({fontSize:10,color:C.inkMute,padding:"3px 8px",borderRadius:99,border:`1px solid ${C.rule}`,background:"none",cursor:"pointer",minWidth:34,textAlign:"center"})}>{_speeds[_spdIdx]}×</button>
+      <button id="_pvc" onClick={()=>window._cycleVoice()} style={mono({fontSize:9,color:C.inkMute,padding:"3px 8px",borderRadius:99,border:`1px solid ${C.rule}`,background:"none",cursor:"pointer",maxWidth:90,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"})}>{voiceName}</button>
     </div>
   )
 }
@@ -2743,7 +2839,6 @@ function LessonPage({lessonRef,setRoute,user,setShowUpgrade,completedLessons=new
   const courseComplete = !next && module.n==="12"
   const content = LC_DATA[lessonRef]
   const visual = LC_VISUALS[lessonRef]
-  const voiceName = typeof _voices!=='undefined'&&_voices.length?(_voices[_voiceIdx]?.name?.split(' ').slice(0,2).join(' ')||'Default'):'Default'
   const isBookmarked = bookmarks.has(lessonRef)
 
   return (
@@ -2763,25 +2858,19 @@ function LessonPage({lessonRef,setRoute,user,setShowUpgrade,completedLessons=new
         ><span style={{fontSize:14}}>{isBookmarked?'★':'☆'}</span>{isBookmarked?'Bookmarked':'Bookmark'}</button>
       </div>
 
-      {/* Hidden ref store for TTS */}
-      <span id="_lesson_ref" data-ref={lessonRef} style={{display:"none"}}/>
-
-      {/* TTS Player */}
-      <div style={{display:"flex",alignItems:"center",gap:10,border:`1px solid ${C.rule}`,borderRadius:6,padding:"10px 14px",marginBottom:18,background:C.paper}}>
-        <button id="_ttsbtn" onClick={()=>window._toggleTTS()} style={{width:34,height:34,borderRadius:"50%",border:"none",background:C.accent,color:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"opacity 140ms"}}
-          onMouseEnter={e=>e.currentTarget.style.opacity=".82"} onMouseLeave={e=>e.currentTarget.style.opacity="1"}>
-          <svg viewBox="0 0 24 24" style={{width:14,height:14,fill:"currentColor"}}><path d="M8 5v14l11-7z"/></svg>
-        </button>
-        <div style={{flex:1,minWidth:0}}>
-          <div style={{fontFamily:F.display,fontSize:13,fontWeight:700,color:C.ink,letterSpacing:'0.06em',textTransform:'uppercase',marginBottom:10}}>Audio narration</div>
-          <div id="_ttsst" style={mono({fontSize:9,color:C.inkMute,marginTop:2})}>Click to listen</div>
-        </div>
-        <div style={{width:120,height:3,background:C.rule,borderRadius:99,overflow:"hidden",flexShrink:0}}>
-          <div id="_pfill" style={{height:"100%",background:C.accent,width:"0%",borderRadius:99,transition:"width .4s linear"}}/>
-        </div>
-        <button id="_pspd" onClick={()=>window._cycleSpeed()} style={mono({fontSize:10,color:C.inkMute,padding:"3px 8px",borderRadius:99,border:`1px solid ${C.rule}`,background:"none",cursor:"pointer",minWidth:34,textAlign:"center"})}>{_speeds[_spdIdx]}×</button>
-        <button id="_pvc" onClick={()=>window._cycleVoice()} style={mono({fontSize:9,color:C.inkMute,padding:"3px 8px",borderRadius:99,border:`1px solid ${C.rule}`,background:"none",cursor:"pointer",maxWidth:90,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"})}>{voiceName}</button>
-      </div>
+      {/* Audio Narration */}
+      {(()=>{
+        const podcastUrl=LC_AUDIO[lessonRef]
+        return(
+          <div style={{marginBottom:20}}>
+            <div style={{fontFamily:F.display,fontSize:13,fontWeight:700,color:C.ink,letterSpacing:'0.06em',textTransform:'uppercase',marginBottom:12}}>Audio Narration</div>
+            {podcastUrl
+              ?<PodcastPlayer url={podcastUrl} lessonRef={lessonRef}/>
+              :<TtsPlayer lessonRef={lessonRef}/>
+            }
+          </div>
+        )
+      })()}
 
       {/* Top next button */}
       {next&&(
@@ -3480,7 +3569,7 @@ function AppShell({user, onSignOut, completedLessons=new Set(), markLessonComple
   return(
     <div style={{display:"grid",gridTemplateColumns:"220px 1fr",minHeight:"100vh",
       fontFamily:F.body,background:C.cream}}>
-      <style>{`@import url('${FONT_URL}');*{box-sizing:border-box}code{font-family:${F.mono};font-size:0.9em;background:rgba(0,0,0,0.06);padding:1px 5px;border-radius:3px}`}</style>
+      <style>{`@import url('${FONT_URL}');*{box-sizing:border-box}code{font-family:${F.mono};font-size:0.9em;background:rgba(0,0,0,0.06);padding:1px 5px;border-radius:3px}@keyframes bulbPulse{0%,100%{opacity:1;box-shadow:0 0 0 3px rgba(184,88,53,0.2),0 0 10px 2px rgba(184,88,53,0.4)}50%{opacity:0.7;box-shadow:0 0 0 5px rgba(184,88,53,0.1),0 0 16px 4px rgba(184,88,53,0.25)}}@keyframes wave{from{transform:scaleY(0.4)}to{transform:scaleY(1.2)}}`}</style>
       {showUpgrade && <UpgradeModal user={user} onClose={()=>setShowUpgrade(false)}/>}
       <Sidebar route={route} setRoute={setRoute} user={user} onSignOut={onSignOut} bookmarks={bookmarks}/>
       <main style={{background:C.cream,minHeight:"100vh",overflowX:"hidden"}}>
