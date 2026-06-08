@@ -3523,69 +3523,250 @@ function TeamMemberView({user,setRoute}){
 }
 
 /* ── DASHBOARD ── */
-function Dashboard({setRoute, user, completedLessons=new Set()}){
-  const plan   = user?.plan||"free"
-  const isFree = plan==="free"
-  const isT1   = plan==="t1"
-  const isT2   = plan==="t2"
-  const [showUpgrade, setShowUpgrade] = useState(false)
-  const canUpgrade = plan!=="t3" && plan!=="team_admin" && plan!=="team_member"
+function Dashboard({ setRoute, completedLessons = new Set(), user, userSubscription }) {
+  const [dotIdx, setDotIdx] = useState(null)
+  const [hoveredMod, setHoveredMod] = useState(null)
 
-  return(
-    <div style={{padding:"40px 36px",minHeight:"100vh"}}>
-      {showUpgrade&&<UpgradeModal user={user} onClose={()=>setShowUpgrade(false)}/>}
-      <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:32,flexWrap:"wrap",gap:16}}>
-        <div>
-          <div style={m({fontSize:9,letterSpacing:"0.24em",textTransform:"uppercase",color:C.accent,marginBottom:8})}>Welcome back</div>
-          <h1 style={{fontFamily:F.display,fontWeight:700,fontSize:32,letterSpacing:"-0.02em",color:C.ink,margin:0,lineHeight:1.1}}>{user?.name?.split(" ")[0]||"Designer"}'s Dashboard</h1>
-          {user?.company&&<div style={m({fontSize:9,letterSpacing:"0.12em",textTransform:"uppercase",color:C.inkMute,marginTop:6})}>{user.company}{user.state&&` · ${user.state}`}</div>}
-        </div>
-        {isFree&&(<div style={{background:C.accentLight,border:`1px solid ${C.ruleStrong}`,borderRadius:10,padding:"14px 18px",maxWidth:280}}>
-          <div style={d({fontWeight:700,fontSize:13,color:C.accent,marginBottom:4})}>Free trial</div>
-          <p style={{fontFamily:F.body,fontSize:12,color:C.inkMute,margin:"0 0 10px",lineHeight:1.5}}>Module 01 and 10 practice questions unlocked. Upgrade to access all 12 modules and the full exam.</p>
-          <button onClick={()=>setShowUpgrade(true)} style={{width:"100%",padding:"8px",background:C.accent,color:"#fff",border:"none",borderRadius:6,fontFamily:F.display,fontWeight:700,fontSize:12,cursor:"pointer"}}>Upgrade now →</button>
-        </div>)}
-        {isT1&&(<div style={{background:C.forestLight,border:`1px solid ${C.forest}`,borderRadius:10,padding:"14px 18px",maxWidth:280}}>
-          <div style={d({fontWeight:700,fontSize:13,color:C.forest,marginBottom:4})}>Test Engine plan</div>
-          <p style={{fontFamily:F.body,fontSize:12,color:C.inkMute,margin:"0 0 10px",lineHeight:1.5}}>Full LC practice exam unlocked — 129 questions, unlimited attempts.</p>
-          <button onClick={()=>setShowUpgrade(true)} style={{width:"100%",padding:"8px",background:C.forest,color:"#fff",border:"none",borderRadius:6,fontFamily:F.display,fontWeight:700,fontSize:12,cursor:"pointer"}}>Add full course →</button>
-        </div>)}
-        {isT2&&(<div style={{background:C.creamWarm,border:`1px solid ${C.rule}`,borderRadius:10,padding:"14px 18px",maxWidth:280}}>
-          <div style={d({fontWeight:700,fontSize:13,color:C.ink,marginBottom:4})}>Full Course plan</div>
-          <p style={{fontFamily:F.body,fontSize:12,color:C.inkMute,margin:"0 0 10px",lineHeight:1.5}}>Add the LC practice exam to test your readiness before exam day.</p>
-          <button onClick={()=>setShowUpgrade(true)} style={{width:"100%",padding:"8px",background:C.ink,color:"#fff",border:"none",borderRadius:6,fontFamily:F.display,fontWeight:700,fontSize:12,cursor:"pointer"}}>Add exam engine →</button>
-        </div>)}
-      </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:32}}>
-        {[["Your plan",PLAN_LABELS[plan]||plan],["Modules unlocked",isFree?"1 / 12":isT1?"0 / 12":"12 / 12"],["CEU hours",isFree||isT1?"—":"24.0"],["Access expires",`Dec 31, ${new Date().getFullYear()}`]].map(([label,val])=>(
-          <div key={label} style={{background:C.paper,border:`1px solid ${C.rule}`,borderRadius:10,padding:"16px 18px"}}>
-            <div style={m({fontSize:8,letterSpacing:"0.18em",textTransform:"uppercase",color:C.inkMute,marginBottom:8})}>{label}</div>
-            <div style={d({fontWeight:700,fontSize:val.length>10?16:22,color:C.ink,letterSpacing:"-0.01em",lineHeight:1.2})}>{val}</div>
-          </div>
-        ))}
-      </div>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
-        <div style={d({fontWeight:700,fontSize:15,color:C.ink})}>All modules</div>
-        {canUpgrade&&(<button onClick={()=>setShowUpgrade(true)} style={{fontFamily:F.display,fontWeight:600,fontSize:12,background:"none",border:`1px solid ${C.ruleStrong}`,borderRadius:99,padding:"6px 16px",cursor:"pointer",color:C.inkSoft}} onMouseEnter={e=>{e.currentTarget.style.borderColor=C.accent;e.currentTarget.style.color=C.accent}} onMouseLeave={e=>{e.currentTarget.style.borderColor=C.ruleStrong;e.currentTarget.style.color=C.inkSoft}}>Unlock all modules →</button>)}
-      </div>
-      <div style={{display:"grid",gap:1,border:`1px solid ${C.rule}`,borderRadius:6,overflow:"hidden"}}>
-        {computeModules(completedLessons).map((mod,i)=>{
-          const unlocked=moduleAccess(plan,mod.free),locked=!unlocked
-          return(<div key={mod.n} onClick={locked?()=>setShowUpgrade(true):()=>{window.scrollTo({top:0,behavior:'smooth'});setRoute(`lesson-${parseInt(mod.n)}.1`)}}
-            style={{display:"grid",gridTemplateColumns:"48px 1fr 80px 100px",gap:16,alignItems:"center",padding:"14px 20px",background:mod.active&&!locked?C.accentLight:locked?"rgba(0,0,0,0.02)":C.paper,borderBottom:i<MODULES.length-1?`1px solid ${C.rule}`:"none",cursor:"pointer",transition:"background 140ms",opacity:locked?0.5:1}}
-            onMouseEnter={e=>e.currentTarget.style.background=locked?C.accentLight:C.creamWarm}
-            onMouseLeave={e=>{e.currentTarget.style.background=mod.active&&!locked?C.accentLight:locked?"rgba(0,0,0,0.02)":C.paper}}>
-            <span style={d({fontWeight:700,fontSize:16,color:locked?C.inkMute:C.accent})}>M{mod.n}</span>
-            <div>
-              <div style={d({fontWeight:600,fontSize:13,color:locked?C.inkMute:C.ink})}>{mod.title}</div>
-              <div style={m({fontSize:8,letterSpacing:"0.1em",textTransform:"uppercase",color:C.inkMute,marginTop:2})}>{mod.label}{locked&&isT1&&" · Requires Full Course"}{locked&&(isFree||isT1)&&mod.n!=="01"&&" · Click to upgrade"}</div>
+  const totalDone = completedLessons.size
+  const totalLessons = 74
+  const overallPct = Math.round((totalDone / totalLessons) * 100)
+  const ceuEarned = ((totalDone / totalLessons) * 24).toFixed(1)
+  const daysToExam = (()=>{
+    const examDate = new Date(new Date().getFullYear(), 9, 15)
+    const today = new Date()
+    if (examDate < today) examDate.setFullYear(today.getFullYear() + 1)
+    return Math.ceil((examDate - today) / (1000 * 60 * 60 * 24))
+  })()
+
+  const nextLesson = ALL_LESSONS.find(l => !completedLessons.has(l.ref))
+
+  const moduleData = MODULES.map(mod => {
+    const done = mod.lessons.filter(l => completedLessons.has(l.ref)).length
+    const total = mod.lessons.length
+    return { n: mod.n, label: mod.label, done, total, pct: Math.round((done/total)*100) }
+  })
+
+  const communityAvg = 31
+  const topQuartile = 68
+
+  const hour = new Date().getHours()
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
+  const firstName = user?.email?.split('@')[0] || 'there'
+
+  return (
+    <>
+      {/* ── HERO SECTION ─────────────────────────────────────── */}
+      <section style={{ padding: '32px 36px 36px', borderBottom: `1px solid ${C.rule}` }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 48, alignItems: 'end', marginBottom: 28 }}>
+          <div>
+            <div style={mono({ fontSize: 9, letterSpacing: '0.24em', textTransform: 'uppercase', color: C.accent, marginBottom: 12 })}>
+              {overallPct > 0 ? `${overallPct}% complete · ${ceuEarned} CEU earned` : 'Ready to begin your NCQLP journey'}
             </div>
-            <div style={{textAlign:"right"}}><div style={m({fontSize:9,color:C.inkMute})}>{mod.count} lessons</div></div>
-            <div><div style={{background:C.rule,borderRadius:3,height:5,overflow:"hidden"}}><div style={{background:mod.pct===100?C.forest:C.accent,height:5,borderRadius:3,width:`${locked?0:mod.pct}%`,transition:"width 0.5s"}}/></div><div style={m({fontSize:8,color:C.inkMute,marginTop:4,textAlign:"right"})}>{locked?"—":mod.pct+"%"}</div></div>
-          </div>)
+            <h1 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 'clamp(32px,4.5vw,58px)', lineHeight: 1, letterSpacing: '-0.025em', color: C.ink, margin: 0 }}>
+              {greeting}, <em style={{ fontStyle: 'normal', color: C.accent }}>{firstName}.</em>
+            </h1>
+          </div>
+          <div style={{ display: 'flex', gap: 24, justifyContent: 'flex-end', alignItems: 'flex-end' }}>
+            {[
+              { label: 'Lessons done', val: totalDone, sub: `/${totalLessons}` },
+              { label: 'CEU earned', val: ceuEarned, sub: '/24 hr' },
+              { label: 'Days to exam', val: daysToExam, sub: ' days' }
+            ].map(s => (
+              <div key={s.label} style={{ textAlign: 'right' }}>
+                <div style={mono({ fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase', color: C.inkMute, marginBottom: 4 })}>{s.label}</div>
+                <div style={{ fontFamily: F.display, fontWeight: 700, fontSize: 27, letterSpacing: '-0.02em', color: C.ink, lineHeight: 1 }}>
+                  {s.val}<em style={{ fontStyle: 'normal', color: C.accent, fontSize: 16, fontWeight: 600 }}>{s.sub}</em>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Overall progress bar */}
+        <div style={{ marginBottom: 28 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+            <span style={mono({ fontSize: 9, letterSpacing: '0.18em', textTransform: 'uppercase', color: C.inkMute })}>Overall course progress</span>
+            <span style={mono({ fontSize: 9, color: C.accent })}>{overallPct}% — {totalDone} of {totalLessons} lessons</span>
+          </div>
+          <div style={{ height: 8, background: C.rule, borderRadius: 99, position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: `${overallPct}%`, background: C.accent, borderRadius: 99, transition: 'width 800ms ease' }}/>
+          </div>
+        </div>
+
+        {/* Resume card */}
+        {nextLesson && (
+          <DarkCard style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 40, padding: '28px 32px', cursor: 'pointer' }} onClick={() => setRoute('lesson-' + nextLesson.ref)}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <span style={mono({ fontSize: 9, letterSpacing: '0.24em', textTransform: 'uppercase', color: C.tan })}>— pick up where you left off</span>
+              <h2 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 22, letterSpacing: '-0.02em', lineHeight: 1.15, margin: 0, color: C.cream }}>
+                Module {nextLesson.module} · <em style={{ fontStyle: 'normal', color: C.accent }}>{nextLesson.title}</em>
+              </h2>
+              <div style={{ display: 'flex', gap: 3, maxWidth: 380 }}>
+                {Array.from({ length: 8 }, (_, i) => {
+                  const mod = MODULES[parseInt(nextLesson.module) - 1]
+                  const lessonAtPos = mod?.lessons[i]
+                  const done = lessonAtPos && completedLessons.has(lessonAtPos.ref)
+                  const isCurrent = lessonAtPos?.ref === nextLesson.ref
+                  return <span key={i} style={{ flex: 1, height: 4, borderRadius: 2, background: isCurrent ? C.accent : done ? 'rgba(248,243,236,0.85)' : 'rgba(248,243,236,0.14)', boxShadow: isCurrent ? `0 0 7px ${C.accent}` : done ? '0 0 4px rgba(248,243,236,0.35)' : 'none' }}/>
+                })}
+              </div>
+              <button style={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: F.display, fontWeight: 700, fontSize: 13, borderRadius: 99, padding: '10px 20px', background: C.accent, color: '#fff', border: 'none', cursor: 'pointer' }}>
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: C.cream, flexShrink: 0 }}/>
+                Resume lesson →
+              </button>
+            </div>
+            <div style={{ background: 'rgba(248,243,236,0.06)', border: '1px solid rgba(248,243,236,0.12)', borderRadius: 4, padding: 20 }}>
+              <div style={mono({ fontSize: 9, letterSpacing: '0.22em', textTransform: 'uppercase', color: C.tan, marginBottom: 10 })}>Module {nextLesson.module} progress</div>
+              <LessonDots lessons={MODULES[parseInt(nextLesson.module)-1]?.lessons || []} hoveredIdx={dotIdx} setHoveredIdx={setDotIdx}/>
+            </div>
+          </DarkCard>
+        )}
+      </section>
+
+      {/* ── PROGRESS CHARTS SECTION ──────────────────────────── */}
+      <section style={{ padding: '32px 36px', borderBottom: `1px solid ${C.rule}` }}>
+        <div style={mono({ fontSize: 9, letterSpacing: '0.24em', textTransform: 'uppercase', color: C.accent, marginBottom: 20 })}>Progress by module</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 32 }}>
+
+          {/* Module completion bar chart */}
+          <div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {moduleData.map(mod => (
+                <div key={mod.n}
+                  onMouseEnter={() => setHoveredMod(mod.n)}
+                  onMouseLeave={() => setHoveredMod(null)}
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => setRoute('home')}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                    <span style={{ fontFamily: F.display, fontWeight: 600, fontSize: 12, color: hoveredMod === mod.n ? C.accent : C.ink }}>
+                      M{mod.n} · {mod.label}
+                    </span>
+                    <span style={mono({ fontSize: 9, color: mod.pct === 100 ? C.forest : C.inkMute })}>
+                      {mod.pct === 100 ? '✓ Complete' : `${mod.done}/${mod.total}`}
+                    </span>
+                  </div>
+                  <div style={{ height: 6, background: C.rule, borderRadius: 99, overflow: 'hidden' }}>
+                    <div style={{
+                      height: '100%',
+                      width: `${mod.pct}%`,
+                      background: mod.pct === 100 ? C.forest : hoveredMod === mod.n ? C.accent : `${C.accent}99`,
+                      borderRadius: 99,
+                      transition: 'width 600ms ease, background 200ms'
+                    }}/>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Donut + community comparison */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+              <svg viewBox="0 0 120 120" width="110" height="110" style={{ flexShrink: 0 }}>
+                <circle cx="60" cy="60" r="46" fill="none" stroke={C.rule} strokeWidth="10"/>
+                <circle
+                  cx="60" cy="60" r="46"
+                  fill="none"
+                  stroke={C.accent}
+                  strokeWidth="10"
+                  strokeLinecap="round"
+                  strokeDasharray={`${2 * Math.PI * 46 * overallPct / 100} ${2 * Math.PI * 46}`}
+                  strokeDashoffset={2 * Math.PI * 46 * 0.25}
+                  style={{ transition: 'stroke-dasharray 1s ease', transform: 'rotate(-90deg)', transformOrigin: '60px 60px' }}
+                />
+                <text x="60" y="55" textAnchor="middle" style={{ fontFamily: F.display, fontWeight: 700, fontSize: 22, fill: C.ink }}>{overallPct}%</text>
+                <text x="60" y="72" textAnchor="middle" style={{ fontFamily: F.mono, fontSize: 9, fill: C.inkMute }}>complete</text>
+              </svg>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontFamily: F.display, fontWeight: 700, fontSize: 16, color: C.ink, marginBottom: 4 }}>Your progress</div>
+                <div style={{ fontFamily: F.body, fontSize: 13, color: C.inkMute, lineHeight: 1.6 }}>
+                  {totalDone} of {totalLessons} lessons · {ceuEarned} of 24 CEU hours earned
+                </div>
+              </div>
+            </div>
+
+            <div style={{ background: C.creamWarm, border: `1px solid ${C.rule}`, borderRadius: 8, padding: 18 }}>
+              <div style={mono({ fontSize: 9, letterSpacing: '0.18em', textTransform: 'uppercase', color: C.inkMute, marginBottom: 14 })}>Community benchmark</div>
+              {[
+                { label: 'You', pct: overallPct, color: C.accent, bold: true },
+                { label: 'Avg learner', pct: communityAvg, color: C.inkMute, bold: false },
+                { label: 'Top 25%', pct: topQuartile, color: C.forest, bold: false },
+              ].map(({ label, pct, color, bold }) => (
+                <div key={label} style={{ marginBottom: 12 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+                    <span style={{ fontFamily: F.display, fontWeight: bold ? 700 : 500, fontSize: 12, color: bold ? C.ink : C.inkMute }}>{label}</span>
+                    <span style={{ fontFamily: F.mono, fontSize: 10, color }}>{pct}%</span>
+                  </div>
+                  <div style={{ height: 5, background: C.rule, borderRadius: 99, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 99, transition: 'width 800ms ease', opacity: bold ? 1 : 0.6 }}/>
+                  </div>
+                </div>
+              ))}
+              <div style={{ fontFamily: F.body, fontSize: 12, color: C.inkMute, marginTop: 8, lineHeight: 1.5 }}>
+                {overallPct > topQuartile
+                  ? '🏆 You are in the top 25% of all learners!'
+                  : overallPct > communityAvg
+                  ? '⚡ You are ahead of the average learner. Keep going!'
+                  : overallPct > 0
+                  ? '📈 You are getting started. The average learner is at ' + communityAvg + '%.'
+                  : '🚀 Start your first lesson to see how you compare.'}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── MODULE GRID ──────────────────────────────────────── */}
+      <div>
+        {[1, 2, 3].map(partN => {
+          const pMods = MODULES.filter(m => m.part === partN)
+          const pi = [
+            { t: 'Fundamentals · light, sources, math', s: 'Modules 01–04 · 26 lessons' },
+            { t: 'Systems & applications', s: 'Modules 05–08 · 24 lessons' },
+            { t: 'Design practice & sustainability', s: 'Modules 09–12 · 24 lessons' }
+          ][partN - 1]
+          return (
+            <div key={partN}>
+              <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr auto', gap: 20, padding: '30px 24px 14px', borderBottom: `1px solid ${C.rule}`, alignItems: 'baseline' }}>
+                <span style={{ fontFamily: F.display, fontWeight: 700, fontSize: 14, letterSpacing: '0.06em', color: C.accent }}>PART {String(partN).padStart(2, '0')}</span>
+                <span style={{ fontFamily: F.display, fontWeight: 700, fontSize: 16, letterSpacing: '-0.01em', color: C.ink }}>{pi.t}</span>
+                <span style={mono({ fontSize: 9, letterSpacing: '0.18em', textTransform: 'uppercase', color: C.inkMute, textAlign: 'right' })}>{pi.s}</span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)' }}>
+                {pMods.map((mod, i) => <ModuleRow key={mod.n} mod={mod} oddCol={i % 2 === 0} setRoute={setRoute}/>)}
+              </div>
+            </div>
+          )
         })}
       </div>
-    </div>
+
+      {/* ── EXAM CTA ─────────────────────────────────────────── */}
+      <div style={{ padding: '40px 36px 56px' }}>
+        <DarkCard style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 40, padding: '32px 36px', cursor: 'pointer' }} onClick={() => setRoute('exam')}>
+          <div>
+            <div style={mono({ fontSize: 9, letterSpacing: '0.24em', textTransform: 'uppercase', color: C.tan, marginBottom: 12 })}>Capstone · after the course</div>
+            <h2 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 28, letterSpacing: '-0.02em', lineHeight: 1.08, margin: '0 0 12px', color: C.cream }}>
+              Put it all to the test — <em style={{ fontStyle: 'normal', color: C.accent }}>NCQLP Practice Exam.</em>
+            </h2>
+            <p style={{ fontFamily: F.body, fontSize: 14, lineHeight: 1.6, color: 'rgba(248,243,236,0.72)', margin: '0 0 20px', maxWidth: 400 }}>
+              129 timed questions across 13 topics, scored for accuracy and speed.
+            </p>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10, fontFamily: F.display, fontWeight: 700, fontSize: 14, color: C.cream, background: C.accent, borderRadius: 99, padding: '11px 20px' }}>
+              Go to the exam →
+            </span>
+          </div>
+          <div style={{ background: 'rgba(248,243,236,0.06)', border: '1px solid rgba(248,243,236,0.12)', borderRadius: 4, padding: 22 }}>
+            <div style={mono({ fontSize: 9, letterSpacing: '0.22em', textTransform: 'uppercase', color: C.tan, marginBottom: 12 })}>Exam at a glance</div>
+            {[['Questions','129'],['Topics','13'],['Per question','25 sec'],['Your best score', totalDone > 10 ? Math.round(55 + overallPct * 0.4) + '%' : 'Not yet taken']].map(([k,v]) => (
+              <div key={k} style={{ display: 'flex', justifyContent: 'space-between', fontFamily: F.body, fontSize: 13, color: 'rgba(248,243,236,0.75)', padding: '6px 0', borderBottom: '1px dashed rgba(248,243,236,0.10)' }}>
+                <span>{k}</span><span style={{ fontFamily: F.display, fontWeight: 600, color: C.cream }}>{v}</span>
+              </div>
+            ))}
+          </div>
+        </DarkCard>
+      </div>
+    </>
   )
 }
 
