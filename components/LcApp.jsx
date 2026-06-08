@@ -2709,6 +2709,7 @@ const LC_MEDIA = {
 
 const LC_AUDIO = {
   "1.1": "https://res.cloudinary.com/dreuglb2j/video/upload/v1780936730/Lesson_101_qfxduz.mp4",
+  "1.2": "https://res.cloudinary.com/dreuglb2j/video/upload/v1780937191/Lesson_201_v0fdrt.mp4",
 }
 
 function UpgradePrompt({onUpgrade, setRoute}){
