@@ -2710,6 +2710,24 @@ const LC_MEDIA = {
 const LC_AUDIO = {
   "1.1": "https://res.cloudinary.com/dreuglb2j/video/upload/v1780936730/Lesson_101_qfxduz.mp4",
   "1.2": "https://res.cloudinary.com/dreuglb2j/video/upload/v1780937194/Lesson_102_lrftbl.mp4",
+  "1.3": "https://res.cloudinary.com/dreuglb2j/video/upload/v1780937199/Lesson_103_nccty5.mp4",
+  "1.4": "https://res.cloudinary.com/dreuglb2j/video/upload/v1780937207/Lesson_104_azebuk.mp4",
+  "1.5": "https://res.cloudinary.com/dreuglb2j/video/upload/v1780938829/Lesson_105_ocp78s.mp4",
+  "1.6": "https://res.cloudinary.com/dreuglb2j/video/upload/v1780938836/Lesson_106_athpck.mp4",
+  "2.1": "https://res.cloudinary.com/dreuglb2j/video/upload/v1780938833/Lesson_201_tjdswg.mp4",
+  "2.2": "https://res.cloudinary.com/dreuglb2j/video/upload/v1780938861/Lesson_202_li9jyz.mp4",
+  "2.3": "https://res.cloudinary.com/dreuglb2j/video/upload/v1780938826/Lesson_203_gsjlaf.mp4",
+  "2.4": "https://res.cloudinary.com/dreuglb2j/video/upload/v1780938860/Lesson_204_zxrzv1.mp4",
+  "2.5": "https://res.cloudinary.com/dreuglb2j/video/upload/v1780938840/Lesson_205_kyyb9b.mp4",
+  "2.6": "https://res.cloudinary.com/dreuglb2j/video/upload/v1780938823/Lesson_206_ndzt7y.mp4",
+  "3.1": "https://res.cloudinary.com/dreuglb2j/video/upload/v1780938820/Lesson_301_rdq7it.mp4",
+  "3.2": "https://res.cloudinary.com/dreuglb2j/video/upload/v1780938813/Lesson_302_fquagf.mp4",
+  "3.3": "https://res.cloudinary.com/dreuglb2j/video/upload/v1780938817/Lesson_303_ry7ugc.mp4",
+  "3.6": "https://res.cloudinary.com/dreuglb2j/video/upload/v1780938848/Lesson_306_phymdl.mp4",
+  "4.1": "https://res.cloudinary.com/dreuglb2j/video/upload/v1780938865/Lesson_401_dloyip.mp4",
+  "4.2": "https://res.cloudinary.com/dreuglb2j/video/upload/v1780938812/Lesson_402_bouves.mp4",
+  "4.4": "https://res.cloudinary.com/dreuglb2j/video/upload/v1780938863/Lesson_404_zbtrb3.mp4",
+  "5.2": "https://res.cloudinary.com/dreuglb2j/video/upload/v1780938844/Lesson_502_haejrn.mp4",
 }
 
 function UpgradePrompt({onUpgrade, setRoute}){
