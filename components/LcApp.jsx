@@ -1313,6 +1313,15 @@ const LEGAL_DOCS = {
       {h:"2. Description of service", body:"LC · Lighting Master provides online educational content, practice examinations, and study tools to help professionals prepare for the Lighting Certified (LC) examination. We are an independent preparation service and are not affiliated with, endorsed by, or connected to the National Council on Qualifications for the Lighting Professions (NCQLP) or any examination body."},
       {h:"3. Accounts", body:"You must be at least 18 years old to create an account. You are responsible for maintaining the confidentiality of your credentials and for all activity under your account. You may not share, transfer, or sell account access. Notify us immediately at admin@luxartmedia.com if you suspect unauthorized access."},
       {h:"4. Subscriptions and access", body:"Access is granted for a calendar-year window expiring December 31 of the year of purchase, or for the specific period shown at checkout. All plans are single-user unless purchased as a team plan. Team plans grant access to the specified number of seats managed by a designated team administrator. Seat assignments may be changed by the team administrator up to the seat limit."},
+      {h:"4a. License & Permitted Use",
+       bodyPre:"Each LC · Lighting Master license is issued to a single named individual (\"Licensee\") and is non-transferable. The following are strictly prohibited:",
+       list:[
+         "Sharing login credentials with any other person",
+         "Allowing any third party to access your account",
+         "Using your account on behalf of another individual",
+         "Purchasing a single license for use by multiple people",
+       ],
+       body:"Luxart LLC actively monitors for concurrent sessions and anomalous login patterns. Accounts found to be shared will be terminated without refund and without prior notice, in accordance with our refund policy. Teams of two or more must purchase a Team License. By completing your purchase you agree that your license is for your individual use only."},
       {h:"5. Acceptable use", body:"You agree not to: reproduce, distribute, or publicly display course content, exam questions, or any proprietary material without written permission; attempt to reverse-engineer, scrape, or circumvent any access controls; share login credentials; use the platform for any unlawful purpose; or upload harmful code. Violations may result in immediate account termination without refund."},
       {h:"6. Intellectual property", body:"All content on LC · Lighting Master — including lesson text, exam questions, diagrams, audio narration, visual assets, and software — is owned by or licensed to Luxart LLC and protected by copyright. Your subscription grants a limited, non-exclusive, non-transferable license to access content for personal study purposes only. No rights are granted beyond this license."},
       {h:"7. Disclaimers", body:"LC · Lighting Master is provided \"as is\" without warranty of any kind. We do not guarantee that use of our platform will result in passing any examination. Examination formats, content, and pass rates are set by the relevant credentialing body and are outside our control. We disclaim all warranties, express or implied, to the fullest extent permitted by law."},
@@ -1417,10 +1426,18 @@ function LegalModal({doc, onClose}) {
                 color:C.accent,margin:"0 0 8px",letterSpacing:"-0.01em"}}>
                 {s.h}
               </h3>
-              <p style={{fontFamily:F.body,fontSize:13,lineHeight:1.75,
+              {s.bodyPre&&<p style={{fontFamily:F.body,fontSize:13,lineHeight:1.75,
+                color:C.inkSoft,margin:"0 0 8px"}}>
+                {s.bodyPre}
+              </p>}
+              {s.list&&<ul style={{fontFamily:F.body,fontSize:13,lineHeight:1.75,
+                color:C.inkSoft,margin:"0 0 8px 18px",padding:0}}>
+                {s.list.map((item,j)=><li key={j} style={{marginBottom:4}}>{item}</li>)}
+              </ul>}
+              {s.body&&<p style={{fontFamily:F.body,fontSize:13,lineHeight:1.75,
                 color:C.inkSoft,margin:0}}>
                 {s.body}
-              </p>
+              </p>}
             </div>
           ))}
           <div style={{marginTop:32,paddingTop:20,borderTop:`1px solid ${C.rule}`}}>
