@@ -2728,18 +2728,18 @@ const MODULE_SHARE_COPY = {
 }
 
 const MODULE_HASHTAGS = {
-  '01': "#NCQLP #LightingDesign #ColorRendering #CRI #TM30 #Photometry #LightingCertified #IES #IESNA #LightingEducation #LC #Luxart",
-  '02': "#NCQLP #LightingDesign #LEDLighting #LightSources #HID #MetalHalide #LightingSpec #IES #LightingCertified #LC #Luxart",
-  '03': "#NCQLP #LEDTechnology #DALIDimming #LM80 #TM21 #LumenMaintenance #LEDDrivers #IES #LightingDesign #LightingCertified #LC #Luxart",
-  '04': "#NCQLP #Photometry #IESFile #LM79 #DLC #ZonalCavity #LightingMath #IES #IESNA #LightingDesign #LightingCertified #LC #Luxart",
-  '05': "#NCQLP #LightingControls #DALI #DaylightHarvesting #ASHRAE901 #LEEDv4 #SmartLighting #IES #LightingDesign #LightingCertified #LC #Luxart",
-  '06': "#NCQLP #LightingDesign #Downlighting #UGR #GlareControl #InteriorDesign #WallWash #IES #IESNA #LightingCertified #LC #Luxart",
-  '07': "#NCQLP #ExteriorLighting #BUGRating #NFPA101 #EmergencyLighting #Title24 #LightTrespass #IES #LightingDesign #LightingCertified #LC #Luxart",
-  '08': "#NCQLP #IndustrialLighting #CircadianLighting #WELLBuilding #MelanopicLux #HazardousLocation #HighBay #IES #LightingDesign #LightingCertified #LC #Luxart",
-  '09': "#NCQLP #SustainableLighting #ASHRAE901 #LEEDv4 #DLC #EnergyEfficiency #GreenBuilding #IES #LightingDesign #LightingCertified #LC #Luxart",
-  '10': "#NCQLP #LightingDesign #DesignProcess #Photometrics #LightingSpec #ArchitecturalLighting #IES #IESNA #LightingCertified #LC #Luxart",
-  '11': "#NCQLP #LightingDesign #ConstructionDocuments #CSISpec #LightingCA #RCP #IES #ArchitecturalLighting #LightingCertified #LC #Luxart",
-  '12': "#NCQLP #LightingCertified #LightingDesign #IES #IESNA #DALI #ASHRAE #LEEDv4 #WELLBuilding #DLC #Title24 #LC #Luxart #ExamReady",
+  '01': "#NCQLP #LightingDesign #ColorRendering #CRI #TM30 #Photometry #LightingCertified #IES #IESNA #LightingEducation #LC #Luxart lightingmasterlc.com",
+  '02': "#NCQLP #LightingDesign #LEDLighting #LightSources #HID #MetalHalide #LightingSpec #IES #LightingCertified #LC #Luxart lightingmasterlc.com",
+  '03': "#NCQLP #LEDTechnology #DALIDimming #LM80 #TM21 #LumenMaintenance #LEDDrivers #IES #LightingDesign #LightingCertified #LC #Luxart lightingmasterlc.com",
+  '04': "#NCQLP #Photometry #IESFile #LM79 #DLC #ZonalCavity #LightingMath #IES #IESNA #LightingDesign #LightingCertified #LC #Luxart lightingmasterlc.com",
+  '05': "#NCQLP #LightingControls #DALI #DaylightHarvesting #ASHRAE901 #LEEDv4 #SmartLighting #IES #LightingDesign #LightingCertified #LC #Luxart lightingmasterlc.com",
+  '06': "#NCQLP #LightingDesign #Downlighting #UGR #GlareControl #InteriorDesign #WallWash #IES #IESNA #LightingCertified #LC #Luxart lightingmasterlc.com",
+  '07': "#NCQLP #ExteriorLighting #BUGRating #NFPA101 #EmergencyLighting #Title24 #LightTrespass #IES #LightingDesign #LightingCertified #LC #Luxart lightingmasterlc.com",
+  '08': "#NCQLP #IndustrialLighting #CircadianLighting #WELLBuilding #MelanopicLux #HazardousLocation #HighBay #IES #LightingDesign #LightingCertified #LC #Luxart lightingmasterlc.com",
+  '09': "#NCQLP #SustainableLighting #ASHRAE901 #LEEDv4 #DLC #EnergyEfficiency #GreenBuilding #IES #LightingDesign #LightingCertified #LC #Luxart lightingmasterlc.com",
+  '10': "#NCQLP #LightingDesign #DesignProcess #Photometrics #LightingSpec #ArchitecturalLighting #IES #IESNA #LightingCertified #LC #Luxart lightingmasterlc.com",
+  '11': "#NCQLP #LightingDesign #ConstructionDocuments #CSISpec #LightingCA #RCP #IES #ArchitecturalLighting #LightingCertified #LC #Luxart lightingmasterlc.com",
+  '12': "#NCQLP #LightingCertified #LightingDesign #IES #IESNA #DALI #ASHRAE #LEEDv4 #WELLBuilding #DLC #Title24 #LC #Luxart #ExamReady lightingmasterlc.com",
 }
 
 /* ── SHARE BUTTON (used inside ModuleCompleteModal) ── */
@@ -2831,21 +2831,24 @@ function ModuleCompleteModal({module, courseComplete, onClose, onNextLesson, nex
             onClick={copyLink}/>
         </div>
 
-        <div style={{ display:'flex', flexDirection:'column', gap:10, marginTop:8, width:'100%' }}>
+        <div style={{ display:'flex', flexDirection:'column', marginTop:8, width:'100%' }}>
           {nextLesson && (
             <button
-              onClick={() => { onClose(); setTimeout(() => onNextLesson(), 100) }}
+              onClick={() => {
+                onClose()
+                setTimeout(() => {
+                  window.scrollTo({ top: 0, behavior: 'instant' })
+                  onNextLesson()
+                }, 80)
+              }}
               style={{
                 width:'100%', fontFamily:F.display, fontWeight:700, fontSize:14,
                 background:C.accent, color:'#fff', border:'none', borderRadius:99,
-                padding:'13px 24px', cursor:'pointer',
+                padding:'13px 24px', cursor:'pointer', marginBottom:10,
                 display:'flex', alignItems:'center', justifyContent:'center', gap:8,
-                transition:'background 150ms',
               }}
-              onMouseEnter={e=>e.currentTarget.style.background=C.tan}
-              onMouseLeave={e=>e.currentTarget.style.background=C.accent}
             >
-              Next lesson — {nextLesson.title} →
+              Continue → {nextLesson?.title || 'Next lesson'}
             </button>
           )}
           <button
@@ -2855,10 +2858,7 @@ function ModuleCompleteModal({module, courseComplete, onClose, onNextLesson, nex
               background:'transparent', color:C.inkMute,
               border:`1px solid ${C.rule}`, borderRadius:99,
               padding:'11px 24px', cursor:'pointer',
-              transition:'border-color 150ms, color 150ms',
             }}
-            onMouseEnter={e=>{ e.currentTarget.style.borderColor=C.ink; e.currentTarget.style.color=C.ink }}
-            onMouseLeave={e=>{ e.currentTarget.style.borderColor=C.rule; e.currentTarget.style.color=C.inkMute }}
           >
             ← Back to dashboard
           </button>
@@ -2894,7 +2894,7 @@ const LC_MEDIA = {
   "3.8":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1781029915/308_yy3v3a.png",
   "4.1":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780597574/401_of5hag.png",
   "4.2":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780597584/402_nx9tmw.png",
-  "4.3":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780597580/403_daykb7.png",
+  "4.3":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1781033022/403_luyv6i.png",
   "4.4":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780944535/404_kcn7nn.png",
   "4.5":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780597798/405_pj6afz.png",
   "4.6":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780597874/406_qghh3n.png",
