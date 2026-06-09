@@ -1777,65 +1777,70 @@ const LC_VISUALS = {
   <rect x="276" y="166" width="228" height="22" rx="5" fill="#7a3a9a" opacity="0.12"/>
   <text x="390" y="181" text-anchor="middle" font-size="9" fill="#7a3a9a" font-weight="600">Metric: melanopic lux — light as health</text>
 </svg>`
-,"3.8":`<svg viewBox="0 0 520 210" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto">
-  <rect width="520" height="210" fill="#fdfaf6" rx="8"/>
-  <text x="260" y="18" text-anchor="middle" font-size="10" font-weight="700" fill="#2F4A3F" font-family="sans-serif">LED Package Types — Specification Reference</text>
-  <rect x="8" y="26" width="504" height="16" rx="3" fill="#2F4A3F"/>
-  <text x="30"  y="38" font-size="8" font-weight="700" fill="#fdfaf6" font-family="sans-serif">Package</text>
-  <text x="180" y="38" font-size="8" font-weight="700" fill="#fdfaf6" font-family="sans-serif">Key characteristic</text>
-  <text x="340" y="38" font-size="8" font-weight="700" fill="#fdfaf6" font-family="sans-serif">Primary applications</text>
-  <text x="500" y="38" font-size="8" font-weight="700" fill="#fdfaf6" font-family="sans-serif" text-anchor="middle">Spectrum</text>
-  <rect x="8" y="44" width="504" height="15" rx="2" fill="#f5ede0"/>
-  <text x="30" y="55" font-size="8" font-weight="600" fill="#2F4A3F" font-family="sans-serif">Discrete LED</text>
-  <text x="180" y="55" font-size="7.5" fill="#5a6a60" font-family="sans-serif">Single chip, individual control</text>
-  <text x="340" y="55" font-size="7.5" fill="#5a6a60" font-family="sans-serif">Indicators, signage, automotive</text>
-  <text x="500" y="55" font-size="7.5" fill="#2F4A3F" font-weight="600" font-family="sans-serif" text-anchor="middle">Visible</text>
-  <rect x="8" y="59" width="504" height="15" rx="2" fill="#fdfaf6"/>
-  <text x="30" y="70" font-size="8" font-weight="600" fill="#2F4A3F" font-family="sans-serif">COB</text>
-  <text x="180" y="70" font-size="7.5" fill="#5a6a60" font-family="sans-serif">Multi-die substrate, uniform surface</text>
-  <text x="340" y="70" font-size="7.5" fill="#5a6a60" font-family="sans-serif">Downlights, spotlights, track, museum</text>
-  <text x="500" y="70" font-size="7.5" fill="#2F4A3F" font-weight="600" font-family="sans-serif" text-anchor="middle">Visible</text>
-  <rect x="8" y="74" width="504" height="15" rx="2" fill="#f5ede0"/>
-  <text x="30" y="85" font-size="8" font-weight="600" fill="#2F4A3F" font-family="sans-serif">SMD (2835/3030/5050)</text>
-  <text x="180" y="85" font-size="7.5" fill="#5a6a60" font-family="sans-serif">Most common, balanced efficacy/cost</text>
-  <text x="340" y="85" font-size="7.5" fill="#5a6a60" font-family="sans-serif">Linear, troffers, panels, residential</text>
-  <text x="500" y="85" font-size="7.5" fill="#2F4A3F" font-weight="600" font-family="sans-serif" text-anchor="middle">Visible</text>
-  <rect x="8" y="89" width="504" height="15" rx="2" fill="#fdfaf6"/>
-  <text x="30" y="100" font-size="8" font-weight="600" fill="#2F4A3F" font-family="sans-serif">LED Tape Light</text>
-  <text x="180" y="100" font-size="7.5" fill="#5a6a60" font-family="sans-serif">Flexible PCB, continuous linear</text>
-  <text x="340" y="100" font-size="7.5" fill="#5a6a60" font-family="sans-serif">Coves, millwork, under-cabinet</text>
-  <text x="500" y="100" font-size="7.5" fill="#2F4A3F" font-weight="600" font-family="sans-serif" text-anchor="middle">Visible</text>
-  <rect x="8" y="104" width="504" height="15" rx="2" fill="#f5ede0"/>
-  <text x="30" y="115" font-size="8" font-weight="600" fill="#2F4A3F" font-family="sans-serif">High-Power LED</text>
-  <text x="180" y="115" font-size="7.5" fill="#5a6a60" font-family="sans-serif">High current, robust thermal mgmt</text>
-  <text x="340" y="115" font-size="7.5" fill="#5a6a60" font-family="sans-serif">Sports, floods, street, high-bay</text>
-  <text x="500" y="115" font-size="7.5" fill="#2F4A3F" font-weight="600" font-family="sans-serif" text-anchor="middle">Visible</text>
-  <rect x="8" y="119" width="504" height="15" rx="2" fill="#fdfaf6"/>
-  <text x="30" y="130" font-size="8" font-weight="600" fill="#2F4A3F" font-family="sans-serif">Filament LED</text>
-  <text x="180" y="130" font-size="7.5" fill="#5a6a60" font-family="sans-serif">Transparent substrate, retro aesthetic</text>
-  <text x="340" y="130" font-size="7.5" fill="#5a6a60" font-family="sans-serif">Hospitality, decorative, vintage</text>
-  <text x="500" y="130" font-size="7.5" fill="#2F4A3F" font-weight="600" font-family="sans-serif" text-anchor="middle">Visible</text>
-  <rect x="8" y="134" width="504" height="15" rx="2" fill="#f5ede0"/>
-  <text x="30" y="145" font-size="8" font-weight="600" fill="#2F4A3F" font-family="sans-serif">RGB / RGBW</text>
-  <text x="180" y="145" font-size="7.5" fill="#5a6a60" font-family="sans-serif">Multi-channel color mixing</text>
-  <text x="340" y="145" font-size="7.5" fill="#5a6a60" font-family="sans-serif">Architectural, entertainment, façades</text>
-  <text x="500" y="145" font-size="7.5" fill="#2F4A3F" font-weight="600" font-family="sans-serif" text-anchor="middle">Visible</text>
-  <rect x="8" y="149" width="504" height="15" rx="2" fill="#fdfaf6"/>
-  <text x="30" y="160" font-size="8" font-weight="600" fill="#2F4A3F" font-family="sans-serif">UV LED</text>
-  <text x="180" y="160" font-size="7.5" fill="#5a6a60" font-family="sans-serif">200-400 nm, replaces mercury lamps</text>
-  <text x="340" y="160" font-size="7.5" fill="#5a6a60" font-family="sans-serif">Disinfection, curing, forensics</text>
-  <text x="500" y="160" font-size="7.5" fill="#7a3aa0" font-weight="600" font-family="sans-serif" text-anchor="middle">UV</text>
-  <rect x="8" y="164" width="504" height="15" rx="2" fill="#f5ede0"/>
-  <text x="30" y="175" font-size="8" font-weight="600" fill="#2F4A3F" font-family="sans-serif">IR LED</text>
-  <text x="180" y="175" font-size="7.5" fill="#5a6a60" font-family="sans-serif">700-1000 nm, invisible to human eye</text>
-  <text x="340" y="175" font-size="7.5" fill="#5a6a60" font-family="sans-serif">Sensors, security, machine vision</text>
-  <text x="500" y="175" font-size="7.5" fill="#C65A3A" font-weight="600" font-family="sans-serif" text-anchor="middle">IR</text>
-  <rect x="8" y="179" width="504" height="15" rx="2" fill="#fdfaf6"/>
-  <text x="30" y="190" font-size="8" font-weight="600" fill="#2F4A3F" font-family="sans-serif">OLED</text>
-  <text x="180" y="190" font-size="7.5" fill="#5a6a60" font-family="sans-serif">Organic surface emitter, flexible</text>
-  <text x="340" y="190" font-size="7.5" fill="#5a6a60" font-family="sans-serif">Decorative, specialty, automotive</text>
-  <text x="500" y="190" font-size="7.5" fill="#2F4A3F" font-weight="600" font-family="sans-serif" text-anchor="middle">Visible</text>
-  <text x="260" y="207" text-anchor="middle" font-size="7.5" fill="#9ab" font-family="sans-serif">RGBW adds dedicated white emitter for improved efficacy and CRI vs RGB alone · Mini LED and MicroLED used primarily in display applications</text>
+,"3.8": `<svg viewBox="0 0 560 310" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;font-family:sans-serif">
+  <rect width="560" height="310" fill="#fdfaf6" rx="8"/>
+  <text x="280" y="20" text-anchor="middle" font-size="11" font-weight="700" fill="#2F4A3F">LED Package Types — Specification Reference</text>
+  <rect x="10" y="28" width="540" height="20" rx="3" fill="#2F4A3F"/>
+  <text x="22"  y="42" font-size="8.5" font-weight="700" fill="#fdfaf6">Package Type</text>
+  <text x="160" y="42" font-size="8.5" font-weight="700" fill="#fdfaf6">Key Characteristic</text>
+  <text x="340" y="42" font-size="8.5" font-weight="700" fill="#fdfaf6">Primary Applications</text>
+  <text x="530" y="42" font-size="8.5" font-weight="700" fill="#fdfaf6" text-anchor="middle">Spectrum</text>
+  <rect x="10" y="48" width="540" height="22" fill="#f5ede0"/>
+  <text x="22"  y="63" font-size="8.5" font-weight="600" fill="#2F4A3F">Discrete LED</text>
+  <text x="160" y="63" font-size="8" fill="#5a6a60">Single chip, individual control</text>
+  <text x="340" y="63" font-size="8" fill="#5a6a60">Indicators, signage, automotive</text>
+  <text x="530" y="63" font-size="8" fill="#2F4A3F" text-anchor="middle" font-weight="600">Visible</text>
+  <rect x="10" y="70" width="540" height="22" fill="#fdfaf6"/>
+  <text x="22"  y="85" font-size="8.5" font-weight="600" fill="#2F4A3F">COB</text>
+  <text x="160" y="85" font-size="8" fill="#5a6a60">Multi-die substrate, uniform surface</text>
+  <text x="340" y="85" font-size="8" fill="#5a6a60">Downlights, spotlights, track, museum</text>
+  <text x="530" y="85" font-size="8" fill="#2F4A3F" text-anchor="middle" font-weight="600">Visible</text>
+  <rect x="10" y="92" width="540" height="22" fill="#f5ede0"/>
+  <text x="22"  y="107" font-size="8.5" font-weight="600" fill="#2F4A3F">SMD (2835 / 3030 / 5050)</text>
+  <text x="160" y="107" font-size="8" fill="#5a6a60">Most common, balanced efficacy/cost</text>
+  <text x="340" y="107" font-size="8" fill="#5a6a60">Linear, troffers, panels, residential</text>
+  <text x="530" y="107" font-size="8" fill="#2F4A3F" text-anchor="middle" font-weight="600">Visible</text>
+  <rect x="10" y="114" width="540" height="22" fill="#fdfaf6"/>
+  <text x="22"  y="129" font-size="8.5" font-weight="600" fill="#2F4A3F">LED Tape Light</text>
+  <text x="160" y="129" font-size="8" fill="#5a6a60">Flexible PCB, continuous linear</text>
+  <text x="340" y="129" font-size="8" fill="#5a6a60">Coves, millwork, under-cabinet</text>
+  <text x="530" y="129" font-size="8" fill="#2F4A3F" text-anchor="middle" font-weight="600">Visible</text>
+  <rect x="10" y="136" width="540" height="22" fill="#f5ede0"/>
+  <text x="22"  y="151" font-size="8.5" font-weight="600" fill="#2F4A3F">High-Power LED</text>
+  <text x="160" y="151" font-size="8" fill="#5a6a60">High current, robust thermal mgmt</text>
+  <text x="340" y="151" font-size="8" fill="#5a6a60">Sports, floods, street, high-bay</text>
+  <text x="530" y="151" font-size="8" fill="#2F4A3F" text-anchor="middle" font-weight="600">Visible</text>
+  <rect x="10" y="158" width="540" height="22" fill="#fdfaf6"/>
+  <text x="22"  y="173" font-size="8.5" font-weight="600" fill="#2F4A3F">Filament LED</text>
+  <text x="160" y="173" font-size="8" fill="#5a6a60">Transparent substrate, retro aesthetic</text>
+  <text x="340" y="173" font-size="8" fill="#5a6a60">Hospitality, decorative, vintage lamps</text>
+  <text x="530" y="173" font-size="8" fill="#2F4A3F" text-anchor="middle" font-weight="600">Visible</text>
+  <rect x="10" y="180" width="540" height="22" fill="#f5ede0"/>
+  <text x="22"  y="195" font-size="8.5" font-weight="600" fill="#2F4A3F">RGB / RGBW</text>
+  <text x="160" y="195" font-size="8" fill="#5a6a60">Multi-channel, RGBW adds white emitter</text>
+  <text x="340" y="195" font-size="8" fill="#5a6a60">Architectural, entertainment, facades</text>
+  <text x="530" y="195" font-size="8" fill="#2F4A3F" text-anchor="middle" font-weight="600">Visible</text>
+  <rect x="10" y="202" width="540" height="22" fill="#fdfaf6"/>
+  <text x="22"  y="217" font-size="8.5" font-weight="600" fill="#2F4A3F">UV LED</text>
+  <text x="160" y="217" font-size="8" fill="#5a6a60">200-400 nm, replaces mercury lamps</text>
+  <text x="340" y="217" font-size="8" fill="#5a6a60">Disinfection, UV curing, forensics</text>
+  <text x="530" y="217" font-size="8" fill="#7a3aa0" text-anchor="middle" font-weight="600">UV</text>
+  <rect x="10" y="224" width="540" height="22" fill="#f5ede0"/>
+  <text x="22"  y="239" font-size="8.5" font-weight="600" fill="#2F4A3F">IR LED</text>
+  <text x="160" y="239" font-size="8" fill="#5a6a60">700-1000 nm, invisible to human eye</text>
+  <text x="340" y="239" font-size="8" fill="#5a6a60">Security cameras, sensors, machine vision</text>
+  <text x="530" y="239" font-size="8" fill="#C65A3A" text-anchor="middle" font-weight="600">IR</text>
+  <rect x="10" y="246" width="540" height="22" fill="#fdfaf6"/>
+  <text x="22"  y="261" font-size="8.5" font-weight="600" fill="#2F4A3F">OLED</text>
+  <text x="160" y="261" font-size="8" fill="#5a6a60">Organic surface emitter, thin and flexible</text>
+  <text x="340" y="261" font-size="8" fill="#5a6a60">Decorative luminaires, automotive, specialty</text>
+  <text x="530" y="261" font-size="8" fill="#2F4A3F" text-anchor="middle" font-weight="600">Visible</text>
+  <rect x="10" y="28" width="540" height="240" rx="3" fill="none" stroke="#DDD0C0" stroke-width="0.8"/>
+  <line x1="150" y1="28" x2="150" y2="268" stroke="#DDD0C0" stroke-width="0.5"/>
+  <line x1="330" y1="28" x2="330" y2="268" stroke="#DDD0C0" stroke-width="0.5"/>
+  <line x1="510" y1="28" x2="510" y2="268" stroke="#DDD0C0" stroke-width="0.5"/>
+  <text x="280" y="285" text-anchor="middle" font-size="7.5" fill="#9ab" font-family="sans-serif">RGBW adds dedicated white emitter for better efficacy and CRI vs RGB alone</text>
+  <text x="280" y="298" text-anchor="middle" font-size="7.5" fill="#9ab" font-family="sans-serif">Mini LED and MicroLED primarily used in display backlighting and AR/VR systems</text>
 </svg>`
 ,"4.1":`<svg viewBox="0 0 520 148" style="width:100%;height:auto" xmlns="http://www.w3.org/2000/svg"><text x="260" y="12" text-anchor="middle" font-size="8" fill="#7A9688" font-family="monospace" letter-spacing=".1em">IES LM-63 FILE STRUCTURE</text><rect x="8" y="18" width="504" height="22" rx="3" fill="#fff5ee" stroke="#C65A3A" stroke-width=".8"/><text x="16" y="33" font-size="9" fill="#C65A3A" font-weight="500">HEADER</text><text x="80" y="33" font-size="8" fill="#7A9688">Manufacturer, Catalogue number, Lamp lumens, Test date, Multiplying factor</text><rect x="8" y="44" width="504" height="22" rx="3" fill="#e8eef8" stroke="#1857a0" stroke-width=".8"/><text x="16" y="59" font-size="9" fill="#1857a0" font-weight="500">TILT</text><text x="56" y="59" font-size="8" fill="#7A9688">TILT=NONE for most luminaires</text><rect x="8" y="70" width="504" height="22" rx="3" fill="#e8f5ee" stroke="#7E9B86" stroke-width=".8"/><text x="16" y="85" font-size="9" fill="#7E9B86" font-weight="500">LAMP AND ELECTRICAL</text><text x="160" y="85" font-size="8" fill="#7A9688">Lamp count, Lumens, Candela multiplier, Watts</text><rect x="8" y="96" width="504" height="34" rx="3" fill="#f3eef8" stroke="#7a3a9a" stroke-width=".8"/><text x="16" y="111" font-size="9" fill="#7a3a9a" font-weight="500">CANDELA DATA</text><text x="120" y="111" font-size="8" fill="#7A9688">Vertical: 0 deg nadir to 180 deg zenith</text><text x="120" y="123" font-size="8" fill="#7A9688">Horizontal planes: 0 to 360 degrees</text><text x="260" y="142" text-anchor="middle" font-size="9" fill="#2F4A3F" font-weight="500">All candela times multiplying factor equals complete 3D distribution</text></svg>`
 ,"4.2":`<svg viewBox="0 0 520 148" style="width:100%;height:auto" xmlns="http://www.w3.org/2000/svg"><text x="260" y="12" text-anchor="middle" font-size="8" fill="#7A9688" font-family="monospace" letter-spacing=".1em">POLAR AND CARTESIAN PHOTOMETRIC PLOTS</text><circle cx="118" cy="88" r="54" fill="none" stroke="#DDD0C0" stroke-width=".6" stroke-dasharray="3,3"/><circle cx="118" cy="88" r="36" fill="none" stroke="#DDD0C0" stroke-width=".4"/><line x1="118" y1="34" x2="118" y2="142" stroke="#DDD0C0" stroke-width=".6"/><line x1="64" y1="88" x2="172" y2="88" stroke="#DDD0C0" stroke-width=".6"/><path d="M118,88 L107,42 Q118,32 129,42 Z" fill="#C65A3A" opacity=".2" stroke="#C65A3A" stroke-width="1.5"/><text x="118" y="28" text-anchor="middle" font-size="8" fill="#C65A3A">0 deg nadir</text><text x="175" y="92" font-size="8" fill="#7A9688">90</text><text x="118" y="156" text-anchor="middle" font-size="9" fill="#2F4A3F" font-weight="500">Polar: radial equals cd, angle sweeps</text><line x1="278" y1="30" x2="278" y2="126" stroke="#DDD0C0" stroke-width=".8"/><line x1="278" y1="126" x2="508" y2="126" stroke="#DDD0C0" stroke-width=".8"/><polyline points="278,126 292,124 306,116 320,94 335,58 350,32 365,58 380,94 394,116 408,124 422,126" fill="none" stroke="#C65A3A" stroke-width="2"/><polyline points="278,106 292,88 306,70 320,62 335,70 350,94 365,70 380,62 394,70 408,88 422,106" fill="none" stroke="#7E9B86" stroke-width="1.5" stroke-dasharray="4,2"/><text x="448" y="48" font-size="8" fill="#C65A3A">narrow</text><text x="448" y="64" font-size="8" fill="#7E9B86">bat-wing</text><text x="393" y="148" text-anchor="middle" font-size="9" fill="#2F4A3F" font-weight="500">Cartesian: X equals angle, Y equals cd</text></svg>`

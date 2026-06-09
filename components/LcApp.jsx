@@ -6,6 +6,18 @@ import PricingCard from '@/components/PricingCard'
 
 const supabase = createClient()
 
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== 'undefined' ? window.innerWidth < 768 : false
+  )
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener('resize', handler)
+    return () => window.removeEventListener('resize', handler)
+  }, [])
+  return isMobile
+}
+
 /* ══ LEARNER APP ══ */
 
 /* ── FONTS ── */
@@ -2454,7 +2466,7 @@ function CertPage({completedLessons=new Set()}) {
 
 /* ── EXAM PAGE ───────────────────────────────────────────────── */
 
-function ExamPage({setRoute}) {
+function ExamPage({setRoute, isMobile=false}) {
   const [examState,setExamState] = useState("addon") // addon | purchased | playing
   const [screen,setScreen] = useState("landing") // landing | start | play | results
   const [session,setSession] = useState({questions:[],idx:0,answers:[],score:0,streak:0,bestStreak:0,startTime:Date.now()})
@@ -2611,7 +2623,7 @@ function ExamPage({setRoute}) {
         <div style={mono({fontSize:9,letterSpacing:"0.22em",textTransform:"uppercase",color:C.accent,marginBottom:12})}>Exam results</div>
         <h1 style={{fontFamily:F.display,fontWeight:700,fontSize:"clamp(36px,5vw,56px)",letterSpacing:"-0.025em",lineHeight:1,color:C.ink,margin:"0 0 8px"}}>{score.toLocaleString()}<em style={{fontStyle:"normal",color:C.accent,fontSize:"0.4em"}}> pts</em></h1>
         <div style={{fontFamily:F.display,fontWeight:700,fontSize:20,color:gradeColor,marginBottom:24}}>{grade}</div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:0,border:`1px solid ${C.rule}`,borderRadius:4,overflow:"hidden",marginBottom:32}}>
+        <div style={{display:"grid",gridTemplateColumns:isMobile?"repeat(2,1fr)":"repeat(4,1fr)",gap:0,border:`1px solid ${C.rule}`,borderRadius:4,overflow:"hidden",marginBottom:32}}>
           {[{n:"Accuracy",v:accuracy+"%"},{n:"Correct",v:`${correct}/${answers.length}`},{n:"Best streak",v:bestStreak+"x"},{n:"Avg time",v:Math.round(answers.reduce((s,a)=>s+a.time,0)/answers.length)+"s"}].map((m,i)=>(
             <div key={m.n} style={{padding:"18px 22px",borderRight:i<3?`1px solid ${C.rule}`:"none",background:C.paper}}>
               <div style={mono({fontSize:9,letterSpacing:"0.18em",textTransform:"uppercase",color:C.inkMute,marginBottom:6})}>{m.n}</div>
@@ -3087,7 +3099,7 @@ function TtsPlayer({lessonRef}){
   )
 }
 
-function LessonPage({lessonRef,setRoute,user,setShowUpgrade,completedLessons=new Set(),markLessonComplete=async()=>{},bookmarks=new Set(),toggleBookmark=async()=>{}}) {
+function LessonPage({lessonRef,setRoute,user,setShowUpgrade,completedLessons=new Set(),markLessonComplete=async()=>{},bookmarks=new Set(),toggleBookmark=async()=>{},isMobile=false}) {
   const [showShareModal,setShowShareModal]=useState(false)
   const [imgFullscreen,setImgFullscreen]=useState(null)
   useEffect(()=>{ window.scrollTo({top:0,behavior:'instant'}) },[lessonRef])
@@ -3110,9 +3122,9 @@ function LessonPage({lessonRef,setRoute,user,setShowUpgrade,completedLessons=new
   const isBookmarked = bookmarks.has(lessonRef)
 
   return (
-    <div style={{padding:"0 36px 48px"}}>
+    <div style={{padding:isMobile?"0 16px 32px":"0 36px 48px"}}>
       <PageHead eyebrow={`Module ${module.n} · ${module.label}`} title={`Lesson ${lesson.ref} —`} em={lesson.title+"."}/>
-      <div style={{display:"flex",gap:8,alignItems:"center",marginTop:14,marginBottom:18}}>
+      <div style={{display:"flex",gap:8,alignItems:"center",marginTop:14,marginBottom:18,flexWrap:"wrap"}}>
         <Tag label={lesson.tag}/>
         <span style={mono({fontSize:9,letterSpacing:"0.12em",textTransform:"uppercase",color:C.inkMute})}>{module.ceu} CEU hrs</span>
         {lesson.done&&<span style={mono({fontSize:9,letterSpacing:"0.12em",textTransform:"uppercase",color:C.forest})}>✓ Complete</span>}
@@ -3450,7 +3462,7 @@ function ModuleRow({mod,oddCol,setRoute,completedLessons=new Set()}){
 
 
 
-function Sidebar({route, setRoute, user, onSignOut, bookmarks=new Set()}){
+function Sidebar({route, setRoute, user, onSignOut, bookmarks=new Set(), isMobile=false, sidebarOpen=false, setSidebarOpen=()=>{}}){
   const nav = [
     {section:"Library", items:[
       {glyph:"▤",label:"Course home",route:"home"},
@@ -3473,8 +3485,23 @@ function Sidebar({route, setRoute, user, onSignOut, bookmarks=new Set()}){
     ]},
   ]
   return (
-    <aside style={{background:C.ink,display:"flex",flexDirection:"column",
-      position:"sticky",top:0,height:"100vh",overflowY:"auto",scrollbarWidth:"none",minWidth:220}}>
+    <aside style={{
+      background:C.ink,
+      display:"flex",
+      flexDirection:"column",
+      position:isMobile?"fixed":"sticky",
+      top:0,
+      left:isMobile?(sidebarOpen?0:-260):0,
+      height:"100vh",
+      width:isMobile?260:220,
+      minWidth:isMobile?"unset":220,
+      overflowY:"auto",
+      scrollbarWidth:"none",
+      borderRight:"1px solid rgba(255,255,255,0.05)",
+      zIndex:isMobile?1000:"auto",
+      transition:isMobile?"left 280ms cubic-bezier(0.4,0,0.2,1)":"none",
+      boxShadow:isMobile&&sidebarOpen?"4px 0 32px rgba(0,0,0,0.4)":"none",
+    }}>
       <div style={{display:"flex",alignItems:"center",gap:10,padding:"18px 16px 14px",
         borderBottom:"1px solid rgba(255,255,255,0.08)"}}>
         <div style={{width:28,height:28,borderRadius:5,background:C.accent,
@@ -3491,7 +3518,7 @@ function Sidebar({route, setRoute, user, onSignOut, bookmarks=new Set()}){
           <div style={m({fontSize:8,letterSpacing:"0.26em",textTransform:"uppercase",
             color:"rgba(255,255,255,0.22)",padding:"0 16px 5px"})}>{section}</div>
           {items.map(item=>(
-            <button key={item.route} onClick={()=>setRoute(item.route)}
+            <button key={item.route} onClick={()=>{setRoute(item.route);if(isMobile)setSidebarOpen(false)}}
               style={{display:"flex",alignItems:"center",gap:10,width:"100%",padding:"9px 16px",
                 background:route===item.route?"rgba(198,90,58,0.18)":"none",border:"none",
                 borderLeft:route===item.route?`2px solid ${C.accent}`:"2px solid transparent",
@@ -3755,7 +3782,7 @@ function TeamMemberView({user,setRoute}){
 }
 
 /* ── DASHBOARD ── */
-function Dashboard({ setRoute, completedLessons = new Set(), user, userSubscription }) {
+function Dashboard({ setRoute, completedLessons = new Set(), user, userSubscription, isMobile=false }) {
   const [dotIdx, setDotIdx] = useState(null)
   const [hoveredMod, setHoveredMod] = useState(null)
 
@@ -3789,7 +3816,7 @@ function Dashboard({ setRoute, completedLessons = new Set(), user, userSubscript
     <>
       {/* ── HERO SECTION ─────────────────────────────────────── */}
       <section style={{ padding: '32px 36px 36px', borderBottom: `1px solid ${C.rule}` }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 48, alignItems: 'end', marginBottom: 28 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.3fr 1fr', gap: 48, alignItems: 'end', marginBottom: 28 }}>
           <div>
             <div style={mono({ fontSize: 9, letterSpacing: '0.24em', textTransform: 'uppercase', color: C.accent, marginBottom: 12 })}>
               {overallPct > 0 ? `${overallPct}% complete · ${ceuEarned} CEU earned` : 'Ready to begin your NCQLP journey'}
@@ -3798,7 +3825,7 @@ function Dashboard({ setRoute, completedLessons = new Set(), user, userSubscript
               {greeting}, <em style={{ fontStyle: 'normal', color: C.accent }}>{firstName}.</em>
             </h1>
           </div>
-          <div style={{ display: 'flex', gap: 24, justifyContent: 'flex-end', alignItems: 'flex-end' }}>
+          <div style={{ display: 'flex', gap: 24, justifyContent: 'flex-end', alignItems: 'flex-end', flexWrap: 'wrap' }}>
             {[
               { label: 'Lessons done', val: totalDone, sub: `/${totalLessons}` },
               { label: 'CEU earned', val: ceuEarned, sub: '/24 hr' },
@@ -3827,7 +3854,7 @@ function Dashboard({ setRoute, completedLessons = new Set(), user, userSubscript
 
         {/* Resume card */}
         {nextLesson && (
-          <DarkCard style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 40, padding: '28px 32px', cursor: 'pointer' }} onClick={() => setRoute('lesson-' + nextLesson.ref)}>
+          <DarkCard style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.5fr 1fr', gap: 40, padding: '28px 32px', cursor: 'pointer' }} onClick={() => setRoute('lesson-' + nextLesson.ref)}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <span style={mono({ fontSize: 9, letterSpacing: '0.24em', textTransform: 'uppercase', color: C.tan })}>— pick up where you left off</span>
               <h2 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 22, letterSpacing: '-0.02em', lineHeight: 1.15, margin: 0, color: C.cream }}>
@@ -3858,7 +3885,7 @@ function Dashboard({ setRoute, completedLessons = new Set(), user, userSubscript
       {/* ── PROGRESS CHARTS SECTION ──────────────────────────── */}
       <section style={{ padding: '32px 36px', borderBottom: `1px solid ${C.rule}` }}>
         <div style={mono({ fontSize: 9, letterSpacing: '0.24em', textTransform: 'uppercase', color: C.accent, marginBottom: 20 })}>Progress by module</div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 32 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: 32 }}>
 
           {/* Module completion bar chart */}
           <div>
@@ -3965,7 +3992,7 @@ function Dashboard({ setRoute, completedLessons = new Set(), user, userSubscript
                 <span style={{ fontFamily: F.display, fontWeight: 700, fontSize: 16, letterSpacing: '-0.01em', color: C.ink }}>{pi.t}</span>
                 <span style={mono({ fontSize: 9, letterSpacing: '0.18em', textTransform: 'uppercase', color: C.inkMute, textAlign: 'right' })}>{pi.s}</span>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2,1fr)' }}>
                 {pMods.map((mod, i) => <ModuleRow key={mod.n} mod={mod} oddCol={i % 2 === 0} setRoute={setRoute} completedLessons={completedLessons}/>)}
               </div>
             </div>
@@ -3975,7 +4002,7 @@ function Dashboard({ setRoute, completedLessons = new Set(), user, userSubscript
 
       {/* ── EXAM CTA ─────────────────────────────────────────── */}
       <div style={{ padding: '40px 36px 56px' }}>
-        <DarkCard style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 40, padding: '32px 36px', cursor: 'pointer' }} onClick={() => setRoute('exam')}>
+        <DarkCard style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.5fr 1fr', gap: 40, padding: '32px 36px', cursor: 'pointer' }} onClick={() => setRoute('exam')}>
           <div>
             <div style={mono({ fontSize: 9, letterSpacing: '0.24em', textTransform: 'uppercase', color: C.tan, marginBottom: 12 })}>Capstone · after the course</div>
             <h2 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 28, letterSpacing: '-0.02em', lineHeight: 1.08, margin: '0 0 12px', color: C.cream }}>
@@ -4478,6 +4505,8 @@ function TrendsPage({ setRoute }) {
 function AppShell({user, onSignOut, completedLessons=new Set(), markLessonComplete=async()=>{}, bookmarks=new Set(), toggleBookmark=async()=>{}}){
   const [route, setRoute] = useState("home")
   const [showUpgrade, setShowUpgrade] = useState(false)
+  const isMobile = useIsMobile()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   useEffect(()=>{
     if(route==='continue'){
       const next = getNextLesson(completedLessons)
@@ -4485,26 +4514,42 @@ function AppShell({user, onSignOut, completedLessons=new Set(), markLessonComple
     }
   },[route])
   return(
-    <div style={{display:"grid",gridTemplateColumns:"220px 1fr",minHeight:"100vh",
+    <div style={{display:"flex",minHeight:"100vh",position:"relative",
       fontFamily:F.body,background:C.cream}}>
       <style>{`@import url('${FONT_URL}');*{box-sizing:border-box}code{font-family:${F.mono};font-size:0.9em;background:rgba(0,0,0,0.06);padding:1px 5px;border-radius:3px}@keyframes bulbPulse{0%,100%{opacity:1;box-shadow:0 0 0 3px rgba(198,90,58,0.2),0 0 10px 2px rgba(198,90,58,0.4)}50%{opacity:0.7;box-shadow:0 0 0 5px rgba(198,90,58,0.1),0 0 16px 4px rgba(198,90,58,0.25)}}@keyframes wave{from{transform:scaleY(0.4)}to{transform:scaleY(1.2)}}`}</style>
       {showUpgrade && <UpgradeModal user={user} onClose={()=>setShowUpgrade(false)}/>}
-      <Sidebar route={route} setRoute={setRoute} user={user} onSignOut={onSignOut} bookmarks={bookmarks}/>
-      <main style={{background:C.cream,minHeight:"100vh",overflowX:"hidden"}}>
+      <Sidebar route={route} setRoute={setRoute} user={user} onSignOut={onSignOut} bookmarks={bookmarks} isMobile={isMobile} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen}/>
+      {isMobile && sidebarOpen && (
+        <div onClick={()=>setSidebarOpen(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",zIndex:999,backdropFilter:"blur(2px)"}}/>
+      )}
+      <main style={{background:C.cream,minHeight:"100vh",overflowX:"hidden",flex:1,width:isMobile?"100%":"calc(100vw - 220px)",maxWidth:"100%"}}>
+        {isMobile && (
+          <div style={{position:"sticky",top:0,zIndex:100,background:C.ink,padding:"0 16px",height:52,display:"flex",alignItems:"center",justifyContent:"space-between",borderBottom:"1px solid rgba(255,255,255,0.08)"}}>
+            <button onClick={()=>setSidebarOpen(true)} style={{background:"none",border:"none",cursor:"pointer",padding:"8px",display:"flex",flexDirection:"column",gap:5,alignItems:"flex-start"}}>
+              <span style={{display:"block",width:22,height:2,background:C.cream,borderRadius:2}}/>
+              <span style={{display:"block",width:16,height:2,background:C.cream,borderRadius:2}}/>
+              <span style={{display:"block",width:20,height:2,background:C.cream,borderRadius:2}}/>
+            </button>
+            <span style={{fontFamily:F.display,fontWeight:700,fontSize:15,color:C.cream,letterSpacing:"-0.01em"}}>
+              LC · <em style={{fontStyle:"normal",color:C.accent}}>Lighting Master</em>
+            </span>
+            <div style={{width:38}}/>
+          </div>
+        )}
         {route==="home"&&user?.plan==="team_admin"  && <TeamAdminDashboard user={user} setRoute={setRoute}/>}
         {route==="home"&&user?.plan==="team_member" && <TeamMemberView user={user} setRoute={setRoute}/>}
-        {route==="home"&&user?.plan!=="team_admin"&&user?.plan!=="team_member" && <Dashboard setRoute={setRoute} user={user} completedLessons={completedLessons}/>}
+        {route==="home"&&user?.plan!=="team_admin"&&user?.plan!=="team_member" && <Dashboard setRoute={setRoute} user={user} completedLessons={completedLessons} isMobile={isMobile}/>}
         {route==="search"    && <SearchPage setRoute={setRoute} user={user} setShowUpgrade={setShowUpgrade}/>}
         {route==="bookmarks" && <BookmarksPage setRoute={setRoute} bookmarks={bookmarks} toggleBookmark={toggleBookmark}/>}
         {route==="notes"     && <NotesPage setRoute={setRoute}/>}
         {route==="continue"  && <ContinuePage setRoute={setRoute} completedLessons={completedLessons}/>}
-        {route==="exam"      && <ExamPage setRoute={setRoute}/>}
+        {route==="exam"      && <ExamPage setRoute={setRoute} isMobile={isMobile}/>}
         {route==="cert"      && <CertPage completedLessons={completedLessons}/>}
         {route==="account"   && <AccountPage/>}
         {route==="community" && <CommunityPage setRoute={setRoute} user={user}/>}
         {route==="trends"    && <TrendsPage setRoute={setRoute}/>}
         {route==="feedback"  && <FeedbackPage user={user} userSubscription={user?.plan ? {plan:user.plan} : null}/>}
-        {route.startsWith("lesson-") && <LessonPage lessonRef={route.replace("lesson-","")} setRoute={setRoute} user={user} setShowUpgrade={setShowUpgrade} completedLessons={completedLessons} markLessonComplete={markLessonComplete} bookmarks={bookmarks} toggleBookmark={toggleBookmark}/>}
+        {route.startsWith("lesson-") && <LessonPage lessonRef={route.replace("lesson-","")} setRoute={setRoute} user={user} setShowUpgrade={setShowUpgrade} completedLessons={completedLessons} markLessonComplete={markLessonComplete} bookmarks={bookmarks} toggleBookmark={toggleBookmark} isMobile={isMobile}/>}
       </main>
     </div>
   )
