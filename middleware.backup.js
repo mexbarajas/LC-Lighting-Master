@@ -45,10 +45,6 @@ export async function middleware(request) {
     // If Supabase is unreachable, let the request through — pages handle auth securely.
   }
 
-  response.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload')
-  response.headers.set('X-Frame-Options', 'SAMEORIGIN')
-  response.headers.set('X-Content-Type-Options', 'nosniff')
-
   return response
 }
 
