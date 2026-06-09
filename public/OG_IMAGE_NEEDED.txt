@@ -1,0 +1,11 @@
+An OG image is needed at public/og-image.png (1200x630px).
+
+Recommended content:
+- Background: #F2E6DA (Linen)
+- Logo / brand mark: LC · Lighting Master
+- Headline: NCQLP Exam Prep for Lighting Professionals
+- Subtext: 12 modules · 74 lessons · 129 practice questions · 24 CEU hours
+- Accent color: #C65A3A (Terra Cotta)
+- Font: Space Grotesk
+
+This file can be deleted once og-image.png is placed here.
