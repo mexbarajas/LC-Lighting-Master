@@ -4163,6 +4163,20 @@ function CommunityPage({ setRoute, user }) {
         <PageHead eyebrow="LC · Community" title="Knowledge" em="hub." />
         {isPaid && <button onClick={() => setView('ask')} style={S.btn(true)}>+ Ask a question</button>}
       </div>
+      <div style={{ background:`${C.forest}0f`, border:`1px solid ${C.forest}30`, borderRadius:10, padding:'20px 24px', marginBottom:24, display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:20 }}>
+        <div>
+          <div style={mono({ fontSize:9, letterSpacing:'0.18em', textTransform:'uppercase', color:C.forest, marginBottom:8 })}>What this is</div>
+          <p style={{ fontFamily:F.body, fontSize:13, color:C.inkMute, lineHeight:1.7, margin:0 }}>A peer knowledge base for LC · Lighting Master members. Ask real-world lighting questions and get answers from fellow professionals studying for the NCQLP exam.</p>
+        </div>
+        <div>
+          <div style={mono({ fontSize:9, letterSpacing:'0.18em', textTransform:'uppercase', color:C.forest, marginBottom:8 })}>How to use it</div>
+          <p style={{ fontFamily:F.body, fontSize:13, color:C.inkMute, lineHeight:1.7, margin:0 }}>Browse by market or fixture type. Click any question to read answers and add your own. Vote on answers to surface the best ones. The question author can mark one answer as accepted — it always stays at the top.</p>
+        </div>
+        <div>
+          <div style={mono({ fontSize:9, letterSpacing:'0.18em', textTransform:'uppercase', color:C.forest, marginBottom:8 })}>Ground rules</div>
+          <p style={{ fontFamily:F.body, fontSize:13, color:C.inkMute, lineHeight:1.7, margin:0 }}>Keep questions specific and lighting-related. No vendor promotion. One vote per answer. Posting requires a paid plan — free tier members can read all questions and answers.</p>
+        </div>
+      </div>
       <div style={{ position: 'relative', marginBottom: 20 }}>
         <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: C.inkMute, fontSize: 16 }}>⌕</span>
         <input style={{ ...S.input, paddingLeft: 42 }} placeholder="Search questions..." value={searchQ} onChange={e => setSearchQ(e.target.value)} onKeyDown={handleSearch}/>
