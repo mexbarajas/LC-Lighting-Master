@@ -2744,7 +2744,7 @@ const LC_MEDIA = {
   "2.2":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780595963/202_u1phtz.png",
   "2.3":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780595963/203_n3ypvk.png",
   "2.4":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780595963/204_id0evl.png",
-  "2.5":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780595963/205_t8bdsj.png",
+  "2.5":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1781017856/205_ptityg.png",
   "2.6":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780595960/206_ccksyg.png",
   "3.1":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780595832/301_z5fxzi.png",
   "3.2":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780595832/302_s9m4nq.png",
@@ -3311,6 +3311,7 @@ function Sidebar({route, setRoute, user, onSignOut, bookmarks=new Set()}){
     ]},
     {section:"Account", items:[
       {glyph:"○",label:"Settings",route:"account"},
+      {glyph:"✉",label:"Feedback",route:"feedback"},
     ]},
   ]
   return (
@@ -4344,8 +4345,243 @@ function AppShell({user, onSignOut, completedLessons=new Set(), markLessonComple
         {route==="account"   && <AccountPage/>}
         {route==="community" && <CommunityPage setRoute={setRoute} user={user}/>}
         {route==="trends"    && <TrendsPage setRoute={setRoute}/>}
+        {route==="feedback"  && <FeedbackPage user={user} userSubscription={user?.plan ? {plan:user.plan} : null}/>}
         {route.startsWith("lesson-") && <LessonPage lessonRef={route.replace("lesson-","")} setRoute={setRoute} user={user} setShowUpgrade={setShowUpgrade} completedLessons={completedLessons} markLessonComplete={markLessonComplete} bookmarks={bookmarks} toggleBookmark={toggleBookmark}/>}
       </main>
+    </div>
+  )
+}
+
+// SQL to run in Supabase:
+// CREATE TABLE public.feedback (
+//   id uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
+//   user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+//   category text NOT NULL,
+//   subject text NOT NULL,
+//   message text NOT NULL,
+//   user_email text,
+//   plan text,
+//   status text DEFAULT 'new',
+//   created_at timestamptz DEFAULT now() NOT NULL
+// );
+// ALTER TABLE public.feedback ENABLE ROW LEVEL SECURITY;
+// CREATE POLICY "Users insert own feedback" ON public.feedback
+//   FOR INSERT WITH CHECK (auth.uid() = user_id OR user_id IS NULL);
+// CREATE POLICY "Service role reads feedback" ON public.feedback
+//   FOR SELECT USING (false); -- only readable via service role
+
+const FEEDBACK_CATEGORIES = [
+  { value: 'bug',      label: '🐛  Bug report',        desc: 'Something is broken or not working as expected' },
+  { value: 'feature',  label: '💡  Feature request',    desc: 'Suggest an improvement or new functionality' },
+  { value: 'content',  label: '📚  Content feedback',   desc: 'Error in a lesson, question, or visual' },
+  { value: 'discount', label: '🎓  Student discount',   desc: 'Request a student or group discount' },
+  { value: 'billing',  label: '💳  Billing question',   desc: 'Question about payment, access, or refunds' },
+  { value: 'other',    label: '✉  Other',              desc: 'Anything else you want to share' },
+]
+
+function FeedbackPage({ user, userSubscription }) {
+  const supabase = createClient()
+  const [category, setCategory] = useState('')
+  const [subject, setSubject] = useState('')
+  const [message, setMessage] = useState('')
+  const [email, setEmail] = useState(user?.email || '')
+  const [sending, setSending] = useState(false)
+  const [sent, setSent] = useState(false)
+  const [error, setError] = useState('')
+
+  async function handleSubmit() {
+    if (!category) { setError('Please select a category.'); return }
+    if (!subject.trim()) { setError('Please add a subject.'); return }
+    if (!message.trim() || message.trim().length < 10) {
+      setError('Message must be at least 10 characters.'); return
+    }
+    if (!email.trim()) { setError('Please enter your email so we can reply.'); return }
+    setSending(true); setError('')
+    const { error: dbError } = await supabase.from('feedback').insert({
+      user_id: user?.id || null,
+      category,
+      subject: subject.trim(),
+      message: message.trim(),
+      user_email: email.trim(),
+      plan: userSubscription?.plan || 'free',
+    })
+    if (dbError) {
+      setError('Failed to send. Please try again or email admin@luxartmedia.com directly.')
+      setSending(false)
+      return
+    }
+    setSending(false)
+    setSent(true)
+  }
+
+  const S = {
+    input: {
+      width: '100%', fontFamily: F.body, fontSize: 14,
+      color: C.ink, background: C.paper,
+      border: `1px solid ${C.rule}`, borderRadius: 6,
+      padding: '10px 14px', outline: 'none',
+      boxSizing: 'border-box', lineHeight: 1.5,
+    },
+    label: mono({ fontSize: 9, letterSpacing: '0.16em',
+      textTransform: 'uppercase', color: C.inkMute, marginBottom: 8,
+      display: 'block' }),
+  }
+
+  if (sent) return (
+    <div style={{ padding: '32px 36px', maxWidth: 600 }}>
+      <div style={{ background: `${C.forest}10`, border: `1px solid ${C.forest}40`,
+        borderRadius: 12, padding: '48px 40px', textAlign: 'center' }}>
+        <div style={{ fontSize: 48, marginBottom: 20 }}>✓</div>
+        <h2 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 24,
+          color: C.ink, margin: '0 0 12px', letterSpacing: '-0.015em' }}>
+          Message sent
+        </h2>
+        <p style={{ fontFamily: F.body, fontSize: 15, color: C.inkMute,
+          lineHeight: 1.7, margin: '0 0 8px' }}>
+          Thanks for reaching out. We read every message and typically
+          reply within 1–2 business days.
+        </p>
+        <p style={{ fontFamily: F.body, fontSize: 14, color: C.inkMute,
+          lineHeight: 1.7, margin: '0 0 28px' }}>
+          You'll hear back at <strong style={{ color: C.ink }}>{email}</strong>
+        </p>
+        <button
+          onClick={() => { setSent(false); setCategory(''); setSubject('');
+            setMessage(''); setError('') }}
+          style={{ fontFamily: F.display, fontWeight: 700, fontSize: 13,
+            borderRadius: 99, padding: '10px 24px', cursor: 'pointer',
+            border: `1px solid ${C.rule}`, background: 'transparent',
+            color: C.inkMute }}>
+          Send another message
+        </button>
+      </div>
+    </div>
+  )
+
+  return (
+    <div style={{ padding: '32px 36px', maxWidth: 680 }}>
+      <div style={{ marginBottom: 32 }}>
+        <div style={mono({ fontSize: 9, letterSpacing: '0.24em',
+          textTransform: 'uppercase', color: C.accent, marginBottom: 12 })}>
+          LC · Lighting Master
+        </div>
+        <h1 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 36,
+          letterSpacing: '-0.02em', color: C.ink, margin: '0 0 10px', lineHeight: 1 }}>
+          Send us <em style={{ fontStyle: 'normal', color: C.accent }}>feedback.</em>
+        </h1>
+        <p style={{ fontFamily: F.body, fontSize: 14, color: C.inkMute,
+          lineHeight: 1.7, margin: 0, maxWidth: 480 }}>
+          Found a bug? Have a suggestion? Asking about a student discount?
+          We read every message and reply personally from
+          {' '}<a href="mailto:admin@luxartmedia.com"
+            style={{ color: C.accent, textDecoration: 'none' }}>
+            admin@luxartmedia.com
+          </a>
+        </p>
+      </div>
+
+      <div style={{ marginBottom: 24 }}>
+        <span style={S.label}>What is this about?</span>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          {FEEDBACK_CATEGORIES.map(cat => (
+            <button key={cat.value}
+              onClick={() => setCategory(cat.value)}
+              style={{
+                textAlign: 'left', padding: '14px 16px',
+                borderRadius: 8, cursor: 'pointer',
+                border: `1.5px solid ${category === cat.value ? C.accent : C.rule}`,
+                background: category === cat.value ? `${C.accent}08` : C.paper,
+                transition: 'border-color 150ms, background 150ms',
+              }}>
+              <div style={{ fontFamily: F.display, fontWeight: 600, fontSize: 13,
+                color: category === cat.value ? C.accent : C.ink, marginBottom: 4 }}>
+                {cat.label}
+              </div>
+              <div style={{ fontFamily: F.body, fontSize: 11,
+                color: C.inkMute, lineHeight: 1.5 }}>
+                {cat.desc}
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ marginBottom: 16 }}>
+        <label style={S.label}>Subject</label>
+        <input style={S.input}
+          placeholder="Brief summary of your message"
+          value={subject}
+          onChange={e => setSubject(e.target.value)}
+          maxLength={120}
+        />
+      </div>
+
+      <div style={{ marginBottom: 16 }}>
+        <label style={S.label}>Message</label>
+        <textarea style={{ ...S.input, minHeight: 140, resize: 'vertical', lineHeight: 1.7 }}
+          placeholder={
+            category === 'bug'      ? 'Describe what happened and how to reproduce it...' :
+            category === 'feature'  ? 'Describe the feature and why it would help you...' :
+            category === 'content'  ? 'Which lesson and what needs to be corrected...' :
+            category === 'discount' ? 'Tell us about your situation (school, program, team size)...' :
+            category === 'billing'  ? 'Describe your billing question or issue...' :
+            'Your message...'
+          }
+          value={message}
+          onChange={e => setMessage(e.target.value)}
+          maxLength={2000}
+        />
+        <div style={mono({ fontSize: 9, color: C.inkMute,
+          textAlign: 'right', marginTop: 4 })}>
+          {message.length}/2000
+        </div>
+      </div>
+
+      <div style={{ marginBottom: 24 }}>
+        <label style={S.label}>Reply to</label>
+        <input style={S.input}
+          type="email"
+          placeholder="your@email.com"
+          value={email}
+          onChange={e => setEmail(e.target.value)}
+        />
+        <div style={mono({ fontSize: 9, color: C.inkMute, marginTop: 6 })}>
+          We reply within 1–2 business days.
+        </div>
+      </div>
+
+      {userSubscription && (
+        <div style={{ background: C.creamWarm, border: `1px solid ${C.rule}`,
+          borderRadius: 6, padding: '10px 14px', marginBottom: 20,
+          display: 'flex', gap: 12, alignItems: 'center' }}>
+          <span style={mono({ fontSize: 9, color: C.inkMute })}>Sending as:</span>
+          <span style={{ fontFamily: F.display, fontWeight: 600,
+            fontSize: 12, color: C.ink }}>
+            {user?.email}
+          </span>
+          <span style={{ fontFamily: F.mono, fontSize: 9,
+            background: `${C.accent}15`, color: C.accent,
+            padding: '2px 8px', borderRadius: 99, marginLeft: 'auto' }}>
+            {userSubscription.plan?.toUpperCase() || 'FREE'} plan
+          </span>
+        </div>
+      )}
+
+      {error && (
+        <div style={{ fontFamily: F.body, fontSize: 13, color: C.accent,
+          padding: '10px 14px', background: `${C.accent}10`,
+          borderRadius: 6, marginBottom: 16 }}>
+          {error}
+        </div>
+      )}
+
+      <button onClick={handleSubmit} disabled={sending}
+        style={{ fontFamily: F.display, fontWeight: 700, fontSize: 14,
+          borderRadius: 99, padding: '13px 32px', cursor: sending ? 'wait' : 'pointer',
+          border: 'none', background: sending ? C.inkMute : C.accent,
+          color: '#fff', transition: 'background 150ms' }}>
+        {sending ? 'Sending...' : 'Send message →'}
+      </button>
     </div>
   )
 }
