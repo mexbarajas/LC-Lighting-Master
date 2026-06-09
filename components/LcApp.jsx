@@ -30,6 +30,20 @@ const C = {
   white:       "#fff",
 }
 const F = { display:"'Space Grotesk',sans-serif", body:"'Inter',sans-serif", mono:"'JetBrains Mono',monospace" }
+
+const MARKETS = [
+  'Commercial','Residential','Hospitality',
+  'Healthcare','Industrial','Sports','Outdoor/Street'
+]
+const FIXTURE_TYPES = {
+  'Commercial':     ['Downlight','Troffer','Linear','Track','Pendant','Wall wash'],
+  'Residential':    ['Downlight','Strip light','Pendant','Landscape','Ceiling'],
+  'Hospitality':    ['Accent','Wall sconce','Cove','Chandelier','Step light'],
+  'Healthcare':     ['Troffer','Exam light','Emergency','Surgical','Corridor'],
+  'Industrial':     ['High-bay','Low-bay','Hazardous location','UFO','Linear high-bay'],
+  'Sports':         ['Floodlight','Sports light','Arena','Field light','Court light'],
+  'Outdoor/Street': ['Street','Flood','Area','Bollard','Wall pack','Canopy'],
+}
 const m = (s={}) => ({fontFamily:F.mono,...s})
 const d = (s={}) => ({fontFamily:F.display,...s})
 const mono    = (s={}) => ({fontFamily:F.mono,...s})
@@ -3291,6 +3305,10 @@ function Sidebar({route, setRoute, user, onSignOut, bookmarks=new Set()}){
       {glyph:"◎",label:"Practice exam",route:"exam"},
       {glyph:"⌗",label:"Certificate",route:"cert"},
     ]},
+    {section:"Community", items:[
+      {glyph:"◈",label:"Knowledge hub",route:"community",pill:"NEW",newPill:true},
+      {glyph:"⬡",label:"Trending topics",route:"trends"},
+    ]},
     {section:"Account", items:[
       {glyph:"○",label:"Settings",route:"account"},
     ]},
@@ -3325,6 +3343,9 @@ function Sidebar({route, setRoute, user, onSignOut, bookmarks=new Set()}){
                 color:route===item.route?"#fff":"rgba(255,255,255,0.65)",display:"flex",alignItems:"center",gap:6,flex:1}}>{item.label}
                 {item.route==="bookmarks"&&bookmarks.size>0&&(
                   <span style={{fontFamily:F.mono,fontSize:9,background:C.accent,color:"#fff",borderRadius:99,padding:"1px 6px",lineHeight:1.6}}>{bookmarks.size}</span>
+                )}
+                {item.newPill&&(
+                  <span style={{fontFamily:F.mono,fontSize:8,background:C.forest,color:"#fff",borderRadius:99,padding:"1px 6px",lineHeight:1.6,letterSpacing:"0.08em"}}>{item.pill}</span>
                 )}
               </span>
             </button>
@@ -3856,6 +3877,431 @@ function getNextLesson(completedLessons) {
   return ALL_LESSONS.find(l => !completedLessons.has(l.ref))
 }
 
+/* ── COMMUNITY KNOWLEDGE HUB ─────────────────────────────── */
+function CommunityPage({ setRoute, user }) {
+  const supabase = createClient()
+  const isPaid = ['t1','t2','t3'].includes(user?.plan)
+
+  const [view, setView] = useState('list')
+  const [questions, setQuestions] = useState([])
+  const [activeQuestion, setActiveQuestion] = useState(null)
+  const [answers, setAnswers] = useState([])
+  const [userVotes, setUserVotes] = useState(new Set())
+  const [loading, setLoading] = useState(true)
+  const [searchQ, setSearchQ] = useState('')
+  const [filterMarket, setFilterMarket] = useState('All')
+  const [filterFixture, setFilterFixture] = useState('All')
+  const [filterStatus, setFilterStatus] = useState('All')
+
+  const [askTitle, setAskTitle] = useState('')
+  const [askBody, setAskBody] = useState('')
+  const [askMarket, setAskMarket] = useState('')
+  const [askFixture, setAskFixture] = useState('')
+  const [askAnon, setAskAnon] = useState(false)
+  const [askLoading, setAskLoading] = useState(false)
+  const [askError, setAskError] = useState('')
+
+  const [answerBody, setAnswerBody] = useState('')
+  const [answerAnon, setAnswerAnon] = useState(false)
+  const [answerLoading, setAnswerLoading] = useState(false)
+
+  async function loadQuestions() {
+    setLoading(true)
+    let query = supabase
+      .from('community_questions')
+      .select('*')
+      .order('created_at', { ascending: false })
+    if (filterMarket !== 'All') query = query.eq('market', filterMarket)
+    if (filterFixture !== 'All') query = query.eq('fixture_type', filterFixture)
+    if (filterStatus === 'Answered') query = query.eq('is_answered', true)
+    if (filterStatus === 'Open') query = query.eq('is_answered', false)
+    if (searchQ.trim()) query = query.ilike('title', `%${searchQ}%`)
+    const { data } = await query.limit(50)
+    setQuestions(data || [])
+    setLoading(false)
+  }
+
+  useEffect(() => { loadQuestions() }, [filterMarket, filterFixture, filterStatus])
+
+  async function loadAnswers(questionId) {
+    const { data } = await supabase
+      .from('community_answers')
+      .select('*')
+      .eq('question_id', questionId)
+      .order('is_accepted', { ascending: false })
+      .order('vote_count', { ascending: false })
+      .order('created_at', { ascending: true })
+    setAnswers(data || [])
+  }
+
+  async function loadUserVotes() {
+    if (!user) return
+    const { data } = await supabase
+      .from('community_votes')
+      .select('target_id')
+      .eq('user_id', user.id)
+    if (data) setUserVotes(new Set(data.map(v => v.target_id)))
+  }
+
+  useEffect(() => { loadUserVotes() }, [user])
+
+  async function openQuestion(q) {
+    setActiveQuestion(q)
+    setView('question')
+    await loadAnswers(q.id)
+    supabase.from('community_questions')
+      .update({ view_count: q.view_count + 1 }).eq('id', q.id)
+  }
+
+  async function submitQuestion() {
+    if (!askTitle.trim() || !askMarket) { setAskError('Title and market are required.'); return }
+    setAskLoading(true); setAskError('')
+    const { error } = await supabase.from('community_questions').insert({
+      user_id: user.id, title: askTitle.trim(), body: askBody.trim(),
+      market: askMarket, fixture_type: askFixture || null, is_anonymous: askAnon,
+    })
+    if (error) { setAskError(error.message); setAskLoading(false); return }
+    setAskTitle(''); setAskBody(''); setAskMarket(''); setAskFixture(''); setAskAnon(false)
+    setAskLoading(false); setView('list'); loadQuestions()
+  }
+
+  async function submitAnswer() {
+    if (!answerBody.trim()) return
+    setAnswerLoading(true)
+    await supabase.from('community_answers').insert({
+      question_id: activeQuestion.id, user_id: user.id,
+      body: answerBody.trim(), is_anonymous: answerAnon,
+    })
+    setAnswerBody(''); setAnswerAnon(false); setAnswerLoading(false)
+    loadAnswers(activeQuestion.id)
+    setActiveQuestion(prev => ({ ...prev, answer_count: prev.answer_count + 1 }))
+  }
+
+  async function toggleVote(targetId, targetType) {
+    if (!user || !isPaid) return
+    const hasVoted = userVotes.has(targetId)
+    if (hasVoted) {
+      await supabase.from('community_votes').delete().eq('user_id', user.id).eq('target_id', targetId)
+      setUserVotes(prev => { const n = new Set(prev); n.delete(targetId); return n })
+      setAnswers(prev => prev.map(a => a.id === targetId ? { ...a, vote_count: a.vote_count - 1 } : a))
+    } else {
+      await supabase.from('community_votes').insert({ user_id: user.id, target_id: targetId, target_type: targetType })
+      setUserVotes(prev => new Set([...prev, targetId]))
+      setAnswers(prev => prev.map(a => a.id === targetId ? { ...a, vote_count: a.vote_count + 1 } : a))
+    }
+  }
+
+  async function acceptAnswer(answerId) {
+    if (!user || user.id !== activeQuestion.user_id) return
+    await supabase.from('community_answers').update({ is_accepted: false }).eq('question_id', activeQuestion.id)
+    await supabase.from('community_answers').update({ is_accepted: true }).eq('id', answerId)
+    await supabase.from('community_questions').update({ is_answered: true }).eq('id', activeQuestion.id)
+    loadAnswers(activeQuestion.id)
+  }
+
+  function displayName(row) {
+    if (row.is_anonymous) return 'Anonymous'
+    return row.user_id === user?.id ? 'You' : 'LC Member'
+  }
+
+  function timeAgo(ts) {
+    const d = Math.floor((Date.now() - new Date(ts)) / 1000)
+    if (d < 60) return 'just now'
+    if (d < 3600) return `${Math.floor(d/60)}m ago`
+    if (d < 86400) return `${Math.floor(d/3600)}h ago`
+    return `${Math.floor(d/86400)}d ago`
+  }
+
+  const MARKET_COLORS = {
+    'Commercial': C.accent, 'Residential': '#7a9a6a',
+    'Hospitality': '#9a6a7a', 'Healthcare': '#6a7a9a',
+    'Industrial': '#8a7a4a', 'Sports': '#4a8a7a',
+    'Outdoor/Street': C.forest,
+  }
+
+  const S = {
+    page: { padding: '32px 36px', maxWidth: 860 },
+    card: { background: C.paper, border: `1px solid ${C.rule}`, borderRadius: 8,
+            padding: '20px 24px', marginBottom: 12, cursor: 'pointer', transition: 'box-shadow 150ms' },
+    pill: (color) => ({ display: 'inline-block', fontFamily: F.mono, fontSize: 9,
+      letterSpacing: '0.12em', textTransform: 'uppercase', padding: '3px 8px',
+      borderRadius: 99, background: `${color}18`, color, marginRight: 6 }),
+    input: { width: '100%', fontFamily: F.body, fontSize: 14, color: C.ink,
+             background: C.paper, border: `1px solid ${C.rule}`, borderRadius: 6,
+             padding: '10px 14px', outline: 'none', boxSizing: 'border-box' },
+    btn: (primary) => ({
+      fontFamily: F.display, fontWeight: 700, fontSize: 13, borderRadius: 99,
+      padding: '10px 20px', cursor: 'pointer',
+      border: primary ? 'none' : `1px solid ${C.rule}`,
+      background: primary ? C.accent : 'transparent',
+      color: primary ? '#fff' : C.inkMute,
+    }),
+    voteBtn: (active) => ({
+      display: 'inline-flex', alignItems: 'center', gap: 5,
+      fontFamily: F.mono, fontSize: 11, fontWeight: 600,
+      background: active ? `${C.forest}18` : 'transparent',
+      border: `1px solid ${active ? C.forest : C.rule}`,
+      color: active ? C.forest : C.inkMute,
+      borderRadius: 99, padding: '5px 12px', cursor: 'pointer',
+    }),
+  }
+
+  function handleSearch(e) { if (e.key === 'Enter') loadQuestions() }
+
+  if (view === 'ask') return (
+    <div style={S.page}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 28 }}>
+        <button onClick={() => setView('list')} style={{ ...S.btn(false), padding: '8px 16px' }}>← Back</button>
+        <PageHead eyebrow="Community knowledge" title="Ask a" em="question." />
+      </div>
+      {!isPaid && (
+        <div style={{ background: `${C.accent}12`, border: `1px solid ${C.accent}40`, borderRadius: 8, padding: '16px 20px', marginBottom: 24 }}>
+          <p style={{ fontFamily: F.body, fontSize: 14, color: C.accent, margin: 0 }}>
+            Posting questions requires a paid plan.
+            <button onClick={() => setRoute('billing')} style={{ ...S.btn(true), padding: '6px 14px', fontSize: 11, marginLeft: 12 }}>Upgrade →</button>
+          </p>
+        </div>
+      )}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 640 }}>
+        <div>
+          <div style={mono({ fontSize: 9, letterSpacing: '0.16em', textTransform: 'uppercase', color: C.inkMute, marginBottom: 8 })}>Question title *</div>
+          <input style={S.input} placeholder="e.g. Best CCT for hotel lobbies?" value={askTitle} onChange={e => setAskTitle(e.target.value)} maxLength={200} disabled={!isPaid}/>
+          <div style={mono({ fontSize: 9, color: C.inkMute, marginTop: 4, textAlign: 'right' })}>{askTitle.length}/200</div>
+        </div>
+        <div>
+          <div style={mono({ fontSize: 9, letterSpacing: '0.16em', textTransform: 'uppercase', color: C.inkMute, marginBottom: 8 })}>Details (optional)</div>
+          <textarea style={{ ...S.input, minHeight: 120, resize: 'vertical', lineHeight: 1.6 }} placeholder="Add context, specs, project type..." value={askBody} onChange={e => setAskBody(e.target.value)} maxLength={2000} disabled={!isPaid}/>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <div>
+            <div style={mono({ fontSize: 9, letterSpacing: '0.16em', textTransform: 'uppercase', color: C.inkMute, marginBottom: 8 })}>Market *</div>
+            <select style={S.input} value={askMarket} onChange={e => { setAskMarket(e.target.value); setAskFixture('') }} disabled={!isPaid}>
+              <option value="">Select market...</option>
+              {MARKETS.map(m => <option key={m} value={m}>{m}</option>)}
+            </select>
+          </div>
+          <div>
+            <div style={mono({ fontSize: 9, letterSpacing: '0.16em', textTransform: 'uppercase', color: C.inkMute, marginBottom: 8 })}>Fixture type</div>
+            <select style={S.input} value={askFixture} onChange={e => setAskFixture(e.target.value)} disabled={!isPaid || !askMarket}>
+              <option value="">Select type...</option>
+              {(FIXTURE_TYPES[askMarket] || []).map(f => <option key={f} value={f}>{f}</option>)}
+            </select>
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <input type="checkbox" id="askAnon" checked={askAnon} onChange={e => setAskAnon(e.target.checked)} disabled={!isPaid}/>
+          <label htmlFor="askAnon" style={{ fontFamily: F.body, fontSize: 13, color: C.inkMute, cursor: 'pointer' }}>Post anonymously</label>
+        </div>
+        {askError && <div style={{ fontFamily: F.body, fontSize: 13, color: C.accent, padding: '10px 14px', background: `${C.accent}12`, borderRadius: 6 }}>{askError}</div>}
+        <div style={{ display: 'flex', gap: 12, paddingTop: 8 }}>
+          <button onClick={submitQuestion} disabled={askLoading || !isPaid} style={S.btn(true)}>{askLoading ? 'Posting...' : 'Post question →'}</button>
+          <button onClick={() => setView('list')} style={S.btn(false)}>Cancel</button>
+        </div>
+      </div>
+    </div>
+  )
+
+  if (view === 'question' && activeQuestion) return (
+    <div style={S.page}>
+      <button onClick={() => { setView('list'); setActiveQuestion(null); setAnswers([]) }} style={{ ...S.btn(false), padding: '8px 16px', marginBottom: 24 }}>← All questions</button>
+      <div style={{ background: C.paper, border: `1px solid ${C.rule}`, borderRadius: 10, padding: '28px 32px', marginBottom: 24 }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
+          <span style={S.pill(MARKET_COLORS[activeQuestion.market] || C.accent)}>{activeQuestion.market}</span>
+          {activeQuestion.fixture_type && <span style={S.pill(C.inkMute)}>{activeQuestion.fixture_type}</span>}
+          {activeQuestion.is_answered && <span style={S.pill(C.forest)}>✓ Answered</span>}
+        </div>
+        <h2 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 22, letterSpacing: '-0.015em', color: C.ink, margin: '0 0 12px', lineHeight: 1.3 }}>{activeQuestion.title}</h2>
+        {activeQuestion.body && <p style={{ fontFamily: F.body, fontSize: 14, color: C.inkMute, lineHeight: 1.7, margin: '0 0 16px' }}>{activeQuestion.body}</p>}
+        <div style={mono({ fontSize: 9, color: C.inkMute })}>Asked by {displayName(activeQuestion)} · {timeAgo(activeQuestion.created_at)} · {activeQuestion.view_count} views · {activeQuestion.answer_count} answers</div>
+      </div>
+      <div style={mono({ fontSize: 9, letterSpacing: '0.18em', textTransform: 'uppercase', color: C.inkMute, marginBottom: 14 })}>{answers.length} {answers.length === 1 ? 'answer' : 'answers'}</div>
+      {answers.map(ans => (
+        <div key={ans.id} style={{ background: ans.is_accepted ? `${C.forest}08` : C.paper, border: `1px solid ${ans.is_accepted ? C.forest : C.rule}`, borderRadius: 8, padding: '20px 24px', marginBottom: 12, borderLeft: ans.is_accepted ? `4px solid ${C.forest}` : `1px solid ${C.rule}` }}>
+          {ans.is_accepted && <div style={mono({ fontSize: 9, color: C.forest, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 10 })}>✓ Accepted answer</div>}
+          <p style={{ fontFamily: F.body, fontSize: 14, color: C.ink, lineHeight: 1.75, margin: '0 0 16px' }}>{ans.body}</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <button onClick={() => toggleVote(ans.id, 'answer')} style={S.voteBtn(userVotes.has(ans.id))}>▲ {ans.vote_count} {ans.vote_count === 1 ? 'vote' : 'votes'}</button>
+            {user?.id === activeQuestion.user_id && !ans.is_accepted && (
+              <button onClick={() => acceptAnswer(ans.id)} style={{ ...S.voteBtn(false), borderColor: C.forest, color: C.forest }}>✓ Accept this answer</button>
+            )}
+            <span style={mono({ fontSize: 9, color: C.inkMute })}>{displayName(ans)} · {timeAgo(ans.created_at)}</span>
+          </div>
+        </div>
+      ))}
+      {answers.length === 0 && (
+        <div style={{ textAlign: 'center', padding: '40px 0', color: C.inkMute }}>
+          <div style={{ fontSize: 32, marginBottom: 12 }}>◈</div>
+          <div style={{ fontFamily: F.display, fontWeight: 600, fontSize: 16, color: C.ink }}>No answers yet</div>
+          <div style={{ fontFamily: F.body, fontSize: 13, marginTop: 6 }}>Be the first to help the community</div>
+        </div>
+      )}
+      {isPaid ? (
+        <div style={{ marginTop: 32, background: C.paper, border: `1px solid ${C.rule}`, borderRadius: 8, padding: '24px 28px' }}>
+          <div style={mono({ fontSize: 9, letterSpacing: '0.18em', textTransform: 'uppercase', color: C.inkMute, marginBottom: 14 })}>Your answer</div>
+          <textarea style={{ ...S.input, minHeight: 100, resize: 'vertical', lineHeight: 1.6, marginBottom: 12 }} placeholder="Share your knowledge..." value={answerBody} onChange={e => setAnswerBody(e.target.value)} maxLength={2000}/>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+            <button onClick={submitAnswer} disabled={answerLoading || !answerBody.trim()} style={S.btn(true)}>{answerLoading ? 'Posting...' : 'Post answer →'}</button>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: F.body, fontSize: 13, color: C.inkMute, cursor: 'pointer' }}>
+              <input type="checkbox" checked={answerAnon} onChange={e => setAnswerAnon(e.target.checked)}/> Post anonymously
+            </label>
+          </div>
+        </div>
+      ) : (
+        <div style={{ marginTop: 24, padding: '16px 20px', background: `${C.accent}10`, border: `1px solid ${C.accent}30`, borderRadius: 8 }}>
+          <p style={{ fontFamily: F.body, fontSize: 14, color: C.accent, margin: 0 }}>
+            Upgrade to a paid plan to post answers.
+            <button onClick={() => setRoute('billing')} style={{ ...S.btn(true), padding: '6px 14px', fontSize: 11, marginLeft: 12 }}>Upgrade →</button>
+          </p>
+        </div>
+      )}
+    </div>
+  )
+
+  return (
+    <div style={S.page}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 28, flexWrap: 'wrap', gap: 16 }}>
+        <PageHead eyebrow="LC · Community" title="Knowledge" em="hub." />
+        {isPaid && <button onClick={() => setView('ask')} style={S.btn(true)}>+ Ask a question</button>}
+      </div>
+      <div style={{ position: 'relative', marginBottom: 20 }}>
+        <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: C.inkMute, fontSize: 16 }}>⌕</span>
+        <input style={{ ...S.input, paddingLeft: 42 }} placeholder="Search questions..." value={searchQ} onChange={e => setSearchQ(e.target.value)} onKeyDown={handleSearch}/>
+      </div>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
+        <select style={{ ...S.input, width: 'auto', padding: '8px 12px', fontSize: 12 }} value={filterMarket} onChange={e => { setFilterMarket(e.target.value); setFilterFixture('All') }}>
+          <option value="All">All markets</option>
+          {MARKETS.map(m => <option key={m} value={m}>{m}</option>)}
+        </select>
+        <select style={{ ...S.input, width: 'auto', padding: '8px 12px', fontSize: 12 }} value={filterFixture} onChange={e => setFilterFixture(e.target.value)} disabled={filterMarket === 'All'}>
+          <option value="All">All fixture types</option>
+          {(FIXTURE_TYPES[filterMarket] || []).map(f => <option key={f} value={f}>{f}</option>)}
+        </select>
+        {['All','Open','Answered'].map(s => (
+          <button key={s} onClick={() => setFilterStatus(s)} style={{ fontFamily: F.display, fontWeight: 600, fontSize: 12, borderRadius: 99, padding: '8px 16px', cursor: 'pointer', border: `1px solid ${filterStatus === s ? C.ink : C.rule}`, background: filterStatus === s ? C.ink : 'transparent', color: filterStatus === s ? C.cream : C.inkMute }}>{s}</button>
+        ))}
+      </div>
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: '60px 0', color: C.inkMute, fontFamily: F.mono, fontSize: 12 }}>Loading questions...</div>
+      ) : questions.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '60px 0' }}>
+          <div style={{ fontSize: 36, marginBottom: 12 }}>◈</div>
+          <div style={{ fontFamily: F.display, fontWeight: 700, fontSize: 18, color: C.ink }}>No questions yet</div>
+          <div style={{ fontFamily: F.body, fontSize: 14, color: C.inkMute, marginTop: 8 }}>
+            {isPaid ? 'Be the first to ask a question in this category.' : 'Upgrade to a paid plan to post questions.'}
+          </div>
+        </div>
+      ) : questions.map(q => (
+        <div key={q.id} style={S.card} onClick={() => openQuestion(q)}
+          onMouseEnter={e => e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.08)'}
+          onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+            <span style={S.pill(MARKET_COLORS[q.market] || C.accent)}>{q.market}</span>
+            {q.fixture_type && <span style={S.pill(C.inkMute)}>{q.fixture_type}</span>}
+            {q.is_answered && <span style={S.pill(C.forest)}>✓ Answered</span>}
+          </div>
+          <div style={{ fontFamily: F.display, fontWeight: 600, fontSize: 16, color: C.ink, marginBottom: 8, lineHeight: 1.35 }}>{q.title}</div>
+          {q.body && <div style={{ fontFamily: F.body, fontSize: 13, color: C.inkMute, lineHeight: 1.6, marginBottom: 10, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{q.body}</div>}
+          <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+            <span style={mono({ fontSize: 10, color: C.inkMute })}>{q.answer_count} {q.answer_count === 1 ? 'answer' : 'answers'}</span>
+            <span style={mono({ fontSize: 10, color: C.inkMute })}>{q.view_count} views</span>
+            <span style={mono({ fontSize: 10, color: C.inkMute, marginLeft: 'auto' })}>{timeAgo(q.created_at)}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function TrendsPage({ setRoute }) {
+  const supabase = createClient()
+  const [trends, setTrends] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function load() {
+      const { data } = await supabase
+        .from('community_trends')
+        .select('*')
+        .order('question_count', { ascending: false })
+        .limit(50)
+      setTrends(data || [])
+      setLoading(false)
+    }
+    load()
+  }, [])
+
+  const MARKET_COLORS = {
+    'Commercial': C.accent, 'Residential': '#7a9a6a',
+    'Hospitality': '#9a6a7a', 'Healthcare': '#6a7a9a',
+    'Industrial': '#8a7a4a', 'Sports': '#4a8a7a',
+    'Outdoor/Street': C.forest,
+  }
+
+  const maxCount = Math.max(...trends.map(t => t.question_count), 1)
+
+  return (
+    <div style={{ padding: '32px 36px', maxWidth: 860 }}>
+      <PageHead eyebrow="Community · Analytics" title="Trending" em="topics." />
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: '60px 0', color: C.inkMute, fontFamily: F.mono, fontSize: 12 }}>Loading trends...</div>
+      ) : trends.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '60px 0' }}>
+          <div style={{ fontFamily: F.display, fontWeight: 700, fontSize: 18, color: C.ink }}>No data yet</div>
+          <div style={{ fontFamily: F.body, fontSize: 14, color: C.inkMute, marginTop: 8 }}>Trends will appear as the community posts questions.</div>
+        </div>
+      ) : (
+        <>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginBottom: 36 }}>
+            {[
+              { label: 'Total questions', val: trends.reduce((s,t)=>s+Number(t.question_count),0) },
+              { label: 'Total answers', val: trends.reduce((s,t)=>s+Number(t.total_answers||0),0) },
+              { label: 'Answered rate', val: Math.round(trends.reduce((s,t)=>s+Number(t.answered_count||0),0)/Math.max(trends.reduce((s,t)=>s+Number(t.question_count),0),1)*100)+'%' },
+            ].map(c => (
+              <div key={c.label} style={{ background: C.paper, border: `1px solid ${C.rule}`, borderRadius: 8, padding: '20px 24px' }}>
+                <div style={mono({ fontSize: 9, letterSpacing: '0.16em', textTransform: 'uppercase', color: C.inkMute, marginBottom: 8 })}>{c.label}</div>
+                <div style={{ fontFamily: F.display, fontWeight: 700, fontSize: 28, color: C.ink, letterSpacing: '-0.02em' }}>{c.val}</div>
+              </div>
+            ))}
+          </div>
+          <div style={mono({ fontSize: 9, letterSpacing: '0.18em', textTransform: 'uppercase', color: C.inkMute, marginBottom: 16 })}>Questions by market &amp; fixture type</div>
+          <div style={{ background: C.paper, border: `1px solid ${C.rule}`, borderRadius: 8, overflow: 'hidden' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 80px 80px 80px', padding: '10px 20px', borderBottom: `1px solid ${C.rule}`, background: C.creamWarm }}>
+              {['Market','Fixture type','Questions','Answers','Answered'].map(h => (
+                <div key={h} style={mono({ fontSize: 9, letterSpacing: '0.14em', textTransform: 'uppercase', color: C.inkMute })}>{h}</div>
+              ))}
+            </div>
+            {trends.map((t, i) => {
+              const color = MARKET_COLORS[t.market] || C.accent
+              const barW = Math.round((t.question_count / maxCount) * 100)
+              return (
+                <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 80px 80px 80px', padding: '12px 20px', alignItems: 'center', borderBottom: i < trends.length-1 ? `1px solid ${C.rule}` : 'none', background: i%2===0 ? 'transparent' : `${C.creamWarm}60` }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0 }}/>
+                    <span style={{ fontFamily: F.display, fontWeight: 600, fontSize: 13, color: C.ink }}>{t.market}</span>
+                  </div>
+                  <div style={{ fontFamily: F.body, fontSize: 13, color: C.inkMute }}>{t.fixture_type || '—'}</div>
+                  <div>
+                    <div style={{ fontFamily: F.display, fontWeight: 700, fontSize: 14, color: C.ink, marginBottom: 4 }}>{t.question_count}</div>
+                    <div style={{ height: 3, background: C.rule, borderRadius: 99, width: 48, overflow: 'hidden' }}>
+                      <div style={{ width: `${barW}%`, height: '100%', background: color, borderRadius: 99 }}/>
+                    </div>
+                  </div>
+                  <div style={{ fontFamily: F.display, fontWeight: 600, fontSize: 14, color: C.ink }}>{t.total_answers || 0}</div>
+                  <div>
+                    <span style={{ display: 'inline-block', fontFamily: F.mono, fontSize: 10, padding: '3px 8px', borderRadius: 99, background: t.answered_count > 0 ? `${C.forest}18` : C.rule, color: t.answered_count > 0 ? C.forest : C.inkMute }}>
+                      {t.answered_count || 0}/{t.question_count}
+                    </span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 function AppShell({user, onSignOut, completedLessons=new Set(), markLessonComplete=async()=>{}, bookmarks=new Set(), toggleBookmark=async()=>{}}){
   const [route, setRoute] = useState("home")
   const [showUpgrade, setShowUpgrade] = useState(false)
@@ -3882,6 +4328,8 @@ function AppShell({user, onSignOut, completedLessons=new Set(), markLessonComple
         {route==="exam"      && <ExamPage setRoute={setRoute}/>}
         {route==="cert"      && <CertPage completedLessons={completedLessons}/>}
         {route==="account"   && <AccountPage/>}
+        {route==="community" && <CommunityPage setRoute={setRoute} user={user}/>}
+        {route==="trends"    && <TrendsPage setRoute={setRoute}/>}
         {route.startsWith("lesson-") && <LessonPage lessonRef={route.replace("lesson-","")} setRoute={setRoute} user={user} setShowUpgrade={setShowUpgrade} completedLessons={completedLessons} markLessonComplete={markLessonComplete} bookmarks={bookmarks} toggleBookmark={toggleBookmark}/>}
       </main>
     </div>

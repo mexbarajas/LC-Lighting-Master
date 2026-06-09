@@ -2222,17 +2222,23 @@ function CertPage({completedLessons=new Set()}) {
   const overallPct = Math.round((totalCompleted / totalLessons) * 100)
   const reqs = [
     {label:"Complete all 74 lessons",detail:`${totalCompleted} of ${totalLessons} lessons done across all 12 modules`,pct:overallPct,done:totalCompleted===totalLessons},
-    {label:"Earn 24 CEU contact hours",detail:"7.5 of 24 hours logged",pct:31,done:false},
+    {label:"Earn 24 CEU contact hours",detail:`${((completedLessons.size/74)*24).toFixed(1)} of 24 hours logged`,pct:Math.round((completedLessons.size/74)*100),done:false},
     {label:"Pass practice exam (≥ 85%)",detail:"No attempts recorded yet",pct:0,done:false},
     {label:"Within access window",detail:"97 days remaining in 6-month window",pct:100,done:true},
   ]
   const metCount = reqs.filter(r=>r.done).length
   const readinessPct = Math.round(reqs.reduce((s,r)=>s+r.pct,0)/reqs.length)
   const partProgress = [
-    {n:"01",title:"Fundamentals",modules:"01–04",done:12,total:26,pct:46},
-    {n:"02",title:"Systems & applications",modules:"05–08",done:0,total:24,pct:0},
-    {n:"03",title:"Design practice",modules:"09–12",done:0,total:24,pct:0},
-  ]
+    {n:"01",title:"Fundamentals",modules:"01–04",moduleNums:["01","02","03","04"]},
+    {n:"02",title:"Systems & applications",modules:"05–08",moduleNums:["05","06","07","08"]},
+    {n:"03",title:"Design practice & sustainability",modules:"09–12",moduleNums:["09","10","11","12"]},
+  ].map(part=>{
+    const partModules=MODULES.filter(m=>part.moduleNums.includes(m.n))
+    const allLessons=partModules.flatMap(m=>m.lessons)
+    const done=allLessons.filter(l=>completedLessons.has(l.ref)).length
+    const total=allLessons.length
+    return{...part,done,total,pct:Math.round((done/total)*100)}
+  })
   return (
     <div style={{padding:"0 36px 48px"}}>
       <PageHead eyebrow="My progress · Course completion" title="Your" em="certificate."/>
@@ -3236,23 +3242,35 @@ function useBeam(){const ref=useRef(null);const [b,setB]=useState({x:"50%",on:fa
 function DarkCard({children,style,onClick}){const{ref,beam,onMove,onLeave}=useBeam();return(<div ref={ref} onMouseMove={onMove} onMouseLeave={onLeave} onClick={onClick} style={{background:C.ink,borderRadius:6,position:"relative",overflow:"hidden",...style}}><div style={{position:"absolute",inset:0,pointerEvents:"none",background:`conic-gradient(from -12deg at ${beam.x} -20%,transparent 0deg,rgba(255,255,255,0.09) 22deg,transparent 44deg)`,opacity:beam.on?1:0,transition:"opacity 280ms ease"}}/>{children}</div>)}
 function LessonDots({lessons,hoveredIdx,setHoveredIdx}){return(<div style={{display:"flex",flexWrap:"wrap",gap:4}}>{lessons.map((l,i)=>(<div key={i} onMouseEnter={()=>setHoveredIdx(i)} onMouseLeave={()=>setHoveredIdx(null)} style={{width:9,height:9,borderRadius:"50%",cursor:"pointer",background:l.done?C.forest:l.active?C.accent:hoveredIdx===i?C.tan:C.rule,transition:"background 160ms,box-shadow 160ms",boxShadow:l.active?`0 0 0 3px rgba(198,90,58,0.28),0 0 8px rgba(198,90,58,0.55)`:l.done&&hoveredIdx===i?`0 0 0 3px rgba(126,155,134,0.3)`:"none",animation:l.active?"bulbPulse 2s ease-in-out infinite":"none"}}/>))}</div>)}
 
-function ModuleRow({mod,oddCol,setRoute}){const[hov,setHov]=useState(false);const[dotIdx,setDotIdx]=useState(null);const{ref,beam,onMove,onLeave:bLeave}=useBeam();const numColor=mod.done?hov?"#4a9068":C.forest:mod.active?hov?C.amber:C.accent:hov?"rgba(232,160,32,0.80)":"rgba(232,160,32,0.45)";const barColor=mod.done?C.forest:mod.active?C.accent:C.ruleStrong;const hovL=dotIdx!==null?mod.lessons[dotIdx]:null;return(<div ref={ref} onMouseMove={e=>{onMove(e);setHov(true)}} onMouseEnter={()=>setHov(true)} onMouseLeave={e=>{bLeave(e);setHov(false)}} onClick={()=>{window.scrollTo({top:0,behavior:'smooth'});setRoute("lesson-"+mod.lessons[0].ref)}} style={{display:"grid",gridTemplateColumns:"80px 1fr auto",gap:20,padding:`24px 24px 24px ${hov?30:24}px`,borderBottom:`1px solid ${C.rule}`,borderRight:oddCol?`1px solid ${C.rule}`:"none",background:hov?mod.active?`color-mix(in srgb,${C.accent} 5%,${C.cream})`:C.creamWarm:"transparent",transition:"background 200ms,padding-left 180ms",cursor:"pointer",position:"relative",overflow:"hidden"}}>
+function ModuleRow({mod,oddCol,setRoute,completedLessons=new Set()}){
+  const completedCount=mod.lessons.filter(l=>completedLessons.has(l.ref)).length
+  const total=mod.lessons.length
+  const pct=Math.round((completedCount/total)*100)
+  const isDone=completedCount===total
+  const isActive=!isDone&&completedCount>0
+  const countStr=completedCount>0?`${completedCount}/${total}`:`${total}`
+  const dotLessons=mod.lessons.map((l,idx)=>({...l,done:completedLessons.has(l.ref),active:!completedLessons.has(l.ref)&&idx===mod.lessons.findIndex(x=>!completedLessons.has(x.ref))}))
+  const[hov,setHov]=useState(false);const[dotIdx,setDotIdx]=useState(null);const{ref,beam,onMove,onLeave:bLeave}=useBeam()
+  const numColor=isDone?hov?"#4a9068":C.forest:isActive?hov?C.amber:C.accent:hov?"rgba(232,160,32,0.80)":"rgba(232,160,32,0.45)"
+  const barColor=isDone?C.forest:isActive?C.accent:C.ruleStrong
+  const hovL=dotIdx!==null?dotLessons[dotIdx]:null
+  return(<div ref={ref} onMouseMove={e=>{onMove(e);setHov(true)}} onMouseEnter={()=>setHov(true)} onMouseLeave={e=>{bLeave(e);setHov(false)}} onClick={()=>{window.scrollTo({top:0,behavior:'smooth'});setRoute("lesson-"+mod.lessons[0].ref)}} style={{display:"grid",gridTemplateColumns:"80px 1fr auto",gap:20,padding:`24px 24px 24px ${hov?30:24}px`,borderBottom:`1px solid ${C.rule}`,borderRight:oddCol?`1px solid ${C.rule}`:"none",background:hov?isActive?`color-mix(in srgb,${C.accent} 5%,${C.cream})`:C.creamWarm:"transparent",transition:"background 200ms,padding-left 180ms",cursor:"pointer",position:"relative",overflow:"hidden"}}>
   {hov&&<div style={{position:"absolute",inset:0,pointerEvents:"none",background:`radial-gradient(ellipse 55% 80% at ${beam.x} -5%,rgba(232,160,32,0.07) 0%,transparent 65%)`}}/>}
-  <div style={{fontFamily:F.display,fontWeight:800,fontSize:56,lineHeight:0.9,letterSpacing:"-0.04em",color:numColor,transition:"color 220ms ease",position:"relative",flexShrink:0,textShadow:hov&&!mod.done&&!mod.active?`0 0 24px rgba(232,160,32,0.45),0 0 48px rgba(232,160,32,0.18)`:"none"}}>
+  <div style={{fontFamily:F.display,fontWeight:800,fontSize:56,lineHeight:0.9,letterSpacing:"-0.04em",color:numColor,transition:"color 220ms ease",position:"relative",flexShrink:0,textShadow:hov&&!isDone&&!isActive?`0 0 24px rgba(232,160,32,0.45),0 0 48px rgba(232,160,32,0.18)`:"none"}}>
     {mod.n}
-    {mod.done&&<span style={{position:"absolute",top:-6,right:-3,width:18,height:18,borderRadius:"50%",background:C.forest,color:C.cream,display:"grid",placeItems:"center",fontSize:9,fontWeight:700,fontFamily:F.display}}>✓</span>}
+    {isDone&&<span style={{position:"absolute",top:-6,right:-3,width:18,height:18,borderRadius:"50%",background:C.forest,color:C.cream,display:"grid",placeItems:"center",fontSize:9,fontWeight:700,fontFamily:F.display}}>✓</span>}
   </div>
   <div style={{display:"flex",flexDirection:"column",gap:6,minWidth:0}}>
-    <span style={mono({fontSize:9,letterSpacing:"0.22em",textTransform:"uppercase",color:mod.done?C.forest:mod.active?C.accent:C.inkMute})}>{mod.active?"In progress · ":""}{mod.label}</span>
+    <span style={mono({fontSize:9,letterSpacing:"0.22em",textTransform:"uppercase",color:isDone?C.forest:isActive?C.accent:C.inkMute})}>{isActive?"In progress · ":""}{mod.label}</span>
     <span style={{fontFamily:F.display,fontWeight:700,fontSize:18,letterSpacing:"-0.01em",lineHeight:1.2,color:C.ink}}>{mod.title}</span>
     <span style={{fontFamily:F.body,fontSize:12,color:C.inkMute,lineHeight:1.55}}>{mod.lessons.slice(0,4).map(l=>l.title).join(" · ")}…</span>
-    {mod.active&&<div style={{marginTop:4}}><LessonDots lessons={mod.lessons} hoveredIdx={dotIdx} setHoveredIdx={setDotIdx}/><div style={mono({marginTop:5,fontSize:9,color:C.inkMute,minHeight:13})}>{hovL?`${hovL.active?"▶ ":hovL.done?"✓ ":""}${hovL.title}`:"Hover a dot to preview"}</div></div>}
+    {isActive&&<div style={{marginTop:4}}><LessonDots lessons={dotLessons} hoveredIdx={dotIdx} setHoveredIdx={setDotIdx}/><div style={mono({marginTop:5,fontSize:9,color:C.inkMute,minHeight:13})}>{hovL?`${hovL.active?"▶ ":hovL.done?"✓ ":""}${hovL.title}`:"Hover a dot to preview"}</div></div>}
   </div>
   <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:8,minWidth:110}}>
-    <span style={mono({fontSize:9,color:C.inkMute,letterSpacing:"0.14em"})}>{mod.count}</span>
-    <div style={{width:100}}><FilamentBar pct={mod.pct} color={barColor} glow={mod.active||mod.done}/></div>
-    <span style={mono({fontSize:9,letterSpacing:"0.12em",color:C.inkMute})}>{mod.done?<span style={{color:C.forest,fontWeight:600}}>Complete</span>:mod.active?<span style={{color:C.accent,fontWeight:600}}>In progress</span>:mod.pct>0?`${mod.pct}%`:"Not started"}</span>
-    <div style={{width:28,height:28,borderRadius:"50%",border:`1px solid ${mod.active?C.accent:C.inkSoft}`,display:"grid",placeItems:"center",opacity:hov||mod.active?1:0,transform:hov||mod.active?"translateX(0)":"translateX(-6px)",transition:"opacity 180ms,transform 180ms",color:mod.active?C.accent:C.inkSoft}}>
+    <span style={mono({fontSize:9,color:C.inkMute,letterSpacing:"0.14em"})}>{countStr}</span>
+    <div style={{width:100}}><FilamentBar pct={pct} color={barColor} glow={isActive||isDone}/></div>
+    <span style={mono({fontSize:9,letterSpacing:"0.12em",color:C.inkMute})}>{isDone?<span style={{color:C.forest,fontWeight:600}}>Complete</span>:isActive?<span style={{color:C.accent,fontWeight:600}}>In progress</span>:pct>0?`${pct}%`:"Not started"}</span>
+    <div style={{width:28,height:28,borderRadius:"50%",border:`1px solid ${isActive?C.accent:C.inkSoft}`,display:"grid",placeItems:"center",opacity:hov||isActive?1:0,transform:hov||isActive?"translateX(0)":"translateX(-6px)",transition:"opacity 180ms,transform 180ms",color:isActive?C.accent:C.inkSoft}}>
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
     </div>
   </div>
@@ -3768,7 +3786,7 @@ function Dashboard({ setRoute, completedLessons = new Set(), user, userSubscript
                 <span style={mono({ fontSize: 9, letterSpacing: '0.18em', textTransform: 'uppercase', color: C.inkMute, textAlign: 'right' })}>{pi.s}</span>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)' }}>
-                {pMods.map((mod, i) => <ModuleRow key={mod.n} mod={mod} oddCol={i % 2 === 0} setRoute={setRoute}/>)}
+                {pMods.map((mod, i) => <ModuleRow key={mod.n} mod={mod} oddCol={i % 2 === 0} setRoute={setRoute} completedLessons={completedLessons}/>)}
               </div>
             </div>
           )
