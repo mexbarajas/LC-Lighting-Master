@@ -2645,7 +2645,7 @@ function ShareBtn({icon, label, hoverBg, hoverColor, defaultColor, onClick}){
 }
 
 /* ── MODULE COMPLETE SHARE MODAL ── */
-function ModuleCompleteModal({module, courseComplete, onClose}){
+function ModuleCompleteModal({module, courseComplete, onClose, onNextLesson, nextLesson, setRoute}){
   const [copied,setCopied]=useState(false)
   const moduleKey=String(module.n).padStart(2,"0")
   const shareBody=MODULE_SHARE_COPY[moduleKey]||`I just completed Module ${module.n}: ${module.title} in LC · Lighting Master. ${module.ceu} CEU credit hours earned. 💡`
@@ -2717,14 +2717,38 @@ function ModuleCompleteModal({module, courseComplete, onClose}){
             onClick={copyLink}/>
         </div>
 
-        <button onClick={onClose}
-          style={{width:"100%",padding:"12px",borderRadius:99,
-            background:C.ink,color:"#fff",border:"none",
-            fontFamily:F.display,fontWeight:700,fontSize:13,cursor:"pointer",transition:"opacity 0.15s"}}
-          onMouseEnter={e=>e.currentTarget.style.opacity="0.82"}
-          onMouseLeave={e=>e.currentTarget.style.opacity="1"}>
-          Continue to dashboard →
-        </button>
+        <div style={{ display:'flex', flexDirection:'column', gap:10, marginTop:8, width:'100%' }}>
+          {nextLesson && (
+            <button
+              onClick={() => { onClose(); setTimeout(() => onNextLesson(), 100) }}
+              style={{
+                width:'100%', fontFamily:F.display, fontWeight:700, fontSize:14,
+                background:C.accent, color:'#fff', border:'none', borderRadius:99,
+                padding:'13px 24px', cursor:'pointer',
+                display:'flex', alignItems:'center', justifyContent:'center', gap:8,
+                transition:'background 150ms',
+              }}
+              onMouseEnter={e=>e.currentTarget.style.background=C.tan}
+              onMouseLeave={e=>e.currentTarget.style.background=C.accent}
+            >
+              Next lesson — {nextLesson.title} →
+            </button>
+          )}
+          <button
+            onClick={onClose}
+            style={{
+              width:'100%', fontFamily:F.display, fontWeight:600, fontSize:13,
+              background:'transparent', color:C.inkMute,
+              border:`1px solid ${C.rule}`, borderRadius:99,
+              padding:'11px 24px', cursor:'pointer',
+              transition:'border-color 150ms, color 150ms',
+            }}
+            onMouseEnter={e=>{ e.currentTarget.style.borderColor=C.ink; e.currentTarget.style.color=C.ink }}
+            onMouseLeave={e=>{ e.currentTarget.style.borderColor=C.rule; e.currentTarget.style.color=C.inkMute }}
+          >
+            ← Back to dashboard
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -2744,7 +2768,7 @@ const LC_MEDIA = {
   "2.2":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780595963/202_u1phtz.png",
   "2.3":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780595963/203_n3ypvk.png",
   "2.4":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780595963/204_id0evl.png",
-  "2.5":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1781017856/205_ptityg.png",
+  "2.5":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1781018493/205_ptityg.png",
   "2.6":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780595960/206_ccksyg.png",
   "3.1":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780595832/301_z5fxzi.png",
   "3.2":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780595832/302_s9m4nq.png",
@@ -2765,7 +2789,7 @@ const LC_MEDIA = {
   "5.4":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780599778/504_i7pm8p.png",
   "5.5":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780599770/505_r15ucf.png",
   "5.6":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780599861/506_hnvvt5.png",
-  "6.1":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780599836/601_f1xsh2.png",
+  "6.1":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1781021781/601_f1xsh2.png",
   "6.2":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780602460/602_jelq8f.png",
   "6.3":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780602461/603_l1u5wi.png",
   "6.4":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780602462/604_eczkfc.png",
@@ -3107,7 +3131,17 @@ function LessonPage({lessonRef,setRoute,user,setShowUpgrade,completedLessons=new
         <ModuleCompleteModal
           module={module}
           courseComplete={courseComplete}
-          onClose={()=>{setShowShareModal(false);setRoute("home")}}
+          nextLesson={next}
+          onNextLesson={() => {
+            setShowShareModal(false)
+            window.scrollTo({ top: 0, behavior: 'instant' })
+            setRoute('lesson-' + next?.ref)
+          }}
+          onClose={() => {
+            setShowShareModal(false)
+            setRoute('home')
+          }}
+          setRoute={setRoute}
         />
       )}
     </div>
