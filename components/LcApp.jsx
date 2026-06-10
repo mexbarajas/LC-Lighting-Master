@@ -184,6 +184,70 @@ function PwField({value,onChange,onBlur,showPw,setShowPw,err,placeholder="Min. 8
   )
 }
 
+function validatePassword(password) {
+  const checks = {
+    length:    password.length >= 10,
+    uppercase: /[A-Z]/.test(password),
+    lowercase: /[a-z]/.test(password),
+    number:    /[0-9]/.test(password),
+    special:   /[^A-Za-z0-9]/.test(password),
+    notCommon: !['password','12345678','qwertyuiop',
+      'lighting','ncqlp','luxart','lightingmaster',
+      '1234567890','aaaaaaaaaa','password1'].includes(
+        password.toLowerCase()
+      ),
+  }
+  const score = Object.values(checks).filter(Boolean).length
+  const strength = score <= 2 ? 'weak' :
+                   score <= 4 ? 'fair' :
+                   score <= 5 ? 'good' : 'strong'
+  const valid = checks.length && checks.uppercase &&
+                checks.lowercase && checks.number && checks.notCommon
+  return { checks, score, strength, valid }
+}
+
+function PasswordStrengthBar({ password }) {
+  if (!password) return null
+  const { strength, score, checks } = validatePassword(password)
+  const colors = { weak:'#ef4444', fair:'#f59e0b', good:'#3b82f6', strong:'#22c55e' }
+  const color = colors[strength]
+  const width = Math.round((score / 6) * 100) + '%'
+  return (
+    <div style={{ marginTop: 8, marginBottom: 4 }}>
+      <div style={{ height: 4, background: C.rule, borderRadius: 99, overflow: 'hidden', marginBottom: 6 }}>
+        <div style={{ height: '100%', width, background: color,
+          borderRadius: 99, transition: 'width 300ms ease, background 300ms ease' }}/>
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {[
+            { key: 'length',    label: '10+ chars' },
+            { key: 'uppercase', label: 'A-Z' },
+            { key: 'lowercase', label: 'a-z' },
+            { key: 'number',    label: '0-9' },
+            { key: 'special',   label: '!@#' },
+          ].map(({ key, label }) => (
+            <span key={key} style={{
+              fontFamily: F.mono, fontSize: 9,
+              color: checks[key] ? '#22c55e' : C.inkMute,
+              letterSpacing: '0.08em',
+              transition: 'color 200ms',
+            }}>
+              {checks[key] ? '✓' : '○'} {label}
+            </span>
+          ))}
+        </div>
+        <span style={{
+          fontFamily: F.mono, fontSize: 9, color, fontWeight: 600,
+          letterSpacing: '0.1em', textTransform: 'uppercase',
+        }}>
+          {strength}
+        </span>
+      </div>
+    </div>
+  )
+}
+
 function AuthModal({mode, onClose, onAuth, initialError=null, onErrorShown=()=>{}}){
   const [tab, setTab] = useState(mode||"signin")
   // sign-in fields
@@ -198,7 +262,10 @@ function AuthModal({mode, onClose, onAuth, initialError=null, onErrorShown=()=>{
   const [state,     setState]     = useState("")
   const [suPw,      setSuPw]      = useState("")
   const [suShowPw,  setSuShowPw]  = useState(false)
+  const [confirmPassword, setConfirmPassword] = useState("")
   const [contactOk, setContactOk] = useState(false)
+  const [loginAttempts, setLoginAttempts] = useState(0)
+  const [lockoutUntil, setLockoutUntil] = useState(null)
   // reset
   const [resetEmail, setResetEmail] = useState("")
   // shared
@@ -233,7 +300,9 @@ function AuthModal({mode, onClose, onAuth, initialError=null, onErrorShown=()=>{
     if(!lastName.trim()) { setError("Last name is required."); return false }
     if(!suEmail||!suEmail.includes("@")){ setError("Enter a valid email address."); return false }
     if(!state)           { setError("Please select your state or region."); return false }
-    if(pwStrength(suPw)<3){ setError("Password is too weak. Add uppercase letters, numbers, or symbols."); return false }
+    const pwCheck = validatePassword(suPw)
+    if(!pwCheck.valid)   { setError("Password must be at least 10 characters and include uppercase, lowercase, and a number."); return false }
+    if(suPw !== confirmPassword){ setError("Passwords do not match."); return false }
     if(!contactOk)       { setError("Please confirm you agree to receive product communications."); return false }
     return true
   }
@@ -263,8 +332,30 @@ function AuthModal({mode, onClose, onAuth, initialError=null, onErrorShown=()=>{
       return
     }
     if(tab==="signin"){
+      if(lockoutUntil && Date.now() < lockoutUntil){
+        const secs = Math.ceil((lockoutUntil - Date.now()) / 1000)
+        setLoading(false)
+        setError(`Too many failed attempts. Try again in ${secs} seconds.`)
+        return
+      }
       const { data, error } = await supabase.auth.signInWithPassword({ email:siEmail, password:siPw })
-      if(error){ setLoading(false); setError(error.message); return }
+      if(error){
+        setLoading(false)
+        const newAttempts = loginAttempts + 1
+        setLoginAttempts(newAttempts)
+        if(newAttempts >= 5){
+          const lockDuration = Math.min(newAttempts * 30 * 1000, 300000)
+          setLockoutUntil(Date.now() + lockDuration)
+          setError(`Too many failed attempts. Account locked for ${lockDuration/1000} seconds.`)
+        } else if(newAttempts >= 3){
+          setError(`Incorrect credentials. ${5 - newAttempts} attempts remaining before temporary lockout.`)
+        } else {
+          setError(error.message)
+        }
+        return
+      }
+      setLoginAttempts(0)
+      setLockoutUntil(null)
       const u = data.user
       const { data:sub } = await supabase.from("subscriptions").select("*").eq("user_id", u.id).single()
       const sessionToken = crypto.randomUUID()
@@ -422,26 +513,16 @@ function AuthModal({mode, onClose, onAuth, initialError=null, onErrorShown=()=>{
               <PwField value={suPw} onChange={e=>setSuPw(e.target.value)}
                 onBlur={()=>touch("suPw")} showPw={suShowPw} setShowPw={setSuShowPw}
                 err={fieldErr.suPw}/>
-              <PwStrengthBar pw={suPw}/>
+              <PasswordStrengthBar password={suPw}/>
             </Field>
 
-            {/* requirements checklist */}
-            {suPw&&(
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"3px 12px",
-                background:C.creamWarm,borderRadius:7,padding:"10px 12px"}}>
-                {[
-                  [suPw.length>=8,           "8+ characters"],
-                  [/[A-Z]/.test(suPw),       "Uppercase letter"],
-                  [/[0-9]/.test(suPw),       "Number"],
-                  [/[^A-Za-z0-9]/.test(suPw),"Symbol (!@#$…)"],
-                ].map(([ok,label])=>(
-                  <div key={label} style={{display:"flex",alignItems:"center",gap:6}}>
-                    <span style={{fontSize:11,color:ok?C.forest:"#C8B8A4",flexShrink:0}}>{ok?"✓":"○"}</span>
-                    <span style={{fontFamily:F.body,fontSize:11,color:ok?C.inkSoft:C.inkMute}}>{label}</span>
-                  </div>
-                ))}
-              </div>
-            )}
+            <Field label="Confirm password" req>
+              <input type="password" placeholder="Re-enter password"
+                value={confirmPassword} onChange={e=>setConfirmPassword(e.target.value)}
+                style={{width:"100%",boxSizing:"border-box",fontFamily:F.body,fontSize:14,
+                  padding:"10px 13px",borderRadius:8,border:`1.5px solid ${C.rule}`,
+                  background:C.paper,color:C.ink,outline:"none"}}/>
+            </Field>
 
             {/* contact agreement */}
             <div onClick={()=>setContactOk(v=>!v)}
