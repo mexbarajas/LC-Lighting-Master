@@ -19,9 +19,9 @@ export default function ResourcesLayout({ children }) {
         }}>
           <a href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
             <img
-              src="/brand/logo-icon.png"
+              src="/brand/logo-transparent.png"
               alt="LC Lighting Master"
-              style={{ height: 36, width: 36, display: 'block', borderRadius: 8 }}
+              style={{ width: 34, height: 34, flexShrink: 0 }}
             />
             <span style={{
               fontFamily: "'Space Grotesk', sans-serif",
@@ -29,6 +29,7 @@ export default function ResourcesLayout({ children }) {
               fontSize: 16,
               color: '#F2E6DA',
               letterSpacing: '-0.01em',
+              lineHeight: 1.1,
             }}>LC · Lighting Master</span>
           </a>
           <a href="/pricing" style={{
