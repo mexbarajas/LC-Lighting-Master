@@ -403,9 +403,9 @@ function AuthModal({mode, onClose, onAuth, initialError=null, onErrorShown=()=>{
         <div style={{display:"flex",justifyContent:"center",marginBottom:20}}>
           <div style={{background:C.ink,borderRadius:8,padding:"7px 14px",display:"inline-flex",alignItems:"center"}}>
             <img
-              src="/brand/logo-full.png"
+              src="/brand/logo-icon.png"
               alt="LC Lighting Master"
-              style={{height:28,width:"auto",mixBlendMode:"screen",display:"block"}}
+              style={{height:36,width:36,display:"block",borderRadius:7}}
             />
           </div>
         </div>
@@ -669,9 +669,9 @@ function Hero({onSignUp}){
         width:600,height:400,background:"radial-gradient(ellipse, rgba(198,90,58,0.18) 0%, transparent 70%)",pointerEvents:"none"}}/>
       <div style={{maxWidth:880,margin:"0 auto",textAlign:"center",position:"relative",zIndex:1}}>
         <img
-          src="/brand/logo-full.png"
+          src="/brand/logo.png"
           alt="LC Lighting Master — NCQLP Exam Prep & Lighting Certification Study Guide"
-          style={{width:"min(360px,70vw)",height:"auto",mixBlendMode:"screen",marginBottom:8,display:"block",marginLeft:"auto",marginRight:"auto"}}
+          style={{width:"min(320px,60vw)",height:"auto",marginBottom:4,display:"block",marginLeft:"auto",marginRight:"auto"}}
         />
         <Kicker light center>LC Exam Prep · Lighting Design</Kicker>
         <h1 style={{fontFamily:F.display,fontWeight:700,fontSize:"clamp(42px,7vw,80px)",
@@ -3540,9 +3540,9 @@ function Sidebar({route, setRoute, user, onSignOut, bookmarks=new Set(), isMobil
     }}>
       <div style={{padding:"14px 16px 12px",borderBottom:"1px solid rgba(255,255,255,0.08)",textAlign:"center"}}>
         <img
-          src="/brand/logo-full.png"
+          src="/brand/logo-icon.png"
           alt="LC Lighting Master"
-          style={{width:150,height:"auto",mixBlendMode:"screen",display:"block",margin:"0 auto 4px"}}
+          style={{width:52,height:52,display:"block",margin:"0 auto 6px",borderRadius:10}}
         />
         <div style={m({fontSize:8,letterSpacing:"0.18em",textTransform:"uppercase",color:"rgba(255,255,255,0.28)",marginTop:2})}>LC Exam Prep · Luxartmedia</div>
       </div>

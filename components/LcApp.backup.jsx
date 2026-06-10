@@ -400,11 +400,14 @@ function AuthModal({mode, onClose, onAuth, initialError=null, onErrorShown=()=>{
           background:"none",border:"none",cursor:"pointer",fontSize:22,color:C.inkMute,lineHeight:1}}>×</button>
 
         {/* logo */}
-        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
-          <div style={{width:30,height:30,borderRadius:7,background:C.accent,
-            display:"flex",alignItems:"center",justifyContent:"center",
-            fontFamily:F.display,fontWeight:800,fontSize:11,color:"#fff"}}>LC</div>
-          <div style={d({fontWeight:700,fontSize:15,color:C.ink})}>Lighting Master</div>
+        <div style={{display:"flex",justifyContent:"center",marginBottom:20}}>
+          <div style={{background:C.ink,borderRadius:8,padding:"7px 14px",display:"inline-flex",alignItems:"center"}}>
+            <img
+              src="/brand/logo-full.png"
+              alt="LC Lighting Master"
+              style={{height:28,width:"auto",mixBlendMode:"screen",display:"block"}}
+            />
+          </div>
         </div>
 
         {/* tabs */}
@@ -665,6 +668,11 @@ function Hero({onSignUp}){
       <div style={{position:"absolute",top:"30%",left:"50%",transform:"translate(-50%,-50%)",
         width:600,height:400,background:"radial-gradient(ellipse, rgba(198,90,58,0.18) 0%, transparent 70%)",pointerEvents:"none"}}/>
       <div style={{maxWidth:880,margin:"0 auto",textAlign:"center",position:"relative",zIndex:1}}>
+        <img
+          src="/brand/logo-full.png"
+          alt="LC Lighting Master — NCQLP Exam Prep & Lighting Certification Study Guide"
+          style={{width:"min(360px,70vw)",height:"auto",mixBlendMode:"screen",marginBottom:8,display:"block",marginLeft:"auto",marginRight:"auto"}}
+        />
         <Kicker light center>LC Exam Prep · Lighting Design</Kicker>
         <h1 style={{fontFamily:F.display,fontWeight:700,fontSize:"clamp(42px,7vw,80px)",
           letterSpacing:"-0.03em",lineHeight:1,color:"#F2E6DA",margin:"0 0 24px"}}>
@@ -3530,15 +3538,13 @@ function Sidebar({route, setRoute, user, onSignOut, bookmarks=new Set(), isMobil
       transition:isMobile?"left 280ms cubic-bezier(0.4,0,0.2,1)":"none",
       boxShadow:isMobile&&sidebarOpen?"4px 0 32px rgba(0,0,0,0.4)":"none",
     }}>
-      <div style={{display:"flex",alignItems:"center",gap:10,padding:"18px 16px 14px",
-        borderBottom:"1px solid rgba(255,255,255,0.08)"}}>
-        <div style={{width:28,height:28,borderRadius:5,background:C.accent,
-          display:"flex",alignItems:"center",justifyContent:"center",
-          fontFamily:F.display,fontWeight:800,fontSize:11,color:"#fff",flexShrink:0}}>LM</div>
-        <div>
-          <div style={{fontFamily:F.display,fontWeight:700,fontSize:13,color:"#fff",lineHeight:1.2}}>Lighting Master</div>
-          <div style={m({fontSize:8,letterSpacing:"0.18em",textTransform:"uppercase",color:"rgba(255,255,255,0.28)",marginTop:1})}>LC Exam Prep · Luxartmedia</div>
-        </div>
+      <div style={{padding:"14px 16px 12px",borderBottom:"1px solid rgba(255,255,255,0.08)",textAlign:"center"}}>
+        <img
+          src="/brand/logo-full.png"
+          alt="LC Lighting Master"
+          style={{width:150,height:"auto",mixBlendMode:"screen",display:"block",margin:"0 auto 4px"}}
+        />
+        <div style={m({fontSize:8,letterSpacing:"0.18em",textTransform:"uppercase",color:"rgba(255,255,255,0.28)",marginTop:2})}>LC Exam Prep · Luxartmedia</div>
       </div>
 
       {nav.map(({section,items})=>(
