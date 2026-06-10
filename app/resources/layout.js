@@ -21,7 +21,7 @@ export default function ResourcesLayout({ children }) {
             <img
               src="/brand/logo-transparent.png"
               alt="LC Lighting Master"
-              style={{ width: 34, height: 34, flexShrink: 0 }}
+              style={{ width: 34, height: 34, flexShrink: 0, filter: 'drop-shadow(0 0 6px rgba(250,210,100,0.55)) brightness(1.15)' }}
             />
             <span style={{
               fontFamily: "'Space Grotesk', sans-serif",

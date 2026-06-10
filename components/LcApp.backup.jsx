@@ -620,7 +620,7 @@ function Nav({onSignIn,onSignUp}){
             </div>
             <div style={m({fontSize:7,letterSpacing:"0.18em",textTransform:"uppercase",
               color:scrolled?C.inkMute:"rgba(249,244,237,0.45)",transition:"color 280ms"})}>
-              by Luxartmedia
+              by luxartmedia.com
             </div>
           </div>
         </div>
@@ -668,13 +668,6 @@ function Hero({onSignUp}){
       <div style={{position:"absolute",top:"30%",left:"50%",transform:"translate(-50%,-50%)",
         width:600,height:400,background:"radial-gradient(ellipse, rgba(198,90,58,0.18) 0%, transparent 70%)",pointerEvents:"none"}}/>
       <div style={{maxWidth:880,margin:"0 auto",textAlign:"center",position:"relative",zIndex:1}}>
-        <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:18,marginBottom:8}}>
-          <img
-            src="/brand/logo-transparent.png"
-            alt="LC Lighting Master logo"
-            style={{width:"min(120px,26vw)",height:"auto"}}
-          />
-        </div>
         <Kicker light center>LC Exam Prep · Lighting Design</Kicker>
         <h1 style={{fontFamily:F.display,fontWeight:700,fontSize:"clamp(42px,7vw,80px)",
           letterSpacing:"-0.03em",lineHeight:1,color:"#F2E6DA",margin:"0 0 24px"}}>
@@ -3541,11 +3534,12 @@ function Sidebar({route, setRoute, user, onSignOut, bookmarks=new Set(), isMobil
       boxShadow:isMobile&&sidebarOpen?"4px 0 32px rgba(0,0,0,0.4)":"none",
     }}>
       <div style={{display:"flex",alignItems:"center",gap:10,padding:"16px 18px 8px",borderBottom:"1px solid rgba(255,255,255,0.08)"}}>
-        <img src="/brand/logo-transparent.png" alt=""
-          style={{width:34,height:34,flexShrink:0}}/>
-        <span style={{fontFamily:F.display,fontWeight:700,fontSize:15,color:C.cream,letterSpacing:"-0.01em",lineHeight:1.1}}>
-          LC · Lighting<br/>Master
-        </span>
+        <img src="/brand/logo-transparent.png" alt="LC Lighting Master"
+          style={{width:34,height:34,flexShrink:0,borderRadius:8}}/>
+        <div>
+          <div style={{fontFamily:F.display,fontWeight:700,fontSize:13,color:C.cream,lineHeight:1.2}}>Lighting Master</div>
+          <div style={m({fontSize:8,letterSpacing:"0.18em",textTransform:"uppercase",color:"rgba(255,255,255,0.28)",marginTop:1})}>BY LUXARTMEDIA.COM</div>
+        </div>
       </div>
 
       {nav.map(({section,items})=>(
@@ -6455,7 +6449,7 @@ function AdminSidebar({route,setRoute,flagCount,onSignOut,onBack=()=>{}}){
           <div style={adisp({fontWeight:700,fontSize:13,color:AT.ink})}>Admin Console</div>
         </div>
         <div style={amono({fontSize:8,letterSpacing:"0.16em",textTransform:"uppercase",
-          color:AT.inkMute})}>Lighting Master · Luxartmedia</div>
+          color:AT.inkMute})}>Lighting Master · luxartmedia.com</div>
       </div>
 
       <nav style={{padding:"8px 0",flex:1}}>

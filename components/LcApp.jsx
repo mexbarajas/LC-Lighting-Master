@@ -403,7 +403,7 @@ function AuthModal({mode, onClose, onAuth, initialError=null, onErrorShown=()=>{
         <div style={{display:"flex",justifyContent:"center",marginBottom:20}}>
           <div style={{background:C.ink,borderRadius:10,padding:"8px 16px",display:"inline-flex",alignItems:"center",gap:10}}>
             <img src="/brand/logo-transparent.png" alt=""
-              style={{width:32,height:32,flexShrink:0}}/>
+              style={{width:32,height:32,flexShrink:0,filter:"drop-shadow(0 0 5px rgba(250,210,100,0.5)) brightness(1.15)"}}/>
             <span style={{fontFamily:F.display,fontWeight:700,fontSize:14,color:C.cream,letterSpacing:"-0.01em",lineHeight:1.15}}>
               LC · Lighting<br/>Master
             </span>
@@ -3535,7 +3535,7 @@ function Sidebar({route, setRoute, user, onSignOut, bookmarks=new Set(), isMobil
     }}>
       <div style={{display:"flex",alignItems:"center",gap:10,padding:"16px 18px 8px",borderBottom:"1px solid rgba(255,255,255,0.08)"}}>
         <img src="/brand/logo-transparent.png" alt="LC Lighting Master"
-          style={{width:34,height:34,flexShrink:0,borderRadius:8}}/>
+          style={{width:34,height:34,flexShrink:0,borderRadius:8,filter:"drop-shadow(0 0 6px rgba(250,210,100,0.55)) brightness(1.15)"}}/>
         <div>
           <div style={{fontFamily:F.display,fontWeight:700,fontSize:13,color:C.cream,lineHeight:1.2}}>Lighting Master</div>
           <div style={m({fontSize:8,letterSpacing:"0.18em",textTransform:"uppercase",color:"rgba(255,255,255,0.28)",marginTop:1})}>BY LUXARTMEDIA.COM</div>
@@ -4561,7 +4561,7 @@ function AppShell({user, onSignOut, completedLessons=new Set(), markLessonComple
             </button>
             <div style={{display:"flex",alignItems:"center",gap:8}}>
               <img src="/brand/logo-transparent.png" alt=""
-                style={{width:26,height:26,flexShrink:0}}/>
+                style={{width:26,height:26,flexShrink:0,filter:"drop-shadow(0 0 5px rgba(250,210,100,0.5)) brightness(1.15)"}}/>
               <span style={{fontFamily:F.display,fontWeight:700,fontSize:15,color:C.cream,letterSpacing:"-0.01em"}}>
                 LC · <em style={{fontStyle:"normal",color:C.accent}}>Lighting Master</em>
               </span>
