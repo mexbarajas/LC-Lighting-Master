@@ -1,9 +1,16 @@
 import Stripe from 'stripe'
 import { getPriceForTier, getAccessExpiry } from '@/lib/pricing'
+import { checkOrigin, originError } from '@/lib/csrf'
+
+export const config = {
+  api: { bodyParser: { sizeLimit: '16kb' } },
+}
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 
 export async function POST(request) {
+  if (!checkOrigin(request)) return originError()
+
   const { tier, seats = 1, examAddon, userId, userEmail } = await request.json()
 
   if (!['t1', 't2', 't3', 'team'].includes(tier)) {

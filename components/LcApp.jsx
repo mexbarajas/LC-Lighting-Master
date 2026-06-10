@@ -359,7 +359,7 @@ function AuthModal({mode, onClose, onAuth, initialError=null, onErrorShown=()=>{
       const u = data.user
       const { data:sub } = await supabase.from("subscriptions").select("*").eq("user_id", u.id).single()
       const sessionToken = crypto.randomUUID()
-      localStorage.setItem('lc_session_token', sessionToken)
+      sessionStorage.setItem('lc_session_token', sessionToken)
       await supabase.from('subscriptions').update({ session_token: sessionToken, session_created_at: new Date().toISOString() }).eq('user_id', u.id)
       setLoading(false)
       onAuth({ id:u.id, name:u.user_metadata?.name||siEmail.split("@")[0], email:u.email,
@@ -4843,10 +4843,10 @@ function LearnerRoot({onAdminClick=()=>{}}){
       if(!session) return
       const u = session.user
       const { data:sub } = await supabase.from("subscriptions").select("*").eq("user_id", u.id).single()
-      const storedToken = localStorage.getItem('lc_session_token')
+      const storedToken = sessionStorage.getItem('lc_session_token')
       if(sub?.session_token && storedToken !== sub.session_token){
         await supabase.auth.signOut()
-        localStorage.removeItem('lc_session_token')
+        sessionStorage.removeItem('lc_session_token')
         setSessionConflict('Your session was ended because another device signed in to this account. Please log in again.')
         setAuthMode('signin')
         return
@@ -4932,7 +4932,7 @@ function LearnerRoot({onAdminClick=()=>{}}){
 
   async function handleSignOut(){
     if(user?.id){
-      localStorage.removeItem('lc_session_token')
+      sessionStorage.removeItem('lc_session_token')
       await supabase.from('subscriptions').update({ session_token: null }).eq('user_id', user.id)
     }
     await supabase.auth.signOut()
