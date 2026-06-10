@@ -17,15 +17,12 @@ export default function ResourcesLayout({ children }) {
           justifyContent: 'space-between',
           height: 60,
         }}>
-          <a href="/" style={{
-            fontFamily: "'Space Grotesk', sans-serif",
-            fontWeight: 700,
-            fontSize: 18,
-            color: '#F2E6DA',
-            textDecoration: 'none',
-            letterSpacing: '-0.02em',
-          }}>
-            LC · Lighting Master
+          <a href="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
+            <img
+              src="/brand/logo-full.png"
+              alt="LC Lighting Master"
+              style={{ height: 40, width: 'auto', mixBlendMode: 'screen', display: 'block' }}
+            />
           </a>
           <a href="/pricing" style={{
             background: '#C65A3A',

@@ -6,6 +6,18 @@ import PricingCard from '@/components/PricingCard'
 
 const supabase = createClient()
 
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== 'undefined' ? window.innerWidth < 768 : false
+  )
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < 768)
+    window.addEventListener('resize', handler)
+    return () => window.removeEventListener('resize', handler)
+  }, [])
+  return isMobile
+}
+
 /* ══ LEARNER APP ══ */
 
 /* ── FONTS ── */
@@ -172,6 +184,70 @@ function PwField({value,onChange,onBlur,showPw,setShowPw,err,placeholder="Min. 8
   )
 }
 
+function validatePassword(password) {
+  const checks = {
+    length:    password.length >= 10,
+    uppercase: /[A-Z]/.test(password),
+    lowercase: /[a-z]/.test(password),
+    number:    /[0-9]/.test(password),
+    special:   /[^A-Za-z0-9]/.test(password),
+    notCommon: !['password','12345678','qwertyuiop',
+      'lighting','ncqlp','luxart','lightingmaster',
+      '1234567890','aaaaaaaaaa','password1'].includes(
+        password.toLowerCase()
+      ),
+  }
+  const score = Object.values(checks).filter(Boolean).length
+  const strength = score <= 2 ? 'weak' :
+                   score <= 4 ? 'fair' :
+                   score <= 5 ? 'good' : 'strong'
+  const valid = checks.length && checks.uppercase &&
+                checks.lowercase && checks.number && checks.notCommon
+  return { checks, score, strength, valid }
+}
+
+function PasswordStrengthBar({ password }) {
+  if (!password) return null
+  const { strength, score, checks } = validatePassword(password)
+  const colors = { weak:'#ef4444', fair:'#f59e0b', good:'#3b82f6', strong:'#22c55e' }
+  const color = colors[strength]
+  const width = Math.round((score / 6) * 100) + '%'
+  return (
+    <div style={{ marginTop: 8, marginBottom: 4 }}>
+      <div style={{ height: 4, background: C.rule, borderRadius: 99, overflow: 'hidden', marginBottom: 6 }}>
+        <div style={{ height: '100%', width, background: color,
+          borderRadius: 99, transition: 'width 300ms ease, background 300ms ease' }}/>
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {[
+            { key: 'length',    label: '10+ chars' },
+            { key: 'uppercase', label: 'A-Z' },
+            { key: 'lowercase', label: 'a-z' },
+            { key: 'number',    label: '0-9' },
+            { key: 'special',   label: '!@#' },
+          ].map(({ key, label }) => (
+            <span key={key} style={{
+              fontFamily: F.mono, fontSize: 9,
+              color: checks[key] ? '#22c55e' : C.inkMute,
+              letterSpacing: '0.08em',
+              transition: 'color 200ms',
+            }}>
+              {checks[key] ? '✓' : '○'} {label}
+            </span>
+          ))}
+        </div>
+        <span style={{
+          fontFamily: F.mono, fontSize: 9, color, fontWeight: 600,
+          letterSpacing: '0.1em', textTransform: 'uppercase',
+        }}>
+          {strength}
+        </span>
+      </div>
+    </div>
+  )
+}
+
 function AuthModal({mode, onClose, onAuth, initialError=null, onErrorShown=()=>{}}){
   const [tab, setTab] = useState(mode||"signin")
   // sign-in fields
@@ -186,7 +262,10 @@ function AuthModal({mode, onClose, onAuth, initialError=null, onErrorShown=()=>{
   const [state,     setState]     = useState("")
   const [suPw,      setSuPw]      = useState("")
   const [suShowPw,  setSuShowPw]  = useState(false)
+  const [confirmPassword, setConfirmPassword] = useState("")
   const [contactOk, setContactOk] = useState(false)
+  const [loginAttempts, setLoginAttempts] = useState(0)
+  const [lockoutUntil, setLockoutUntil] = useState(null)
   // reset
   const [resetEmail, setResetEmail] = useState("")
   // shared
@@ -221,7 +300,9 @@ function AuthModal({mode, onClose, onAuth, initialError=null, onErrorShown=()=>{
     if(!lastName.trim()) { setError("Last name is required."); return false }
     if(!suEmail||!suEmail.includes("@")){ setError("Enter a valid email address."); return false }
     if(!state)           { setError("Please select your state or region."); return false }
-    if(pwStrength(suPw)<3){ setError("Password is too weak. Add uppercase letters, numbers, or symbols."); return false }
+    const pwCheck = validatePassword(suPw)
+    if(!pwCheck.valid)   { setError("Password must be at least 10 characters and include uppercase, lowercase, and a number."); return false }
+    if(suPw !== confirmPassword){ setError("Passwords do not match."); return false }
     if(!contactOk)       { setError("Please confirm you agree to receive product communications."); return false }
     return true
   }
@@ -251,12 +332,34 @@ function AuthModal({mode, onClose, onAuth, initialError=null, onErrorShown=()=>{
       return
     }
     if(tab==="signin"){
+      if(lockoutUntil && Date.now() < lockoutUntil){
+        const secs = Math.ceil((lockoutUntil - Date.now()) / 1000)
+        setLoading(false)
+        setError(`Too many failed attempts. Try again in ${secs} seconds.`)
+        return
+      }
       const { data, error } = await supabase.auth.signInWithPassword({ email:siEmail, password:siPw })
-      if(error){ setLoading(false); setError(error.message); return }
+      if(error){
+        setLoading(false)
+        const newAttempts = loginAttempts + 1
+        setLoginAttempts(newAttempts)
+        if(newAttempts >= 5){
+          const lockDuration = Math.min(newAttempts * 30 * 1000, 300000)
+          setLockoutUntil(Date.now() + lockDuration)
+          setError(`Too many failed attempts. Account locked for ${lockDuration/1000} seconds.`)
+        } else if(newAttempts >= 3){
+          setError(`Incorrect credentials. ${5 - newAttempts} attempts remaining before temporary lockout.`)
+        } else {
+          setError(error.message)
+        }
+        return
+      }
+      setLoginAttempts(0)
+      setLockoutUntil(null)
       const u = data.user
       const { data:sub } = await supabase.from("subscriptions").select("*").eq("user_id", u.id).single()
       const sessionToken = crypto.randomUUID()
-      localStorage.setItem('lc_session_token', sessionToken)
+      sessionStorage.setItem('lc_session_token', sessionToken)
       await supabase.from('subscriptions').update({ session_token: sessionToken, session_created_at: new Date().toISOString() }).eq('user_id', u.id)
       setLoading(false)
       onAuth({ id:u.id, name:u.user_metadata?.name||siEmail.split("@")[0], email:u.email,
@@ -410,26 +513,16 @@ function AuthModal({mode, onClose, onAuth, initialError=null, onErrorShown=()=>{
               <PwField value={suPw} onChange={e=>setSuPw(e.target.value)}
                 onBlur={()=>touch("suPw")} showPw={suShowPw} setShowPw={setSuShowPw}
                 err={fieldErr.suPw}/>
-              <PwStrengthBar pw={suPw}/>
+              <PasswordStrengthBar password={suPw}/>
             </Field>
 
-            {/* requirements checklist */}
-            {suPw&&(
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"3px 12px",
-                background:C.creamWarm,borderRadius:7,padding:"10px 12px"}}>
-                {[
-                  [suPw.length>=8,           "8+ characters"],
-                  [/[A-Z]/.test(suPw),       "Uppercase letter"],
-                  [/[0-9]/.test(suPw),       "Number"],
-                  [/[^A-Za-z0-9]/.test(suPw),"Symbol (!@#$…)"],
-                ].map(([ok,label])=>(
-                  <div key={label} style={{display:"flex",alignItems:"center",gap:6}}>
-                    <span style={{fontSize:11,color:ok?C.forest:"#C8B8A4",flexShrink:0}}>{ok?"✓":"○"}</span>
-                    <span style={{fontFamily:F.body,fontSize:11,color:ok?C.inkSoft:C.inkMute}}>{label}</span>
-                  </div>
-                ))}
-              </div>
-            )}
+            <Field label="Confirm password" req>
+              <input type="password" placeholder="Re-enter password"
+                value={confirmPassword} onChange={e=>setConfirmPassword(e.target.value)}
+                style={{width:"100%",boxSizing:"border-box",fontFamily:F.body,fontSize:14,
+                  padding:"10px 13px",borderRadius:8,border:`1.5px solid ${C.rule}`,
+                  background:C.paper,color:C.ink,outline:"none"}}/>
+            </Field>
 
             {/* contact agreement */}
             <div onClick={()=>setContactOk(v=>!v)}
@@ -1860,60 +1953,7 @@ const LC_VISUALS = {
 ,"6.4":`<svg viewBox="0 0 520 128" style="width:100%;height:auto" xmlns="http://www.w3.org/2000/svg"><text x="260" y="12" text-anchor="middle" font-size="8" fill="#7A9688" font-family="monospace" letter-spacing=".1em">TRIM TYPES: OPEN, BAFFLE, LENS / DIFFUSER</text><rect x="8" y="20" width="154" height="98" rx="5" fill="#FAF5F0" stroke="#DDD0C0" stroke-width=".5"/><text x="85" y="38" text-anchor="middle" font-size="9" fill="#2F4A3F" font-weight="500">Open trim</text><text x="85" y="53" text-anchor="middle" font-size="8" fill="#7A9688">Source visible</text><text x="85" y="67" text-anchor="middle" font-size="8" fill="#7A9688">Highest output</text><text x="85" y="81" text-anchor="middle" font-size="8" fill="#cc3344">Highest glare</text><text x="85" y="95" text-anchor="middle" font-size="8" fill="#7A9688">Utility spaces only</text><rect x="172" y="20" width="154" height="98" rx="5" fill="#e8f5ee" stroke="#7E9B86" stroke-width=".8"/><text x="249" y="38" text-anchor="middle" font-size="9" fill="#7E9B86" font-weight="500">Baffle trim</text><text x="249" y="53" text-anchor="middle" font-size="8" fill="#7A9688">Black grooved cone</text><text x="249" y="67" text-anchor="middle" font-size="8" fill="#7E9B86">Hides source</text><text x="249" y="81" text-anchor="middle" font-size="8" fill="#7E9B86">Controls glare</text><text x="249" y="95" text-anchor="middle" font-size="8" fill="#7A9688">Office standard</text><rect x="336" y="20" width="176" height="98" rx="5" fill="#e8eef8" stroke="#1857a0" stroke-width=".8"/><text x="424" y="38" text-anchor="middle" font-size="9" fill="#1857a0" font-weight="500">Lens / Diffuser</text><text x="424" y="53" text-anchor="middle" font-size="8" fill="#7A9688">Frosted or prismatic</text><text x="424" y="67" text-anchor="middle" font-size="8" fill="#1857a0">Lowest luminance</text><text x="424" y="81" text-anchor="middle" font-size="8" fill="#1857a0">Soft distribution</text><text x="424" y="95" text-anchor="middle" font-size="8" fill="#7A9688">Healthcare, classrooms</text></svg>`
 ,"6.5":`<svg viewBox="0 0 520 128" style="width:100%;height:auto" xmlns="http://www.w3.org/2000/svg"><text x="260" y="12" text-anchor="middle" font-size="8" fill="#7A9688" font-family="monospace" letter-spacing=".1em">EDGE-LIT PANEL VS WAVEGUIDE PANEL</text><rect x="8" y="20" width="242" height="98" rx="5" fill="#FAF5F0" stroke="#DDD0C0" stroke-width=".5"/><text x="129" y="38" text-anchor="middle" font-size="9" fill="#2F4A3F" font-weight="500">Traditional edge-lit</text><text x="129" y="53" text-anchor="middle" font-size="8" fill="#7A9688">LEDs at perimeter edge</text><text x="129" y="67" text-anchor="middle" font-size="8" fill="#7A9688">LGP total internal reflection</text><text x="129" y="81" text-anchor="middle" font-size="8" fill="#cc3344">Bright edges vs dark centre</text><text x="129" y="95" text-anchor="middle" font-size="8" fill="#cc3344">30-40 pct uniformity</text><rect x="270" y="20" width="242" height="98" rx="5" fill="#e8f5ee" stroke="#7E9B86" stroke-width=".8"/><text x="391" y="38" text-anchor="middle" font-size="9" fill="#7E9B86" font-weight="500">Waveguide panel</text><text x="391" y="53" text-anchor="middle" font-size="8" fill="#7A9688">Micro-optic extraction dots</text><text x="391" y="67" text-anchor="middle" font-size="8" fill="#7A9688">engineered density gradient</text><text x="391" y="81" text-anchor="middle" font-size="8" fill="#7E9B86">Uniform corner to corner</text><text x="391" y="95" text-anchor="middle" font-size="8" fill="#7E9B86">60-80 pct or better uniformity</text></svg>`
 ,"6.6":`<svg viewBox="0 0 520 128" style="width:100%;height:auto" xmlns="http://www.w3.org/2000/svg"><text x="260" y="12" text-anchor="middle" font-size="8" fill="#7A9688" font-family="monospace" letter-spacing=".1em">INTERIOR LIGHTING BY APPLICATION TYPE</text><rect x="8" y="20" width="154" height="98" rx="5" fill="#FAF5F0" stroke="#DDD0C0" stroke-width=".5"/><text x="85" y="38" text-anchor="middle" font-size="9" fill="#2F4A3F" font-weight="500">Open Office</text><text x="85" y="53" text-anchor="middle" font-size="8" fill="#7A9688">300-500 lux</text><text x="85" y="67" text-anchor="middle" font-size="8" fill="#7E9B86">UGR 19 or less</text><text x="85" y="81" text-anchor="middle" font-size="8" fill="#7E9B86">Uniformity 1:3</text><text x="85" y="95" text-anchor="middle" font-size="8" fill="#7A9688">Controls integration</text><rect x="172" y="20" width="154" height="98" rx="5" fill="#e8f5ee" stroke="#7E9B86" stroke-width=".8"/><text x="249" y="38" text-anchor="middle" font-size="9" fill="#7E9B86" font-weight="500">Retail</text><text x="249" y="53" text-anchor="middle" font-size="8" fill="#7A9688">Ambient 300-500 lux</text><text x="249" y="67" text-anchor="middle" font-size="8" fill="#7E9B86">Accent 3-5x ambient</text><text x="249" y="81" text-anchor="middle" font-size="8" fill="#7E9B86">CRI 90 and R9 50 or more</text><text x="249" y="95" text-anchor="middle" font-size="8" fill="#7A9688">Adjustable track</text><rect x="336" y="20" width="176" height="98" rx="5" fill="#fff5ee" stroke="#C65A3A" stroke-width=".8"/><text x="424" y="38" text-anchor="middle" font-size="9" fill="#C65A3A" font-weight="500">Hospitality</text><text x="424" y="53" text-anchor="middle" font-size="8" fill="#7A9688">50-100 lux ambient</text><text x="424" y="67" text-anchor="middle" font-size="8" fill="#C65A3A">5:1 to 10:1 contrast</text><text x="424" y="81" text-anchor="middle" font-size="8" fill="#C65A3A">2700-3000K warm</text><text x="424" y="95" text-anchor="middle" font-size="8" fill="#7A9688">Dimming essential</text></svg>`
-,"7.1":`<svg viewBox="0 0 520 200" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto">
-  <rect width="520" height="200" fill="#fdfaf6" rx="8"/>
-  <text x="260" y="18" text-anchor="middle" font-size="10" font-weight="700" fill="#2F4A3F" font-family="sans-serif">IES Outdoor Distribution Types — I through V</text>
-
-  <!-- Type I -->
-  <rect x="8" y="26" width="92" height="168" rx="5" fill="#f5ede0" stroke="#DDD0C0" stroke-width="0.6"/>
-  <text x="54" y="40" text-anchor="middle" font-size="9" font-weight="700" fill="#C65A3A" font-family="sans-serif">TYPE I</text>
-  <line x1="54" y1="50" x2="54" y2="170" stroke="#DDD0C0" stroke-width="0.5" stroke-dasharray="2,2"/>
-  <ellipse cx="54" cy="130" rx="10" ry="40" fill="none" stroke="#C65A3A" stroke-width="1.2"/>
-  <ellipse cx="54" cy="130" rx="18" ry="68" fill="#C65A3A" fill-opacity="0.08" stroke="#C65A3A" stroke-width="0.6"/>
-  <circle cx="54" cy="60" r="4" fill="#2F4A3F"/>
-  <text x="54" y="180" text-anchor="middle" font-size="7.5" fill="#7A9688" font-family="sans-serif">Centerline</text>
-  <text x="54" y="190" text-anchor="middle" font-size="7.5" fill="#7A9688" font-family="sans-serif">Width ≈ MH</text>
-
-  <!-- Type II -->
-  <rect x="108" y="26" width="92" height="168" rx="5" fill="#f5ede0" stroke="#DDD0C0" stroke-width="0.6"/>
-  <text x="154" y="40" text-anchor="middle" font-size="9" font-weight="700" fill="#C65A3A" font-family="sans-serif">TYPE II</text>
-  <line x1="120" y1="50" x2="120" y2="170" stroke="#DDD0C0" stroke-width="0.5" stroke-dasharray="2,2"/>
-  <ellipse cx="148" cy="130" rx="22" ry="42" fill="#C65A3A" fill-opacity="0.08" stroke="#C65A3A" stroke-width="0.6"/>
-  <ellipse cx="145" cy="125" rx="14" ry="30" fill="none" stroke="#C65A3A" stroke-width="1.2" transform="rotate(-10 145 125)"/>
-  <circle cx="120" cy="60" r="4" fill="#2F4A3F"/>
-  <text x="154" y="180" text-anchor="middle" font-size="7.5" fill="#7A9688" font-family="sans-serif">Edge mount</text>
-  <text x="154" y="190" text-anchor="middle" font-size="7.5" fill="#7A9688" font-family="sans-serif">Width 1.5× MH</text>
-
-  <!-- Type III -->
-  <rect x="208" y="26" width="92" height="168" rx="5" fill="#f5ede0" stroke="#DDD0C0" stroke-width="0.6"/>
-  <text x="254" y="40" text-anchor="middle" font-size="9" font-weight="700" fill="#C65A3A" font-family="sans-serif">TYPE III</text>
-  <line x1="216" y1="50" x2="216" y2="170" stroke="#DDD0C0" stroke-width="0.5" stroke-dasharray="2,2"/>
-  <ellipse cx="254" cy="128" rx="32" ry="42" fill="#C65A3A" fill-opacity="0.08" stroke="#C65A3A" stroke-width="0.6"/>
-  <ellipse cx="250" cy="124" rx="20" ry="28" fill="none" stroke="#C65A3A" stroke-width="1.2" transform="rotate(-15 250 124)"/>
-  <circle cx="216" cy="60" r="4" fill="#2F4A3F"/>
-  <text x="254" y="180" text-anchor="middle" font-size="7.5" fill="#7A9688" font-family="sans-serif">Side mount</text>
-  <text x="254" y="190" text-anchor="middle" font-size="7.5" fill="#7A9688" font-family="sans-serif">Width 2.75× MH</text>
-
-  <!-- Type IV -->
-  <rect x="308" y="26" width="92" height="168" rx="5" fill="#f5ede0" stroke="#DDD0C0" stroke-width="0.6"/>
-  <text x="354" y="40" text-anchor="middle" font-size="9" font-weight="700" fill="#C65A3A" font-family="sans-serif">TYPE IV</text>
-  <line x1="316" y1="50" x2="316" y2="170" stroke="#DDD0C0" stroke-width="0.5" stroke-dasharray="2,2"/>
-  <path d="M316 80 Q354 90 390 130 Q370 160 316 165 Z" fill="#C65A3A" fill-opacity="0.1" stroke="#C65A3A" stroke-width="0.8"/>
-  <path d="M316 90 Q348 98 378 128 Q362 152 316 155 Z" fill="none" stroke="#C65A3A" stroke-width="1.2"/>
-  <circle cx="316" cy="60" r="4" fill="#2F4A3F"/>
-  <text x="354" y="180" text-anchor="middle" font-size="7.5" fill="#7A9688" font-family="sans-serif">Wall / perimeter</text>
-  <text x="354" y="190" text-anchor="middle" font-size="7.5" fill="#7A9688" font-family="sans-serif">Forward throw</text>
-
-  <!-- Type V -->
-  <rect x="408" y="26" width="104" height="168" rx="5" fill="#f5ede0" stroke="#DDD0C0" stroke-width="0.6"/>
-  <text x="460" y="40" text-anchor="middle" font-size="9" font-weight="700" fill="#C65A3A" font-family="sans-serif">TYPE V</text>
-  <circle cx="460" cy="115" r="52" fill="#C65A3A" fill-opacity="0.07" stroke="#C65A3A" stroke-width="0.6"/>
-  <circle cx="460" cy="115" r="34" fill="#C65A3A" fill-opacity="0.08" stroke="#C65A3A" stroke-width="0.8"/>
-  <circle cx="460" cy="115" r="16" fill="#C65A3A" fill-opacity="0.12" stroke="#C65A3A" stroke-width="1.2"/>
-  <circle cx="460" cy="60" r="4" fill="#2F4A3F"/>
-  <text x="460" y="180" text-anchor="middle" font-size="7.5" fill="#7A9688" font-family="sans-serif">Center mount</text>
-  <text x="460" y="190" text-anchor="middle" font-size="7.5" fill="#7A9688" font-family="sans-serif">Omnidirectional</text>
-</svg>`
+,"7.1": ``
 ,"7.2":`<svg viewBox="0 0 520 128" style="width:100%;height:auto" xmlns="http://www.w3.org/2000/svg"><text x="260" y="12" text-anchor="middle" font-size="8" fill="#7A9688" font-family="monospace" letter-spacing=".1em">DARK-SKY LIGHTING PRINCIPLES</text><rect x="8" y="20" width="504" height="98" rx="5" fill="#FAF5F0" stroke="#DDD0C0" stroke-width=".5"/><text x="260" y="38" text-anchor="middle" font-size="10" fill="#2F4A3F" font-weight="500">Five dark-sky principles (IDA/IES Model Lighting Ordinance)</text><text x="260" y="54" text-anchor="middle" font-size="9" fill="#7E9B86">1. Useful: light only what needs lighting</text><text x="260" y="68" text-anchor="middle" font-size="9" fill="#7E9B86">2. Targeted: direct light downward, minimise spill</text><text x="260" y="82" text-anchor="middle" font-size="9" fill="#1857a0">3. Low level: use minimum light needed for the task</text><text x="260" y="96" text-anchor="middle" font-size="9" fill="#1857a0">4. Controlled: use timers, sensors, dimming at night</text><text x="260" y="110" text-anchor="middle" font-size="9" fill="#C65A3A">5. Warm colour: CCT 3000K or less reduces scatter and impact on wildlife</text></svg>`
 ,"7.3":`<svg viewBox="0 0 520 128" style="width:100%;height:auto" xmlns="http://www.w3.org/2000/svg"><text x="260" y="12" text-anchor="middle" font-size="8" fill="#7A9688" font-family="monospace" letter-spacing=".1em">NFPA 101 EMERGENCY LIGHTING REQUIREMENTS</text><rect x="8" y="20" width="242" height="98" rx="5" fill="#fff5ee" stroke="#C65A3A" stroke-width=".8"/><text x="129" y="38" text-anchor="middle" font-size="10" fill="#C65A3A" font-weight="500">Illuminance levels</text><text x="129" y="53" text-anchor="middle" font-size="8" fill="#7A9688">Along egress path: 1 fc min (10 lux)</text><text x="129" y="67" text-anchor="middle" font-size="8" fill="#7A9688">Open floor areas: 0.1 fc avg (1 lux)</text><text x="129" y="81" text-anchor="middle" font-size="8" fill="#C65A3A">Max:min ratio 40:1</text><text x="129" y="95" text-anchor="middle" font-size="8" fill="#7A9688">At floor level</text><rect x="260" y="20" width="252" height="98" rx="5" fill="#e8eef8" stroke="#1857a0" stroke-width=".8"/><text x="386" y="38" text-anchor="middle" font-size="10" fill="#1857a0" font-weight="500">Duration and testing</text><text x="386" y="53" text-anchor="middle" font-size="8" fill="#7A9688">90-minute rated duration</text><text x="386" y="67" text-anchor="middle" font-size="8" fill="#7A9688">30-second functional test monthly</text><text x="386" y="81" text-anchor="middle" font-size="8" fill="#1857a0">90-minute load test annually</text><text x="386" y="95" text-anchor="middle" font-size="8" fill="#7A9688">Self-test / self-diagnostic units</text></svg>`
 ,"7.4":`<svg viewBox="0 0 520 128" style="width:100%;height:auto" xmlns="http://www.w3.org/2000/svg"><text x="260" y="12" text-anchor="middle" font-size="8" fill="#7A9688" font-family="monospace" letter-spacing=".1em">EMERGENCY POWER SYSTEMS</text><rect x="8" y="20" width="154" height="98" rx="5" fill="#FAF5F0" stroke="#DDD0C0" stroke-width=".5"/><text x="85" y="38" text-anchor="middle" font-size="9" fill="#2F4A3F" font-weight="500">Self-contained</text><text x="85" y="53" text-anchor="middle" font-size="8" fill="#7A9688">Battery in fixture</text><text x="85" y="67" text-anchor="middle" font-size="8" fill="#7A9688">Automatic on outage</text><text x="85" y="81" text-anchor="middle" font-size="8" fill="#7E9B86">No special wiring</text><text x="85" y="95" text-anchor="middle" font-size="8" fill="#cc3344">Battery maintenance</text><rect x="172" y="20" width="154" height="98" rx="5" fill="#e8f5ee" stroke="#7E9B86" stroke-width=".8"/><text x="249" y="38" text-anchor="middle" font-size="9" fill="#7E9B86" font-weight="500">Central battery</text><text x="249" y="53" text-anchor="middle" font-size="8" fill="#7A9688">Central battery plant</text><text x="249" y="67" text-anchor="middle" font-size="8" fill="#7A9688">feeds emergency circuit</text><text x="249" y="81" text-anchor="middle" font-size="8" fill="#7E9B86">Central maintenance</text><text x="249" y="95" text-anchor="middle" font-size="8" fill="#7E9B86">Large buildings</text><rect x="336" y="20" width="176" height="98" rx="5" fill="#e8eef8" stroke="#1857a0" stroke-width=".8"/><text x="424" y="38" text-anchor="middle" font-size="9" fill="#1857a0" font-weight="500">Generator transfer</text><text x="424" y="53" text-anchor="middle" font-size="8" fill="#7A9688">Generator with ATS</text><text x="424" y="67" text-anchor="middle" font-size="8" fill="#7A9688">10-second transfer req.</text><text x="424" y="81" text-anchor="middle" font-size="8" fill="#1857a0">Hospitals and critical</text><text x="424" y="95" text-anchor="middle" font-size="8" fill="#1857a0">NEC Art 700</text></svg>`
@@ -2454,7 +2494,7 @@ function CertPage({completedLessons=new Set()}) {
 
 /* ── EXAM PAGE ───────────────────────────────────────────────── */
 
-function ExamPage({setRoute}) {
+function ExamPage({setRoute, isMobile=false}) {
   const [examState,setExamState] = useState("addon") // addon | purchased | playing
   const [screen,setScreen] = useState("landing") // landing | start | play | results
   const [session,setSession] = useState({questions:[],idx:0,answers:[],score:0,streak:0,bestStreak:0,startTime:Date.now()})
@@ -2611,7 +2651,7 @@ function ExamPage({setRoute}) {
         <div style={mono({fontSize:9,letterSpacing:"0.22em",textTransform:"uppercase",color:C.accent,marginBottom:12})}>Exam results</div>
         <h1 style={{fontFamily:F.display,fontWeight:700,fontSize:"clamp(36px,5vw,56px)",letterSpacing:"-0.025em",lineHeight:1,color:C.ink,margin:"0 0 8px"}}>{score.toLocaleString()}<em style={{fontStyle:"normal",color:C.accent,fontSize:"0.4em"}}> pts</em></h1>
         <div style={{fontFamily:F.display,fontWeight:700,fontSize:20,color:gradeColor,marginBottom:24}}>{grade}</div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:0,border:`1px solid ${C.rule}`,borderRadius:4,overflow:"hidden",marginBottom:32}}>
+        <div style={{display:"grid",gridTemplateColumns:isMobile?"repeat(2,1fr)":"repeat(4,1fr)",gap:0,border:`1px solid ${C.rule}`,borderRadius:4,overflow:"hidden",marginBottom:32}}>
           {[{n:"Accuracy",v:accuracy+"%"},{n:"Correct",v:`${correct}/${answers.length}`},{n:"Best streak",v:bestStreak+"x"},{n:"Avg time",v:Math.round(answers.reduce((s,a)=>s+a.time,0)/answers.length)+"s"}].map((m,i)=>(
             <div key={m.n} style={{padding:"18px 22px",borderRight:i<3?`1px solid ${C.rule}`:"none",background:C.paper}}>
               <div style={mono({fontSize:9,letterSpacing:"0.18em",textTransform:"uppercase",color:C.inkMute,marginBottom:6})}>{m.n}</div>
@@ -3087,7 +3127,7 @@ function TtsPlayer({lessonRef}){
   )
 }
 
-function LessonPage({lessonRef,setRoute,user,setShowUpgrade,completedLessons=new Set(),markLessonComplete=async()=>{},bookmarks=new Set(),toggleBookmark=async()=>{}}) {
+function LessonPage({lessonRef,setRoute,user,setShowUpgrade,completedLessons=new Set(),markLessonComplete=async()=>{},bookmarks=new Set(),toggleBookmark=async()=>{},isMobile=false}) {
   const [showShareModal,setShowShareModal]=useState(false)
   const [imgFullscreen,setImgFullscreen]=useState(null)
   useEffect(()=>{ window.scrollTo({top:0,behavior:'instant'}) },[lessonRef])
@@ -3110,9 +3150,9 @@ function LessonPage({lessonRef,setRoute,user,setShowUpgrade,completedLessons=new
   const isBookmarked = bookmarks.has(lessonRef)
 
   return (
-    <div style={{padding:"0 36px 48px"}}>
+    <div style={{padding:isMobile?"0 16px 32px":"0 36px 48px"}}>
       <PageHead eyebrow={`Module ${module.n} · ${module.label}`} title={`Lesson ${lesson.ref} —`} em={lesson.title+"."}/>
-      <div style={{display:"flex",gap:8,alignItems:"center",marginTop:14,marginBottom:18}}>
+      <div style={{display:"flex",gap:8,alignItems:"center",marginTop:14,marginBottom:18,flexWrap:"wrap"}}>
         <Tag label={lesson.tag}/>
         <span style={mono({fontSize:9,letterSpacing:"0.12em",textTransform:"uppercase",color:C.inkMute})}>{module.ceu} CEU hrs</span>
         {lesson.done&&<span style={mono({fontSize:9,letterSpacing:"0.12em",textTransform:"uppercase",color:C.forest})}>✓ Complete</span>}
@@ -3450,7 +3490,7 @@ function ModuleRow({mod,oddCol,setRoute,completedLessons=new Set()}){
 
 
 
-function Sidebar({route, setRoute, user, onSignOut, bookmarks=new Set()}){
+function Sidebar({route, setRoute, user, onSignOut, bookmarks=new Set(), isMobile=false, sidebarOpen=false, setSidebarOpen=()=>{}}){
   const nav = [
     {section:"Library", items:[
       {glyph:"▤",label:"Course home",route:"home"},
@@ -3473,8 +3513,23 @@ function Sidebar({route, setRoute, user, onSignOut, bookmarks=new Set()}){
     ]},
   ]
   return (
-    <aside style={{background:C.ink,display:"flex",flexDirection:"column",
-      position:"sticky",top:0,height:"100vh",overflowY:"auto",scrollbarWidth:"none",minWidth:220}}>
+    <aside style={{
+      background:C.ink,
+      display:"flex",
+      flexDirection:"column",
+      position:isMobile?"fixed":"sticky",
+      top:0,
+      left:isMobile?(sidebarOpen?0:-260):0,
+      height:"100vh",
+      width:isMobile?260:220,
+      minWidth:isMobile?"unset":220,
+      overflowY:"auto",
+      scrollbarWidth:"none",
+      borderRight:"1px solid rgba(255,255,255,0.05)",
+      zIndex:isMobile?1000:"auto",
+      transition:isMobile?"left 280ms cubic-bezier(0.4,0,0.2,1)":"none",
+      boxShadow:isMobile&&sidebarOpen?"4px 0 32px rgba(0,0,0,0.4)":"none",
+    }}>
       <div style={{display:"flex",alignItems:"center",gap:10,padding:"18px 16px 14px",
         borderBottom:"1px solid rgba(255,255,255,0.08)"}}>
         <div style={{width:28,height:28,borderRadius:5,background:C.accent,
@@ -3491,7 +3546,7 @@ function Sidebar({route, setRoute, user, onSignOut, bookmarks=new Set()}){
           <div style={m({fontSize:8,letterSpacing:"0.26em",textTransform:"uppercase",
             color:"rgba(255,255,255,0.22)",padding:"0 16px 5px"})}>{section}</div>
           {items.map(item=>(
-            <button key={item.route} onClick={()=>setRoute(item.route)}
+            <button key={item.route} onClick={()=>{setRoute(item.route);if(isMobile)setSidebarOpen(false)}}
               style={{display:"flex",alignItems:"center",gap:10,width:"100%",padding:"9px 16px",
                 background:route===item.route?"rgba(198,90,58,0.18)":"none",border:"none",
                 borderLeft:route===item.route?`2px solid ${C.accent}`:"2px solid transparent",
@@ -3755,7 +3810,7 @@ function TeamMemberView({user,setRoute}){
 }
 
 /* ── DASHBOARD ── */
-function Dashboard({ setRoute, completedLessons = new Set(), user, userSubscription }) {
+function Dashboard({ setRoute, completedLessons = new Set(), user, userSubscription, isMobile=false }) {
   const [dotIdx, setDotIdx] = useState(null)
   const [hoveredMod, setHoveredMod] = useState(null)
 
@@ -3789,7 +3844,7 @@ function Dashboard({ setRoute, completedLessons = new Set(), user, userSubscript
     <>
       {/* ── HERO SECTION ─────────────────────────────────────── */}
       <section style={{ padding: '32px 36px 36px', borderBottom: `1px solid ${C.rule}` }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 48, alignItems: 'end', marginBottom: 28 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.3fr 1fr', gap: 48, alignItems: 'end', marginBottom: 28 }}>
           <div>
             <div style={mono({ fontSize: 9, letterSpacing: '0.24em', textTransform: 'uppercase', color: C.accent, marginBottom: 12 })}>
               {overallPct > 0 ? `${overallPct}% complete · ${ceuEarned} CEU earned` : 'Ready to begin your NCQLP journey'}
@@ -3798,7 +3853,7 @@ function Dashboard({ setRoute, completedLessons = new Set(), user, userSubscript
               {greeting}, <em style={{ fontStyle: 'normal', color: C.accent }}>{firstName}.</em>
             </h1>
           </div>
-          <div style={{ display: 'flex', gap: 24, justifyContent: 'flex-end', alignItems: 'flex-end' }}>
+          <div style={{ display: 'flex', gap: 24, justifyContent: 'flex-end', alignItems: 'flex-end', flexWrap: 'wrap' }}>
             {[
               { label: 'Lessons done', val: totalDone, sub: `/${totalLessons}` },
               { label: 'CEU earned', val: ceuEarned, sub: '/24 hr' },
@@ -3827,7 +3882,7 @@ function Dashboard({ setRoute, completedLessons = new Set(), user, userSubscript
 
         {/* Resume card */}
         {nextLesson && (
-          <DarkCard style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 40, padding: '28px 32px', cursor: 'pointer' }} onClick={() => setRoute('lesson-' + nextLesson.ref)}>
+          <DarkCard style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.5fr 1fr', gap: 40, padding: '28px 32px', cursor: 'pointer' }} onClick={() => setRoute('lesson-' + nextLesson.ref)}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <span style={mono({ fontSize: 9, letterSpacing: '0.24em', textTransform: 'uppercase', color: C.tan })}>— pick up where you left off</span>
               <h2 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 22, letterSpacing: '-0.02em', lineHeight: 1.15, margin: 0, color: C.cream }}>
@@ -3858,7 +3913,7 @@ function Dashboard({ setRoute, completedLessons = new Set(), user, userSubscript
       {/* ── PROGRESS CHARTS SECTION ──────────────────────────── */}
       <section style={{ padding: '32px 36px', borderBottom: `1px solid ${C.rule}` }}>
         <div style={mono({ fontSize: 9, letterSpacing: '0.24em', textTransform: 'uppercase', color: C.accent, marginBottom: 20 })}>Progress by module</div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 32 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: 32 }}>
 
           {/* Module completion bar chart */}
           <div>
@@ -3965,7 +4020,7 @@ function Dashboard({ setRoute, completedLessons = new Set(), user, userSubscript
                 <span style={{ fontFamily: F.display, fontWeight: 700, fontSize: 16, letterSpacing: '-0.01em', color: C.ink }}>{pi.t}</span>
                 <span style={mono({ fontSize: 9, letterSpacing: '0.18em', textTransform: 'uppercase', color: C.inkMute, textAlign: 'right' })}>{pi.s}</span>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2,1fr)' }}>
                 {pMods.map((mod, i) => <ModuleRow key={mod.n} mod={mod} oddCol={i % 2 === 0} setRoute={setRoute} completedLessons={completedLessons}/>)}
               </div>
             </div>
@@ -3975,7 +4030,7 @@ function Dashboard({ setRoute, completedLessons = new Set(), user, userSubscript
 
       {/* ── EXAM CTA ─────────────────────────────────────────── */}
       <div style={{ padding: '40px 36px 56px' }}>
-        <DarkCard style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 40, padding: '32px 36px', cursor: 'pointer' }} onClick={() => setRoute('exam')}>
+        <DarkCard style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.5fr 1fr', gap: 40, padding: '32px 36px', cursor: 'pointer' }} onClick={() => setRoute('exam')}>
           <div>
             <div style={mono({ fontSize: 9, letterSpacing: '0.24em', textTransform: 'uppercase', color: C.tan, marginBottom: 12 })}>Capstone · after the course</div>
             <h2 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 28, letterSpacing: '-0.02em', lineHeight: 1.08, margin: '0 0 12px', color: C.cream }}>
@@ -4478,6 +4533,8 @@ function TrendsPage({ setRoute }) {
 function AppShell({user, onSignOut, completedLessons=new Set(), markLessonComplete=async()=>{}, bookmarks=new Set(), toggleBookmark=async()=>{}}){
   const [route, setRoute] = useState("home")
   const [showUpgrade, setShowUpgrade] = useState(false)
+  const isMobile = useIsMobile()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   useEffect(()=>{
     if(route==='continue'){
       const next = getNextLesson(completedLessons)
@@ -4485,26 +4542,42 @@ function AppShell({user, onSignOut, completedLessons=new Set(), markLessonComple
     }
   },[route])
   return(
-    <div style={{display:"grid",gridTemplateColumns:"220px 1fr",minHeight:"100vh",
+    <div style={{display:"flex",minHeight:"100vh",position:"relative",
       fontFamily:F.body,background:C.cream}}>
       <style>{`@import url('${FONT_URL}');*{box-sizing:border-box}code{font-family:${F.mono};font-size:0.9em;background:rgba(0,0,0,0.06);padding:1px 5px;border-radius:3px}@keyframes bulbPulse{0%,100%{opacity:1;box-shadow:0 0 0 3px rgba(198,90,58,0.2),0 0 10px 2px rgba(198,90,58,0.4)}50%{opacity:0.7;box-shadow:0 0 0 5px rgba(198,90,58,0.1),0 0 16px 4px rgba(198,90,58,0.25)}}@keyframes wave{from{transform:scaleY(0.4)}to{transform:scaleY(1.2)}}`}</style>
       {showUpgrade && <UpgradeModal user={user} onClose={()=>setShowUpgrade(false)}/>}
-      <Sidebar route={route} setRoute={setRoute} user={user} onSignOut={onSignOut} bookmarks={bookmarks}/>
-      <main style={{background:C.cream,minHeight:"100vh",overflowX:"hidden"}}>
+      <Sidebar route={route} setRoute={setRoute} user={user} onSignOut={onSignOut} bookmarks={bookmarks} isMobile={isMobile} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen}/>
+      {isMobile && sidebarOpen && (
+        <div onClick={()=>setSidebarOpen(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",zIndex:999,backdropFilter:"blur(2px)"}}/>
+      )}
+      <main style={{background:C.cream,minHeight:"100vh",overflowX:"hidden",flex:1,width:isMobile?"100%":"calc(100vw - 220px)",maxWidth:"100%"}}>
+        {isMobile && (
+          <div style={{position:"sticky",top:0,zIndex:100,background:C.ink,padding:"0 16px",height:52,display:"flex",alignItems:"center",justifyContent:"space-between",borderBottom:"1px solid rgba(255,255,255,0.08)"}}>
+            <button onClick={()=>setSidebarOpen(true)} style={{background:"none",border:"none",cursor:"pointer",padding:"8px",display:"flex",flexDirection:"column",gap:5,alignItems:"flex-start"}}>
+              <span style={{display:"block",width:22,height:2,background:C.cream,borderRadius:2}}/>
+              <span style={{display:"block",width:16,height:2,background:C.cream,borderRadius:2}}/>
+              <span style={{display:"block",width:20,height:2,background:C.cream,borderRadius:2}}/>
+            </button>
+            <span style={{fontFamily:F.display,fontWeight:700,fontSize:15,color:C.cream,letterSpacing:"-0.01em"}}>
+              LC · <em style={{fontStyle:"normal",color:C.accent}}>Lighting Master</em>
+            </span>
+            <div style={{width:38}}/>
+          </div>
+        )}
         {route==="home"&&user?.plan==="team_admin"  && <TeamAdminDashboard user={user} setRoute={setRoute}/>}
         {route==="home"&&user?.plan==="team_member" && <TeamMemberView user={user} setRoute={setRoute}/>}
-        {route==="home"&&user?.plan!=="team_admin"&&user?.plan!=="team_member" && <Dashboard setRoute={setRoute} user={user} completedLessons={completedLessons}/>}
+        {route==="home"&&user?.plan!=="team_admin"&&user?.plan!=="team_member" && <Dashboard setRoute={setRoute} user={user} completedLessons={completedLessons} isMobile={isMobile}/>}
         {route==="search"    && <SearchPage setRoute={setRoute} user={user} setShowUpgrade={setShowUpgrade}/>}
         {route==="bookmarks" && <BookmarksPage setRoute={setRoute} bookmarks={bookmarks} toggleBookmark={toggleBookmark}/>}
         {route==="notes"     && <NotesPage setRoute={setRoute}/>}
         {route==="continue"  && <ContinuePage setRoute={setRoute} completedLessons={completedLessons}/>}
-        {route==="exam"      && <ExamPage setRoute={setRoute}/>}
+        {route==="exam"      && <ExamPage setRoute={setRoute} isMobile={isMobile}/>}
         {route==="cert"      && <CertPage completedLessons={completedLessons}/>}
         {route==="account"   && <AccountPage/>}
         {route==="community" && <CommunityPage setRoute={setRoute} user={user}/>}
         {route==="trends"    && <TrendsPage setRoute={setRoute}/>}
         {route==="feedback"  && <FeedbackPage user={user} userSubscription={user?.plan ? {plan:user.plan} : null}/>}
-        {route.startsWith("lesson-") && <LessonPage lessonRef={route.replace("lesson-","")} setRoute={setRoute} user={user} setShowUpgrade={setShowUpgrade} completedLessons={completedLessons} markLessonComplete={markLessonComplete} bookmarks={bookmarks} toggleBookmark={toggleBookmark}/>}
+        {route.startsWith("lesson-") && <LessonPage lessonRef={route.replace("lesson-","")} setRoute={setRoute} user={user} setShowUpgrade={setShowUpgrade} completedLessons={completedLessons} markLessonComplete={markLessonComplete} bookmarks={bookmarks} toggleBookmark={toggleBookmark} isMobile={isMobile}/>}
       </main>
     </div>
   )
@@ -4770,10 +4843,10 @@ function LearnerRoot({onAdminClick=()=>{}}){
       if(!session) return
       const u = session.user
       const { data:sub } = await supabase.from("subscriptions").select("*").eq("user_id", u.id).single()
-      const storedToken = localStorage.getItem('lc_session_token')
+      const storedToken = sessionStorage.getItem('lc_session_token')
       if(sub?.session_token && storedToken !== sub.session_token){
         await supabase.auth.signOut()
-        localStorage.removeItem('lc_session_token')
+        sessionStorage.removeItem('lc_session_token')
         setSessionConflict('Your session was ended because another device signed in to this account. Please log in again.')
         setAuthMode('signin')
         return
@@ -4859,7 +4932,7 @@ function LearnerRoot({onAdminClick=()=>{}}){
 
   async function handleSignOut(){
     if(user?.id){
-      localStorage.removeItem('lc_session_token')
+      sessionStorage.removeItem('lc_session_token')
       await supabase.from('subscriptions').update({ session_token: null }).eq('user_id', user.id)
     }
     await supabase.auth.signOut()
