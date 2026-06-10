@@ -401,12 +401,12 @@ function AuthModal({mode, onClose, onAuth, initialError=null, onErrorShown=()=>{
 
         {/* logo */}
         <div style={{display:"flex",justifyContent:"center",marginBottom:20}}>
-          <div style={{background:C.ink,borderRadius:8,padding:"7px 14px",display:"inline-flex",alignItems:"center"}}>
-            <img
-              src="/brand/logo-icon.png"
-              alt="LC Lighting Master"
-              style={{height:36,width:36,display:"block",borderRadius:7}}
-            />
+          <div style={{background:C.ink,borderRadius:10,padding:"8px 16px",display:"inline-flex",alignItems:"center",gap:10}}>
+            <img src="/brand/logo-transparent.png" alt=""
+              style={{width:32,height:32,flexShrink:0}}/>
+            <span style={{fontFamily:F.display,fontWeight:700,fontSize:14,color:C.cream,letterSpacing:"-0.01em",lineHeight:1.15}}>
+              LC · Lighting<br/>Master
+            </span>
           </div>
         </div>
 
@@ -668,11 +668,13 @@ function Hero({onSignUp}){
       <div style={{position:"absolute",top:"30%",left:"50%",transform:"translate(-50%,-50%)",
         width:600,height:400,background:"radial-gradient(ellipse, rgba(198,90,58,0.18) 0%, transparent 70%)",pointerEvents:"none"}}/>
       <div style={{maxWidth:880,margin:"0 auto",textAlign:"center",position:"relative",zIndex:1}}>
-        <img
-          src="/brand/logo.png"
-          alt="LC Lighting Master — NCQLP Exam Prep & Lighting Certification Study Guide"
-          style={{width:"min(320px,60vw)",height:"auto",marginBottom:4,display:"block",marginLeft:"auto",marginRight:"auto"}}
-        />
+        <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:18,marginBottom:8}}>
+          <img
+            src="/brand/logo-transparent.png"
+            alt="LC Lighting Master logo"
+            style={{width:"min(120px,26vw)",height:"auto"}}
+          />
+        </div>
         <Kicker light center>LC Exam Prep · Lighting Design</Kicker>
         <h1 style={{fontFamily:F.display,fontWeight:700,fontSize:"clamp(42px,7vw,80px)",
           letterSpacing:"-0.03em",lineHeight:1,color:"#F2E6DA",margin:"0 0 24px"}}>
@@ -3538,13 +3540,12 @@ function Sidebar({route, setRoute, user, onSignOut, bookmarks=new Set(), isMobil
       transition:isMobile?"left 280ms cubic-bezier(0.4,0,0.2,1)":"none",
       boxShadow:isMobile&&sidebarOpen?"4px 0 32px rgba(0,0,0,0.4)":"none",
     }}>
-      <div style={{padding:"14px 16px 12px",borderBottom:"1px solid rgba(255,255,255,0.08)",textAlign:"center"}}>
-        <img
-          src="/brand/logo-icon.png"
-          alt="LC Lighting Master"
-          style={{width:52,height:52,display:"block",margin:"0 auto 6px",borderRadius:10}}
-        />
-        <div style={m({fontSize:8,letterSpacing:"0.18em",textTransform:"uppercase",color:"rgba(255,255,255,0.28)",marginTop:2})}>LC Exam Prep · Luxartmedia</div>
+      <div style={{display:"flex",alignItems:"center",gap:10,padding:"16px 18px 8px",borderBottom:"1px solid rgba(255,255,255,0.08)"}}>
+        <img src="/brand/logo-transparent.png" alt=""
+          style={{width:34,height:34,flexShrink:0}}/>
+        <span style={{fontFamily:F.display,fontWeight:700,fontSize:15,color:C.cream,letterSpacing:"-0.01em",lineHeight:1.1}}>
+          LC · Lighting<br/>Master
+        </span>
       </div>
 
       {nav.map(({section,items})=>(
@@ -4564,9 +4565,13 @@ function AppShell({user, onSignOut, completedLessons=new Set(), markLessonComple
               <span style={{display:"block",width:16,height:2,background:C.cream,borderRadius:2}}/>
               <span style={{display:"block",width:20,height:2,background:C.cream,borderRadius:2}}/>
             </button>
-            <span style={{fontFamily:F.display,fontWeight:700,fontSize:15,color:C.cream,letterSpacing:"-0.01em"}}>
-              LC · <em style={{fontStyle:"normal",color:C.accent}}>Lighting Master</em>
-            </span>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <img src="/brand/logo-transparent.png" alt=""
+                style={{width:26,height:26,flexShrink:0}}/>
+              <span style={{fontFamily:F.display,fontWeight:700,fontSize:15,color:C.cream,letterSpacing:"-0.01em"}}>
+                LC · <em style={{fontStyle:"normal",color:C.accent}}>Lighting Master</em>
+              </span>
+            </div>
             <div style={{width:38}}/>
           </div>
         )}
