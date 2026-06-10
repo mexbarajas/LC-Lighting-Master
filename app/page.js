@@ -1,4 +1,5 @@
 import LcAppClient from '@/components/LcAppClient'
+import Link from 'next/link'
 
 export const metadata = {
   title: 'NCQLP Exam Prep & Lighting Certification Study Guide | LC Lighting Master',
@@ -13,5 +14,23 @@ export const metadata = {
 }
 
 export default function Page() {
-  return <LcAppClient />
+  return (
+    <>
+      <LcAppClient />
+      <div style={{
+        textAlign: 'center',
+        padding: '16px 24px 24px',
+        fontSize: 13,
+        fontFamily: "'Inter', sans-serif",
+        color: '#7E9B86',
+        borderTop: '1px solid #E8DDD4',
+        background: '#FAF5F0',
+      }}>
+        <span style={{ marginRight: 6 }}>Free resources:</span>
+        <Link href="/resources/what-is-the-ncqlp-lc-exam" style={{ color: '#C65A3A', textDecoration: 'none', marginRight: 12 }}>NCQLP Exam Guide</Link>
+        <Link href="/resources/ncqlp-exam-dates-2026" style={{ color: '#C65A3A', textDecoration: 'none', marginRight: 12 }}>2026 Exam Dates</Link>
+        <Link href="/resources/ncqlp-practice-questions" style={{ color: '#C65A3A', textDecoration: 'none' }}>Practice Questions</Link>
+      </div>
+    </>
+  )
 }
