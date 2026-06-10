@@ -620,7 +620,7 @@ function Nav({onSignIn,onSignUp}){
             </div>
             <div style={m({fontSize:7,letterSpacing:"0.18em",textTransform:"uppercase",
               color:scrolled?C.inkMute:"rgba(249,244,237,0.45)",transition:"color 280ms"})}>
-              by Luxartmedia
+              by luxartmedia.com
             </div>
           </div>
         </div>
@@ -3538,7 +3538,7 @@ function Sidebar({route, setRoute, user, onSignOut, bookmarks=new Set(), isMobil
           style={{width:34,height:34,flexShrink:0,borderRadius:8}}/>
         <div>
           <div style={{fontFamily:F.display,fontWeight:700,fontSize:13,color:C.cream,lineHeight:1.2}}>Lighting Master</div>
-          <div style={m({fontSize:8,letterSpacing:"0.18em",textTransform:"uppercase",color:"rgba(255,255,255,0.28)",marginTop:1})}>BY LUXARTMEDIA</div>
+          <div style={m({fontSize:8,letterSpacing:"0.18em",textTransform:"uppercase",color:"rgba(255,255,255,0.28)",marginTop:1})}>BY LUXARTMEDIA.COM</div>
         </div>
       </div>
 
@@ -6449,7 +6449,7 @@ function AdminSidebar({route,setRoute,flagCount,onSignOut,onBack=()=>{}}){
           <div style={adisp({fontWeight:700,fontSize:13,color:AT.ink})}>Admin Console</div>
         </div>
         <div style={amono({fontSize:8,letterSpacing:"0.16em",textTransform:"uppercase",
-          color:AT.inkMute})}>Lighting Master · Luxartmedia</div>
+          color:AT.inkMute})}>Lighting Master · luxartmedia.com</div>
       </div>
 
       <nav style={{padding:"8px 0",flex:1}}>
