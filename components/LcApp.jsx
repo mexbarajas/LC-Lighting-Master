@@ -611,9 +611,10 @@ function Nav({onSignIn,onSignUp}){
       <div style={{maxWidth:1180,margin:"0 auto",padding:"0 32px",
         display:"flex",alignItems:"center",height:68,gap:32}}>
         <div style={{display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
-          <div style={{width:32,height:32,borderRadius:6,background:C.accent,
-            display:"flex",alignItems:"center",justifyContent:"center",
-            fontFamily:F.display,fontWeight:800,fontSize:12,color:"#fff"}}>LC</div>
+          <img src="/brand/logo-transparent.png" alt="LC Lighting Master"
+            style={{width:32,height:32,flexShrink:0,borderRadius:7,
+              border:"1px solid rgba(242,230,218,0.28)",
+              boxShadow:scrolled?"0 2px 10px rgba(47,74,63,0.2)":"0 0 14px rgba(232,160,32,0.35), 0 0 4px rgba(242,230,218,0.15)"}}/>
           <div>
             <div style={d({fontWeight:700,fontSize:14,color:scrolled?C.ink:"#fff",lineHeight:1.1,transition:"color 280ms"})}>
               Lighting Master
