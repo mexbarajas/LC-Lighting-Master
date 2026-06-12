@@ -1,57 +1,79 @@
+// Run in Supabase SQL Editor if not already present:
+// ALTER TABLE public.subscriptions
+//   ADD COLUMN IF NOT EXISTS seats integer DEFAULT 1,
+//   ADD COLUMN IF NOT EXISTS stripe_payment_intent text,
+//   ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now();
+//
+// Verify:
+// SELECT column_name, data_type
+// FROM information_schema.columns
+// WHERE table_name = 'subscriptions';
+
 import Stripe from 'stripe'
-import { createClient } from '@supabase/supabase-js'
+import { createServiceClient } from '@/lib/supabase/service'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
+const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
 
 export async function POST(request) {
   const body = await request.text()
-  const sig = request.headers.get('stripe-signature')
+  const sig  = request.headers.get('stripe-signature')
 
   let event
   try {
-    event = stripe.webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET)
+    event = stripe.webhooks.constructEvent(body, sig, webhookSecret)
   } catch (err) {
-    return Response.json({ error: `Webhook Error: ${err.message}` }, { status: 400 })
+    console.error('Webhook signature failed:', err.message)
+    return new Response(`Webhook Error: ${err.message}`, { status: 400 })
   }
 
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object
-    const { tier, seats, examAddon, userId, accessYear } = session.metadata
 
-    if (!userId) {
-      console.warn('Webhook: missing userId in metadata, skipping DB write')
-      return Response.json({ received: true })
+    // Only process paid sessions
+    if (session.payment_status !== 'paid') {
+      return new Response('Skipped — not paid', { status: 200 })
     }
 
-    const year = Number(accessYear) || new Date().getFullYear()
-    const periodEnd = new Date(Date.UTC(year, 11, 31, 23, 59, 59)).toISOString()
+    const userId = session.metadata?.user_id
+    const plan   = session.metadata?.plan
+    const seats  = parseInt(session.metadata?.seats || '1')
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    )
+    if (!userId || !plan) {
+      console.error('Webhook missing metadata:', session.metadata)
+      return new Response('Missing metadata', { status: 400 })
+    }
+
+    // Access expiry = December 31 of current year.
+    // If purchased after Nov 1, extend to Dec 31 next year.
+    const now = new Date()
+    const expiry = new Date(now.getFullYear(), 11, 31, 23, 59, 59)
+    if (now.getMonth() >= 10) {
+      expiry.setFullYear(expiry.getFullYear() + 1)
+    }
+
+    const supabase = createServiceClient()
 
     const { error } = await supabase
       .from('subscriptions')
-      .upsert(
-        {
-          user_id: userId,
-          plan: tier,
-          status: 'active',
-          stripe_customer_id: session.customer,
-          stripe_session_id: session.id,
-          exam_addon: examAddon === 'true',
-          current_period_end: periodEnd,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_id' }
-      )
+      .upsert({
+        user_id:               userId,
+        plan:                  plan,
+        status:                'active',
+        stripe_customer_id:    session.customer || null,
+        stripe_payment_intent: session.payment_intent || null,
+        current_period_end:    expiry.toISOString(),
+        seats:                 plan === 'team' ? seats : 1,
+        updated_at:            new Date().toISOString(),
+      }, { onConflict: 'user_id' })
 
     if (error) {
       console.error('Supabase upsert error:', error)
-      return Response.json({ error: 'DB write failed' }, { status: 500 })
+      return new Response('Database error', { status: 500 })
     }
+
+    console.log(`✓ Plan ${plan} activated for user ${userId}, expires ${expiry.toISOString()}`)
   }
 
-  return Response.json({ received: true })
+  return new Response('OK', { status: 200 })
 }

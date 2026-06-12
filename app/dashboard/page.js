@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import PurchaseSuccessBanner from '@/components/PurchaseSuccessBanner'
 
 const PLAN_LABELS = {
   free: 'Free trial',
@@ -10,11 +11,13 @@ const PLAN_LABELS = {
   team_member: 'Team Member',
 }
 
-export default async function DashboardPage() {
+export default async function DashboardPage({ searchParams }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) redirect('/login')
+
+  const showSuccess = (await searchParams)?.purchase === 'success'
 
   const { data: sub } = await supabase
     .from('subscriptions')
@@ -40,6 +43,8 @@ export default async function DashboardPage() {
             {user.user_metadata?.name?.split(' ')[0] || user.email.split('@')[0]}'s Dashboard
           </h1>
         </div>
+
+        {showSuccess && <PurchaseSuccessBanner />}
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 32 }}>
           {[

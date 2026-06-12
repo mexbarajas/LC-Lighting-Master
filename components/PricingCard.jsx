@@ -59,13 +59,12 @@ function FeatureRow({ item, dark }) {
 
 export default function PricingCard({ userId, userEmail, isStudent, onContactUs }) {
   const season = getCurrentSeason()
-  const [examAddon, setExamAddon] = useState(false)
   const [teamSeats, setTeamSeats] = useState(4)
   const [loading, setLoading] = useState(null)
   const [contactModal, setContactModal] = useState(false)
 
   const t1Price = getPriceForTier('t1')
-  const t2Price = getPriceForTier('t2', 1, examAddon)
+  const t2Price = getPriceForTier('t2')
   const t3Price = getPriceForTier('t3')
   const teamInfo = getPriceForTier('team', teamSeats) // null for 11+ seats
 
@@ -73,24 +72,27 @@ export default function PricingCard({ userId, userEmail, isStudent, onContactUs 
   const teamSavings = teamInfo ? t3IndividualTotal - teamInfo.amountCents : null
   const activeTier = getTeamPerSeat(teamSeats)
 
-  const handleCheckout = useCallback(async (tier, seats, addOn) => {
+  const handleCheckout = useCallback(async (plan, seats = 1) => {
     if (loading) return
-    setLoading(tier)
+    setLoading(plan)
     try {
       const res = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tier, seats, examAddon: addOn, userId, userEmail }),
+        body: JSON.stringify({ plan, seats }),
       })
-      const { url, contactUs } = await res.json()
-      if (contactUs) { setContactModal(true); return }
-      if (url) window.location.href = url
+      const data = await res.json()
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        alert(data.error || 'Checkout failed. Please try again.')
+      }
     } catch {
-      alert('Something went wrong. Please try again.')
+      alert('Network error. Please try again.')
     } finally {
       setLoading(null)
     }
-  }, [loading, userId, userEmail])
+  }, [loading])
 
   // T1 badge by season
   const t1Badge = season.season === 'peak'
@@ -169,7 +171,7 @@ export default function PricingCard({ userId, userEmail, isStudent, onContactUs 
               '25-sec timed exam engine', 'Speed bonuses & streaks', 'Unlimited attempts']
               .map((f, i) => <FeatureRow key={i} item={f} dark={false} />)}
           </div>
-          <button onClick={() => handleCheckout('t1', 1, false)}
+          <button onClick={() => handleCheckout('t1')}
             disabled={loading === 't1'}
             style={{
               width: '100%', padding: '12px', borderRadius: 99,
@@ -220,7 +222,7 @@ export default function PricingCard({ userId, userEmail, isStudent, onContactUs 
                 {season.season === 'earlyBird' && (
                   <span style={{ fontFamily: FONT.mono, fontSize: 12,
                     color: C.inkMute, textDecoration: 'line-through', marginRight: 6 }}>
-                    {fmt(49500 + (examAddon ? 20000 : 0))}
+                    {fmt(49500)}
                   </span>
                 )}
                 <span style={{ fontFamily: FONT.display, fontWeight: 700, fontSize: 36,
@@ -244,25 +246,7 @@ export default function PricingCard({ userId, userEmail, isStudent, onContactUs 
               'Bookmarks & notes hub', 'Certificate of completion', '24 CEU credit hours']
               .map((f, i) => <FeatureRow key={i} item={f} dark={false} />)}
           </div>
-          {/* Exam add-on toggle */}
-          <label style={{
-            display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
-            background: examAddon ? C.accentDim : C.creamWarm,
-            border: `1px solid ${examAddon ? C.accent : C.rule}`,
-            borderRadius: 8, cursor: 'pointer', marginBottom: 14,
-            transition: 'all 0.15s',
-          }}>
-            <input type="checkbox" checked={examAddon} onChange={e => setExamAddon(e.target.checked)}
-              style={{ accentColor: C.accent, width: 14, height: 14, flexShrink: 0 }} />
-            <div>
-              <div style={{ fontFamily: FONT.display, fontWeight: 700, fontSize: 12,
-                color: C.ink }}>+$200 — Add Exam Engine</div>
-              <div style={{ fontFamily: FONT.body, fontSize: 10.5, color: C.inkMute, marginTop: 1 }}>
-                129 practice questions, unlimited attempts
-              </div>
-            </div>
-          </label>
-          <button onClick={() => handleCheckout('t2', 1, examAddon)}
+          <button onClick={() => handleCheckout('t2')}
             disabled={loading === 't2'}
             style={{
               width: '100%', padding: '12px', borderRadius: 99,
@@ -344,7 +328,7 @@ export default function PricingCard({ userId, userEmail, isStudent, onContactUs 
               'Topic accuracy analytics', 'Priority support']
               .map((f, i) => <FeatureRow key={i} item={f} dark={true} />)}
           </div>
-          <button onClick={() => handleCheckout('t3', 1, false)}
+          <button onClick={() => handleCheckout('t3')}
             disabled={loading === 't3'}
             style={{
               width: '100%', padding: '12px', borderRadius: 99,
@@ -482,7 +466,7 @@ export default function PricingCard({ userId, userEmail, isStudent, onContactUs 
         )}
 
         {!activeTier.contact ? (
-          <button onClick={() => handleCheckout('team', teamSeats, false)}
+          <button onClick={() => handleCheckout('team', teamSeats)}
             disabled={loading === 'team'}
             style={{
               padding: '11px 28px', borderRadius: 99,
