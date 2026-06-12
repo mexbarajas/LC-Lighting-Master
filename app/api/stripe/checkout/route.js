@@ -68,6 +68,15 @@ export async function POST(request) {
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://lightingmasterlc.com'
 
+  console.log('Creating Stripe session:', {
+    plan,
+    unitAmount,
+    productName,
+    quantity,
+    email,
+    stripeKeyPrefix: process.env.STRIPE_SECRET_KEY?.slice(0, 12),
+  })
+
   try {
     const checkoutSession = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -95,10 +104,22 @@ export async function POST(request) {
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     )
   } catch (err) {
-    console.error('Stripe checkout error:', err)
+    console.error('Stripe error:', {
+      message: err.message,
+      type: err.type,
+      code: err.code,
+      statusCode: err.statusCode,
+      param: err.param,
+      raw: err.raw,
+    })
     return new Response(
-      JSON.stringify({ error: 'Checkout session creation failed' }),
-      { status: 500 }
+      JSON.stringify({
+        error: 'Checkout session creation failed',
+        detail: err.message,
+        code: err.code,
+        type: err.type,
+      }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
     )
   }
 }
