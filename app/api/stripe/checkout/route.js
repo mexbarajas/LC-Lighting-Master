@@ -1,5 +1,5 @@
 import Stripe from 'stripe'
-import { getPriceForTier, getAccessExpiry, isStudentEmail, studentPrice } from '@/lib/pricing'
+import { getPriceForTier, getTeamPerSeat, isStudentEmail, studentPrice } from '@/lib/pricing'
 import { checkOrigin, originError } from '@/lib/csrf'
 import { createClient } from '@/lib/supabase/server'
 
@@ -20,45 +20,71 @@ export async function POST(request) {
 
   const seatCount = Number(seats)
 
-  if (tier === 'team' && seatCount >= 11) {
-    return Response.json({ error: 'Contact us for 11+ seats' }, { status: 400 })
-  }
-
   // Email from server session only — never trusted from request body
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   const serverEmail = user?.email ?? null
 
-  const priceInfo = getPriceForTier(tier, seatCount, Boolean(examAddon))
+  if (tier === 'team') {
+    const teamTier = getTeamPerSeat(seatCount)
+    if (teamTier.contact) {
+      return Response.json({ error: 'Contact us for 11+ seats' }, { status: 400 })
+    }
+    const perSeatCents = teamTier.perSeat * 100
+    const session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      customer_email: serverEmail || undefined,
+      line_items: [{
+        price_data: {
+          currency: 'usd',
+          unit_amount: perSeatCents,
+          product_data: { name: 'LC · Lighting Master — Team Access' },
+        },
+        quantity: seatCount,
+      }],
+      metadata: {
+        tier: 'team',
+        seats: String(seatCount),
+        examAddon: 'false',
+        userId: userId || '',
+        accessYear: String(new Date().getFullYear()),
+        studentDiscount: 'false',
+      },
+      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?payment=success`,
+      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/pricing?cancelled=true`,
+    })
+    return Response.json({ url: session.url })
+  }
+
+  // Individual tiers (t1/t2/t3)
+  const priceInfo = getPriceForTier(tier, 1, Boolean(examAddon))
   if (!priceInfo) {
-    return Response.json({ contactUs: true })
+    return Response.json({ error: 'Invalid tier' }, { status: 400 })
   }
 
   let { amountCents, label } = priceInfo
   let discountApplied = false
 
-  if (tier !== 'team' && isStudentEmail(serverEmail)) {
+  if (isStudentEmail(serverEmail)) {
     amountCents = studentPrice(amountCents)
-    label = label + ' (Student — 40% discount)'
+    label = label + ' — Student 40% off'
     discountApplied = true
   }
 
   const session = await stripe.checkout.sessions.create({
     mode: 'payment',
     customer_email: serverEmail || undefined,
-    line_items: [
-      {
-        price_data: {
-          currency: 'usd',
-          unit_amount: amountCents,
-          product_data: { name: label },
-        },
-        quantity: 1,
+    line_items: [{
+      price_data: {
+        currency: 'usd',
+        unit_amount: amountCents,
+        product_data: { name: label },
       },
-    ],
+      quantity: 1,
+    }],
     metadata: {
       tier,
-      seats: String(seatCount),
+      seats: '1',
       examAddon: String(Boolean(examAddon)),
       userId: userId || '',
       accessYear: String(new Date().getFullYear()),
