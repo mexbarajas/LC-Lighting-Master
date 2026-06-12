@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { getCurrentSeason, getPriceForTier, getTeamPerSeat, TEAM_TIERS, isStudentEmail, studentPrice } from '@/lib/pricing'
+import { getCurrentSeason, getPriceForTier, getTeamPerSeat, TEAM_TIERS, studentPrice } from '@/lib/pricing'
 
 const C = {
   ink: '#16120e',
@@ -57,7 +57,7 @@ function FeatureRow({ item, dark }) {
   )
 }
 
-export default function PricingCard({ userId, userEmail, onContactUs }) {
+export default function PricingCard({ userId, userEmail, isStudent, onContactUs }) {
   const season = getCurrentSeason()
   const [examAddon, setExamAddon] = useState(false)
   const [teamSeats, setTeamSeats] = useState(4)
@@ -71,7 +71,6 @@ export default function PricingCard({ userId, userEmail, onContactUs }) {
 
   const t3IndividualTotal = t3Price.amountCents * teamSeats
   const teamSavings = teamInfo ? t3IndividualTotal - teamInfo.amountCents : null
-  const isStudent = isStudentEmail(userEmail)
   const activeTier = getTeamPerSeat(teamSeats)
 
   const handleCheckout = useCallback(async (tier, seats, addOn) => {

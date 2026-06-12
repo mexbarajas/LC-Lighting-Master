@@ -1,3 +1,5 @@
+import { createClient } from '@/lib/supabase/server'
+import { isStudentEmail } from '@/lib/pricing'
 import PricingPageClient from '@/components/PricingPageClient'
 
 export const metadata = {
@@ -6,6 +8,20 @@ export const metadata = {
   alternates: { canonical: 'https://lightingmasterlc.com/pricing' },
 }
 
-export default function PricingPage() {
-  return <PricingPageClient />
+export default async function PricingPage() {
+  const supabase = await createClient()
+  const { data: { session } } = await supabase.auth.getSession()
+  const userEmail = session?.user?.email || ''
+  const userId = session?.user?.id || null
+  const isStudent = isStudentEmail(userEmail)
+
+  console.log('isStudent:', isStudent, 'email:', userEmail)
+
+  return (
+    <PricingPageClient
+      isStudent={isStudent}
+      userEmail={userEmail}
+      userId={userId}
+    />
+  )
 }

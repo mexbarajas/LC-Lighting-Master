@@ -1,23 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import PricingCard from '@/components/PricingCard'
 
-export default function PricingPageClient() {
-  const [userId, setUserId] = useState(null)
-  const [userEmail, setUserEmail] = useState(null)
-
-  useEffect(() => {
-    const supabase = createClient()
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        setUserId(session.user.id)
-        setUserEmail(session.user.email)
-      }
-    })
-  }, [])
-
+export default function PricingPageClient({ isStudent, userEmail, userId }) {
   return (
     <div style={{
       fontFamily: "'Inter', sans-serif",
@@ -49,7 +34,7 @@ export default function PricingPageClient() {
           </p>
         </div>
 
-        <PricingCard userId={userId} userEmail={userEmail} />
+        <PricingCard userId={userId} userEmail={userEmail} isStudent={isStudent} />
 
         <div style={{ marginTop: 48, textAlign: 'center' }}>
           <a href="/" style={{
