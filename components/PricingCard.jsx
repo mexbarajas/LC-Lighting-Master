@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { getCurrentSeason, getPriceForTier } from '@/lib/pricing'
+import { getCurrentSeason, getPriceForTier, TEAM_TIERS, isStudentEmail, studentPrice } from '@/lib/pricing'
 
 const C = {
   ink: '#16120e',
@@ -67,10 +67,11 @@ export default function PricingCard({ userId, userEmail, onContactUs }) {
   const t1Price = getPriceForTier('t1')
   const t2Price = getPriceForTier('t2', 1, examAddon)
   const t3Price = getPriceForTier('t3')
-  const teamInfo = teamSeats >= 10 ? null : getPriceForTier('team', teamSeats)
+  const teamInfo = getPriceForTier('team', teamSeats) // null for 11+ seats
 
   const t3IndividualTotal = t3Price.amountCents * teamSeats
   const teamSavings = teamInfo ? t3IndividualTotal - teamInfo.amountCents : null
+  const isStudent = isStudentEmail(userEmail)
 
   const handleCheckout = useCallback(async (tier, seats, addOn) => {
     if (loading) return
@@ -302,6 +303,39 @@ export default function PricingCard({ userId, userEmail, onContactUs }) {
         </div>
       </div>
 
+      {/* Student discount banner */}
+      {isStudent && (
+        <div style={{
+          background: C.forestDim, border: `1px solid ${C.forest}`,
+          borderRadius: 10, padding: '14px 18px', marginBottom: 24,
+          display: 'flex', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap',
+        }}>
+          <div style={{ flex: 1, minWidth: 180 }}>
+            <div style={{ fontFamily: FONT.display, fontWeight: 700, fontSize: 13,
+              color: C.forest, marginBottom: 4 }}>Student discount — 40% off</div>
+            <div style={{ fontFamily: FONT.body, fontSize: 12, color: C.inkMute, lineHeight: 1.5 }}>
+              Your .edu address qualifies you for a 40% student discount. Applied at checkout automatically.
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', alignItems: 'center' }}>
+            {[
+              { label: 'Tier 1', orig: t1Price.amountCents },
+              { label: 'Tier 2', orig: t2Price.amountCents },
+              { label: 'Tier 3', orig: t3Price.amountCents },
+            ].map(({ label, orig }) => (
+              <div key={label} style={{ textAlign: 'center' }}>
+                <div style={{ fontFamily: FONT.mono, fontSize: 9, letterSpacing: '0.14em',
+                  textTransform: 'uppercase', color: C.inkMute, marginBottom: 2 }}>{label}</div>
+                <span style={{ fontFamily: FONT.mono, fontSize: 11, color: C.inkMute,
+                  textDecoration: 'line-through', marginRight: 4 }}>{fmt(orig)}</span>
+                <span style={{ fontFamily: FONT.display, fontWeight: 700, fontSize: 15,
+                  color: C.forest }}>{fmt(studentPrice(orig))}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ── Team section ── */}
       <div style={{
         background: C.creamWarm, border: `1px solid ${C.rule}`,
@@ -310,33 +344,76 @@ export default function PricingCard({ userId, userEmail, onContactUs }) {
         <div style={{ fontFamily: FONT.display, fontWeight: 700, fontSize: 15,
           color: C.ink, marginBottom: 4 }}>Team Access</div>
         <p style={{ fontFamily: FONT.body, fontSize: 12, color: C.inkMute,
-          margin: '0 0 18px', lineHeight: 1.6 }}>
-          Enroll your studio. Volume pricing at 6+ seats. Contact us for 10+ seats.
+          margin: '0 0 16px', lineHeight: 1.6 }}>
+          Enroll your studio. Includes all Tier 3 content for each seat.
         </p>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', marginBottom: 12 }}>
-          <label style={{ fontFamily: FONT.mono, fontSize: 10, letterSpacing: '0.14em',
-            textTransform: 'uppercase', color: C.inkMute, flexShrink: 0 }}>
-            Seats: <strong style={{ color: C.ink }}>{teamSeats}</strong>
-          </label>
-          <input type="range" min={2} max={10} value={teamSeats}
-            onChange={e => setTeamSeats(Number(e.target.value))}
-            style={{ flex: 1, maxWidth: 220, accentColor: C.accent }} />
-          <div>
-            {teamInfo ? (
-              <>
-                <span style={{ fontFamily: FONT.display, fontWeight: 700, fontSize: 26,
-                  color: C.ink, letterSpacing: '-0.02em' }}>{fmt(teamInfo.amountCents)}</span>
-                <span style={{ fontFamily: FONT.mono, fontSize: 10, color: C.inkMute, marginLeft: 6 }}>
-                  ({fmt(teamInfo.perSeat)}/seat)
-                </span>
-              </>
-            ) : (
-              <span style={{ fontFamily: FONT.display, fontWeight: 700, fontSize: 16, color: C.inkMute }}>
-                Contact us
+        {/* Tier table */}
+        <div style={{ marginBottom: 18, border: `1px solid ${C.rule}`,
+          borderRadius: 8, overflow: 'hidden' }}>
+          {TEAM_TIERS.map((t, i) => (
+            <div key={i} style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              padding: '9px 14px',
+              background: teamSeats >= t.minSeats && teamSeats <= t.maxSeats
+                ? C.accentDim
+                : i % 2 === 0 ? C.cream : C.creamWarm,
+              borderBottom: `1px solid ${C.rule}`,
+              transition: 'background 0.15s',
+            }}>
+              <span style={{ fontFamily: FONT.mono, fontSize: 10, letterSpacing: '0.12em', color: C.inkMute }}>
+                {t.minSeats}–{t.maxSeats} seats
               </span>
-            )}
+              <span style={{ fontFamily: FONT.display, fontWeight: 700, fontSize: 13, color: C.ink }}>
+                {fmt(t.perSeatCents)} / seat
+              </span>
+            </div>
+          ))}
+          <div style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            padding: '9px 14px', background: C.creamWarm,
+          }}>
+            <span style={{ fontFamily: FONT.mono, fontSize: 10, letterSpacing: '0.12em', color: C.inkMute }}>
+              11+ seats
+            </span>
+            <span style={{ fontFamily: FONT.display, fontSize: 12, color: C.inkMute }}>Contact us</span>
           </div>
+        </div>
+
+        {/* Seat stepper + total */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', marginBottom: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center',
+            border: `1px solid ${C.ruleStrong}`, borderRadius: 8, overflow: 'hidden' }}>
+            <button
+              onClick={() => setTeamSeats(s => Math.max(2, s - 1))}
+              style={{ width: 36, height: 36, border: 'none', background: C.cream,
+                cursor: 'pointer', fontFamily: FONT.display, fontSize: 16, color: C.inkSoft }}>
+              −
+            </button>
+            <input type="number" min={2} max={50} value={teamSeats}
+              onChange={e => setTeamSeats(Math.max(2, Math.round(Number(e.target.value) || 2)))}
+              style={{ width: 48, height: 36, border: 'none',
+                borderLeft: `1px solid ${C.rule}`, borderRight: `1px solid ${C.rule}`,
+                textAlign: 'center', fontFamily: FONT.display, fontWeight: 700,
+                fontSize: 14, color: C.ink, background: C.cream }} />
+            <button
+              onClick={() => setTeamSeats(s => s + 1)}
+              style={{ width: 36, height: 36, border: 'none', background: C.cream,
+                cursor: 'pointer', fontFamily: FONT.display, fontSize: 16, color: C.inkSoft }}>
+              +
+            </button>
+          </div>
+          <span style={{ fontFamily: FONT.mono, fontSize: 10, letterSpacing: '0.12em',
+            textTransform: 'uppercase', color: C.inkMute }}>seats</span>
+          {teamInfo && (
+            <div style={{ marginLeft: 'auto' }}>
+              <span style={{ fontFamily: FONT.display, fontWeight: 700, fontSize: 26,
+                color: C.ink, letterSpacing: '-0.02em' }}>{fmt(teamInfo.amountCents)}</span>
+              <span style={{ fontFamily: FONT.mono, fontSize: 10, color: C.inkMute, marginLeft: 6 }}>
+                ({fmt(teamInfo.perSeat)}/seat)
+              </span>
+            </div>
+          )}
         </div>
 
         {teamInfo && teamSavings > 0 && (
@@ -347,7 +424,7 @@ export default function PricingCard({ userId, userEmail, onContactUs }) {
           </div>
         )}
 
-        {teamSeats < 10 ? (
+        {teamSeats <= 10 ? (
           <button onClick={() => handleCheckout('team', teamSeats, false)}
             disabled={loading === 'team'}
             style={{
@@ -364,9 +441,9 @@ export default function PricingCard({ userId, userEmail, onContactUs }) {
         ) : (
           <div>
             <div style={{ fontFamily: FONT.body, fontSize: 13, color: C.inkMute, marginBottom: 10 }}>
-              10+ seats — enterprise rates available.
+              11+ seats — enterprise rates available.
             </div>
-            <a href="mailto:team@lightingmaster.com"
+            <a href="mailto:admin@luxartmedia.com"
               style={{ display: 'inline-block', padding: '11px 28px', borderRadius: 99,
                 background: C.ink, color: '#fff', fontFamily: FONT.display,
                 fontWeight: 700, fontSize: 13, textDecoration: 'none' }}>
@@ -404,11 +481,11 @@ export default function PricingCard({ userId, userEmail, onContactUs }) {
               lineHeight: 1.6, marginBottom: 20 }}>
               For 10+ seats, contact us for volume pricing and custom onboarding.
             </p>
-            <a href="mailto:team@lightingmaster.com"
+            <a href="mailto:admin@luxartmedia.com"
               style={{ display: 'inline-block', padding: '11px 28px', borderRadius: 99,
                 background: C.accent, color: '#fff', fontFamily: FONT.display,
                 fontWeight: 700, fontSize: 13, textDecoration: 'none' }}>
-              team@lightingmaster.com →
+              admin@luxartmedia.com →
             </a>
             <button onClick={() => setContactModal(false)}
               style={{ display: 'block', margin: '14px auto 0',
