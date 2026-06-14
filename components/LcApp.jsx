@@ -4849,7 +4849,7 @@ const FEEDBACK_CATEGORIES = [
   { value: 'bug',      label: '🐛  Bug report',        desc: 'Something is broken or not working as expected' },
   { value: 'feature',  label: '💡  Feature request',    desc: 'Suggest an improvement or new functionality' },
   { value: 'content',  label: '📚  Content feedback',   desc: 'Error in a lesson, question, or visual' },
-  { value: 'discount', label: '🎓  Student discount',   desc: 'Request a student or group discount' },
+  { value: 'discount', label: '🎓  Student discount',   desc: 'Request a 25% student discount' },
   { value: 'billing',  label: '💳  Billing question',   desc: 'Question about payment, access, or refunds' },
   { value: 'other',    label: '✉  Other',              desc: 'Anything else you want to share' },
 ]

@@ -261,7 +261,7 @@ export default function PricingCard({ userId, userEmail, onContactUs }) {
         </div>
         <p style={{ fontFamily: FONT.body, fontSize: 13, color: C.inkMute,
           lineHeight: 1.75, margin: '0 0 18px', maxWidth: 520 }}>
-          We offer a 40% student discount for enrolled students in lighting design, architecture,
+          We offer a 25% student discount for enrolled students in lighting design, architecture,
           electrical engineering, or related programs. Send us your student ID or enrollment
           verification and we'll send you a discount code.
         </p>
