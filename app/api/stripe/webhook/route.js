@@ -2,7 +2,23 @@
 // ALTER TABLE public.subscriptions
 //   ADD COLUMN IF NOT EXISTS seats integer DEFAULT 1,
 //   ADD COLUMN IF NOT EXISTS stripe_payment_intent text,
-//   ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now();
+//   ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now(),
+//   ADD COLUMN IF NOT EXISTS email text;
+//
+// To show real emails in admin Recent Signups, also run:
+// CREATE OR REPLACE FUNCTION public.handle_new_user()
+// RETURNS trigger AS $$
+// BEGIN
+//   INSERT INTO public.subscriptions (user_id, plan, status, email)
+//   VALUES (new.id, 'free', 'active', new.email)
+//   ON CONFLICT (user_id) DO UPDATE SET email = EXCLUDED.email;
+//   RETURN new;
+// END;
+// $$ LANGUAGE plpgsql SECURITY DEFINER;
+//
+// CREATE OR REPLACE TRIGGER on_auth_user_created
+//   AFTER INSERT ON auth.users
+//   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 //
 // Verify:
 // SELECT column_name, data_type
@@ -89,6 +105,7 @@ export async function POST(request) {
           user_id:               userId,
           plan:                  plan,
           status:                'active',
+          email:                 session.customer_email || null,
           stripe_customer_id:    session.customer || null,
           stripe_payment_intent: session.payment_intent || null,
           current_period_end:    expiry.toISOString(),

@@ -5638,16 +5638,70 @@ function AdminLogin({onLogin}){
 }
 
 /* ── OVERVIEW ──────────────────────────────────── */
-function Overview({users,onNavigate}){
-  const active=users.filter(u=>u.status==="active").length
-  const flagged=users.filter(u=>u.flagged).length
-  const pastDue=users.filter(u=>u.status==="past_due").length
-  const totalRev=users.reduce((s,u)=>s+u.amount,0)
-  const thisMonth=REVENUE_MONTHS[REVENUE_MONTHS.length-1]
-  const lastMonth=REVENUE_MONTHS[REVENUE_MONTHS.length-2]
-  const revTrend=Math.round(((thisMonth.mrr-lastMonth.mrr)/lastMonth.mrr)*100)
+function AdminPlanDonut({stats}){
+  const plans=[
+    {label:"Free",       key:"free",color:"#DDD0C0"},
+    {label:"Practice Test",key:"t1",color:"#7E9B86"},
+    {label:"Full Course",key:"t2", color:"#DFA688"},
+    {label:"Course+Exam",key:"t3", color:"#C65A3A"},
+    {label:"Team",       key:"team",color:"#2F4A3F"},
+  ]
+  const total=plans.reduce((s,p)=>s+(stats[p.key]||0),0)||1
+  const r=54,cx=70,cy=70,circ=2*Math.PI*r
+  let offset=0
+  const segments=plans.map(p=>{
+    const count=stats[p.key]||0
+    const pct=count/total
+    const dash=pct*circ
+    const seg={...p,count,pct,dash,offset}
+    offset+=dash
+    return seg
+  })
+  return(
+    <div style={{background:AT.bg3,border:`1px solid ${AT.border}`,borderRadius:8,padding:"20px 24px"}}>
+      <div style={amono({fontSize:9,letterSpacing:"0.18em",textTransform:"uppercase",color:AT.inkMute,marginBottom:16})}>
+        Plan distribution
+      </div>
+      <div style={{display:"flex",alignItems:"center",gap:24}}>
+        <svg width="140" height="140" viewBox="0 0 140 140" style={{flexShrink:0}}>
+          <circle cx={cx} cy={cy} r={r} fill="none" stroke={AT.border} strokeWidth="18"/>
+          {segments.map(s=>s.count>0&&(
+            <circle key={s.key} cx={cx} cy={cy} r={r}
+              fill="none" stroke={s.color} strokeWidth="18"
+              strokeLinecap="butt"
+              strokeDasharray={`${s.dash} ${circ-s.dash}`}
+              strokeDashoffset={circ/4-s.offset}
+              style={{transition:"stroke-dasharray 600ms ease"}}
+            />
+          ))}
+          <text x={cx} y={cy-6} textAnchor="middle"
+            style={{fontFamily:AF.display,fontWeight:700,fontSize:22,fill:AT.ink}}>{total}</text>
+          <text x={cx} y={cy+12} textAnchor="middle"
+            style={{fontFamily:AF.mono,fontSize:9,fill:AT.inkMute}}>users</text>
+        </svg>
+        <div style={{flex:1,display:"flex",flexDirection:"column",gap:8}}>
+          {segments.map(s=>(
+            <div key={s.key} style={{display:"flex",alignItems:"center",gap:8}}>
+              <span style={{width:10,height:10,borderRadius:"50%",background:s.color,flexShrink:0,display:"inline-block"}}/>
+              <span style={{fontFamily:AF.display,fontWeight:600,fontSize:12,color:AT.ink,flex:1}}>{s.label}</span>
+              <span style={amono({fontSize:11,color:AT.inkMute})}>{s.count}</span>
+              <span style={amono({fontSize:10,color:AT.inkMute,minWidth:36,textAlign:"right"})}>
+                {total>0?Math.round(s.pct*100):0}%
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
 
-  const recentUsers=[...users].sort((a,b)=>new Date(b.joinDate)-new Date(a.joinDate)).slice(0,5)
+function Overview({adminStats,onNavigate}){
+  if(!adminStats||adminStats.totalUsers===undefined) return(
+    <div style={{padding:60,textAlign:"center",fontFamily:AF.mono,fontSize:12,color:AT.inkMute}}>
+      Loading dashboard data...
+    </div>
+  )
 
   return(
     <div>
@@ -5658,114 +5712,77 @@ function Overview({users,onNavigate}){
         </div>
       </div>
 
-      {/* Alert bar */}
-      {(flagged>0||pastDue>0)&&(
-        <div style={{display:"flex",gap:10,marginBottom:24,flexWrap:"wrap"}}>
-          {flagged>0&&(
-            <div onClick={()=>onNavigate("flags")}
-              style={{background:AT.redDim,border:`1px solid ${AT.red}`,borderRadius:8,
-                padding:"10px 16px",display:"flex",alignItems:"center",gap:10,cursor:"pointer",
-                flex:1,minWidth:220}}>
-              <span style={{color:AT.red,fontSize:16}}>⚑</span>
-              <div>
-                <div style={amono({fontSize:11,color:AT.red,fontWeight:700})}>{flagged} flagged account{flagged>1?"s":""}</div>
-                <div style={amono({fontSize:10,color:AT.red,opacity:0.7})}>Requires review</div>
-              </div>
-              <span style={{color:AT.red,marginLeft:"auto",fontSize:12}}>→</span>
-            </div>
-          )}
-          {pastDue>0&&(
-            <div onClick={()=>onNavigate("subscriptions")}
-              style={{background:AT.amberDim,border:`1px solid ${AT.amber}`,borderRadius:8,
-                padding:"10px 16px",display:"flex",alignItems:"center",gap:10,cursor:"pointer",
-                flex:1,minWidth:220}}>
-              <span style={{color:AT.amber,fontSize:16}}>⚠</span>
-              <div>
-                <div style={amono({fontSize:11,color:AT.amber,fontWeight:700})}>{pastDue} payment{pastDue>1?"s":""} past due</div>
-                <div style={amono({fontSize:10,color:AT.amber,opacity:0.7})}>Stripe follow-up needed</div>
-              </div>
-              <span style={{color:AT.amber,marginLeft:"auto",fontSize:12}}>→</span>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Stat cards */}
+      {/* Stat cards — real Supabase data */}
       <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:28}}>
-        <StatCard label="Total Revenue" value={fmtMoney(totalRev)} sub="all time" color={AT.green} trend={revTrend}/>
-        <StatCard label="This Month" value={fmtMoney(thisMonth.mrr)} sub={`${thisMonth.users} new enrollments`} color={AT.accent}/>
-        <StatCard label="Active Users" value={active} sub={`${users.length} total accounts`}/>
-        <StatCard label="Flagged" value={flagged+pastDue} sub={`${flagged} flags · ${pastDue} past due`} color={flagged+pastDue>0?AT.red:AT.green}/>
+        <StatCard label="Total Users"   value={adminStats.totalUsers}                              sub="all accounts"/>
+        <StatCard label="Est. Revenue"  value={`$${adminStats.revenue.toLocaleString()}`}          sub="one-time payments" color={AT.green}/>
+        <StatCard label="Active (30d)"  value={adminStats.activeUsers}                             sub="lessons in last 30 days"/>
+        <StatCard label="Lessons Done"  value={adminStats.totalLessonsCompleted}                   sub="total completions"/>
       </div>
 
       {/* Plan breakdown */}
       <div style={{display:"grid",gridTemplateColumns:"1.4fr 1fr",gap:16,marginBottom:28}}>
-        <div style={{background:AT.bg3,border:`1px solid ${AT.border}`,borderRadius:8,padding:"20px"}}>
-          <SectionTitle>Plan distribution</SectionTitle>
-          {PLANS.map(plan=>{
-            const count=users.filter(u=>u.plan===plan).length
-            const pct=Math.round((count/users.length)*100)
-            return(
-              <div key={plan} style={{display:"flex",alignItems:"center",gap:12,marginBottom:10}}>
-                <div style={{width:80,flexShrink:0}}>
-                  <PlanBadge plan={plan}/>
-                </div>
-                <MiniBar value={count} max={users.length} color={PLAN_COLORS[plan]}/>
-                <div style={amono({fontSize:11,color:AT.inkSoft,width:40,textAlign:"right",flexShrink:0})}>
-                  {count} <span style={{color:AT.inkMute}}>({pct}%)</span>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-
-        <div style={{background:AT.bg3,border:`1px solid ${AT.border}`,borderRadius:8,padding:"20px"}}>
-          <SectionTitle>Status breakdown</SectionTitle>
-          {["active","free","past_due","canceled","trialing"].map(s=>{
-            const count=users.filter(u=>u.status===s).length
-            if(count===0) return null
-            return(
-              <div key={s} style={{display:"flex",alignItems:"center",
-                justifyContent:"space-between",padding:"6px 0",
-                borderBottom:`1px solid ${AT.border}`}}>
-                <StatusBadge status={s}/>
-                <div style={amono({fontSize:12,color:AT.inkSoft})}>{count}</div>
-              </div>
-            )
-          })}
+        <AdminPlanDonut stats={adminStats.planCounts||{}}/>
+        <div style={{background:AT.bg3,border:`1px solid ${AT.border}`,borderRadius:8,padding:"20px 24px"}}>
+          <div style={amono({fontSize:9,letterSpacing:"0.18em",textTransform:"uppercase",color:AT.inkMute,marginBottom:16})}>
+            Platform activity
+          </div>
+          {[
+            ["Community questions", adminStats.communityQuestions],
+            ["Feedback submissions", adminStats.feedbackCount],
+          ].map(([label,val])=>(
+            <div key={label} style={{display:"flex",alignItems:"center",
+              justifyContent:"space-between",padding:"8px 0",
+              borderBottom:`1px solid ${AT.border}`}}>
+              <div style={amono({fontSize:11,color:AT.inkSoft})}>{label}</div>
+              <div style={adisp({fontWeight:700,fontSize:14,color:AT.ink})}>{val??'—'}</div>
+            </div>
+          ))}
         </div>
       </div>
 
       {/* Recent signups */}
-      <div style={{background:AT.bg3,border:`1px solid ${AT.border}`,borderRadius:8,padding:"20px"}}>
-        <SectionTitle>
-          Recent signups
-          <Btn small onClick={()=>onNavigate("users")}>View all →</Btn>
-        </SectionTitle>
-        <TableHeader cols={[
-          {label:"User",w:"2fr"},{label:"Plan",w:"100px"},
-          {label:"Status",w:"100px"},{label:"Joined",w:"120px"},{label:"",w:"60px"}
-        ]}/>
-        {recentUsers.map(u=>(
-          <div key={u.id} style={{display:"grid",gridTemplateColumns:"2fr 100px 100px 120px 60px",
-            gap:0,padding:"10px 16px",borderBottom:`1px solid ${AT.border}`,
-            transition:"background 0.1s"}}
-            onMouseEnter={e=>e.currentTarget.style.background=AT.bg4}
-            onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-            <div>
-              <div style={asans({fontSize:13,color:AT.ink,fontWeight:500})}>
-                {u.firstName} {u.lastName}
-              </div>
-              <div style={amono({fontSize:10,color:AT.inkMute})}>{u.email}</div>
-            </div>
-            <div style={{paddingTop:2}}><PlanBadge plan={u.plan}/></div>
-            <div style={{paddingTop:2}}><StatusBadge status={u.status}/></div>
-            <div style={amono({fontSize:11,color:AT.inkMute,paddingTop:4})}>{fmtDate(u.joinDate)}</div>
-            <div style={{paddingTop:2}}>
-              {u.flagged&&<span style={{color:AT.red,fontSize:12}}>⚑</span>}
-            </div>
+      <div style={{background:AT.bg3,border:`1px solid ${AT.border}`,borderRadius:8,padding:"20px 24px"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+          <div style={amono({fontSize:9,letterSpacing:"0.18em",textTransform:"uppercase",color:AT.inkMute})}>
+            Recent signups
           </div>
-        ))}
+          <button onClick={()=>onNavigate("users")}
+            style={{fontFamily:AF.mono,fontSize:9,letterSpacing:"0.12em",textTransform:"uppercase",
+              background:"none",border:`1px solid ${AT.border}`,borderRadius:99,
+              padding:"4px 12px",color:AT.inkMute,cursor:"pointer",flexShrink:0}}>
+            View all →
+          </button>
+        </div>
+        <div style={{display:"flex",flexDirection:"column",gap:0}}>
+          {(adminStats.recentUsers||[]).map((u,i)=>(
+            <div key={u.user_id||i} style={{
+              display:"grid",gridTemplateColumns:"1fr auto",gap:12,
+              alignItems:"center",padding:"10px 0",
+              borderBottom:i<(adminStats.recentUsers.length-1)?`1px solid ${AT.border}`:"none",
+            }}>
+              <div style={{minWidth:0}}>
+                <div style={{fontFamily:AF.display,fontWeight:600,fontSize:13,color:AT.ink,
+                  overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                  {u.email}
+                </div>
+                <div style={amono({fontSize:9,color:AT.inkMute,marginTop:2})}>
+                  {u.created_at?new Date(u.created_at).toLocaleDateString("en-US",
+                    {month:"short",day:"numeric",year:"numeric"}):"—"}
+                </div>
+              </div>
+              <span style={{fontFamily:AF.mono,fontSize:9,letterSpacing:"0.1em",textTransform:"uppercase",
+                background:`${AT.accent}18`,color:AT.accent,padding:"3px 8px",borderRadius:99,flexShrink:0}}>
+                {u.plan||"free"}
+              </span>
+            </div>
+          ))}
+          {(!adminStats.recentUsers||adminStats.recentUsers.length===0)&&(
+            <div style={amono({fontSize:11,color:AT.inkMute,padding:"16px 0",textAlign:"center"})}>
+              No users yet
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
@@ -6695,15 +6712,17 @@ function AdminSidebar({route,setRoute,flagCount,onSignOut,onBack=()=>{}}){
     <aside style={{background:AT.bg1,width:220,flexShrink:0,display:"flex",
       flexDirection:"column",borderRight:`1px solid ${AT.border}`,
       position:"sticky",top:0,height:"100vh",overflowY:"auto"}}>
-      <div style={{padding:"20px 16px 16px",borderBottom:`1px solid ${AT.border}`}}>
-        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:4}}>
-          <div style={{width:26,height:26,borderRadius:6,background:AT.accent,
-            display:"flex",alignItems:"center",justifyContent:"center",
-            fontFamily:AF.display,fontWeight:800,fontSize:10,color:"#fff"}}>LC</div>
-          <div style={adisp({fontWeight:700,fontSize:13,color:AT.ink})}>Admin Console</div>
+      <div style={{display:"flex",alignItems:"center",gap:10,padding:"16px 18px 14px",borderBottom:`1px solid ${AT.border}`}}>
+        <img src="/brand/logo-transparent.png" alt="LC Lighting Master"
+          style={{width:34,height:34,flexShrink:0,borderRadius:8,
+            border:"1px solid rgba(242,230,218,0.28)",
+            boxShadow:"0 0 14px rgba(232,160,32,0.35)"}}/>
+        <div>
+          <div style={{fontFamily:AF.display,fontWeight:700,fontSize:14,
+            color:"#F2E6DA",letterSpacing:"-0.01em",lineHeight:1.1}}>LC · Lighting Master</div>
+          <div style={{fontFamily:AF.mono,fontSize:9,letterSpacing:"0.14em",
+            textTransform:"uppercase",color:"rgba(242,230,218,0.4)",marginTop:2}}>Admin</div>
         </div>
-        <div style={amono({fontSize:8,letterSpacing:"0.16em",textTransform:"uppercase",
-          color:AT.inkMute})}>Lighting Master · luxartmedia.com</div>
       </div>
 
       <nav style={{padding:"8px 0",flex:1}}>
@@ -6755,8 +6774,70 @@ function AdminApp({onBack=()=>{}}){
   const [route, setRoute] = useState("overview")
   const [users, setUsers] = useState(SEED_USERS)
   const [selectedUser, setSelectedUser] = useState(null)
+  const [adminStats, setAdminStats] = useState({
+    totalUsers:0, planCounts:{}, revenue:0,
+    activeUsers:0, totalLessonsCompleted:0,
+    communityQuestions:0, feedbackCount:0,
+    recentUsers:[],
+  })
 
   const flagCount = users.filter(u=>u.flagged||u.status==="past_due").length
+
+  async function loadAdminStats(){
+    try{
+      const {count:totalUsers}=await supabase
+        .from("subscriptions").select("*",{count:"exact",head:true})
+
+      const {data:planData}=await supabase
+        .from("subscriptions").select("plan,email,created_at,user_id,status")
+
+      const planCounts={free:0,t1:0,t2:0,t3:0,team:0}
+      planData?.forEach(r=>{
+        if(planCounts[r.plan]!==undefined) planCounts[r.plan]++
+        else planCounts.free++
+      })
+
+      const PLAN_PRICES={t1:250,t2:395,t3:595,team:360}
+      const revenue=planData
+        ?.filter(r=>r.plan!=="free")
+        .reduce((s,r)=>s+(PLAN_PRICES[r.plan]||0),0)||0
+
+      const recentUsers=[...(planData||[])]
+        .sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))
+        .slice(0,10)
+        .map(u=>({...u,email:u.email||u.user_id?.slice(0,8)+"..."}))
+
+      const thirtyDaysAgo=new Date()
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate()-30)
+      const {count:activeUsers}=await supabase
+        .from("progress").select("user_id",{count:"exact",head:true})
+        .gte("completed_at",thirtyDaysAgo.toISOString())
+
+      const {count:totalLessonsCompleted}=await supabase
+        .from("progress").select("*",{count:"exact",head:true})
+
+      const {count:communityQuestions}=await supabase
+        .from("community_questions").select("*",{count:"exact",head:true})
+
+      const {count:feedbackCount}=await supabase
+        .from("feedback").select("*",{count:"exact",head:true})
+
+      setAdminStats({
+        totalUsers:           totalUsers||0,
+        planCounts,
+        revenue,
+        activeUsers:          activeUsers||0,
+        totalLessonsCompleted:totalLessonsCompleted||0,
+        communityQuestions:   communityQuestions||0,
+        feedbackCount:        feedbackCount||0,
+        recentUsers,
+      })
+    }catch(e){
+      console.error("loadAdminStats:",e)
+    }
+  }
+
+  useEffect(()=>{ loadAdminStats() },[])
 
   function handleSelectUser(user){
     setSelectedUser(user)
@@ -6791,7 +6872,7 @@ function AdminApp({onBack=()=>{}}){
       `}</style>
       <AdminSidebar route={route} setRoute={navigate} flagCount={flagCount} onSignOut={handleSignOut} onBack={onBack}/>
       <main style={{flex:1,padding:"32px 36px",overflowY:"auto",minHeight:"100vh"}}>
-        {route==="overview"     && <Overview users={users} onNavigate={navigate}/>}
+        {route==="overview"     && <Overview adminStats={adminStats} onNavigate={navigate}/>}
         {route==="users"        && <UsersView users={users} setUsers={setUsers} onSelectUser={handleSelectUser}/>}
         {route==="user-detail"  && selectedUser && <UserDetail user={selectedUser} onBack={()=>navigate("users")} onUpdate={handleUpdateUser}/>}
         {route==="subscriptions"&& <Subscriptions users={users}/>}
