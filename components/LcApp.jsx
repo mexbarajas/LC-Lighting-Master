@@ -5909,13 +5909,18 @@ function UserDetail({user,onBack,onUpdate}){
           ))}
         </div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:4}}>
-          {Array.from({length:12},(_,i)=>{
-            const done=i<user.modulesCompleted
+          {MODULES.map((mod,i)=>{
+            const cSet=new Set(user.completedRefs||[])
+            const total=mod.lessons.length
+            const done=mod.lessons.filter(l=>cSet.has(l.ref)).length
+            const full=done===total
+            const partial=done>0&&!full
             return(
-              <div key={i} style={{background:done?AT.green+"20":AT.bg4,
-                border:`1px solid ${done?AT.green+"40":AT.border}`,
+              <div key={i} style={{background:full?AT.green+"20":partial?AT.accent+"15":AT.bg4,
+                border:`1px solid ${full?AT.green+"40":partial?AT.accent+"30":AT.border}`,
                 borderRadius:4,padding:"6px",textAlign:"center"}}>
-                <div style={amono({fontSize:9,color:done?AT.green:AT.inkMute})}>M{String(i+1).padStart(2,"0")}</div>
+                <div style={amono({fontSize:9,color:full?AT.green:partial?AT.accent:AT.inkMute})}>M{mod.n}</div>
+                <div style={amono({fontSize:8,color:AT.inkMute,marginTop:1})}>{done}/{total}</div>
               </div>
             )
           })}
@@ -6087,38 +6092,45 @@ function Revenue({revenueMonths=[]}){
 /* ── CONTENT & PROGRESS ────────────────────────── */
 function ContentView({moduleStats=[]}){
   const ms=moduleStats
-  const maxComp=ms.length?Math.max(...ms.map(m=>m.completions),1):1
+  const maxStarted=ms.length?Math.max(...ms.map(m=>m.started||0),1):1
+  const totalLessons=ms.reduce((s,m)=>s+(m.completions||0),0)
+  const totalStarted=ms.reduce((s,m)=>s+(m.started||0),0)
+  const mostActive=ms.length?ms.reduce((a,b)=>(b.started||0)>(a.started||0)?b:a,ms[0]):null
   return(
     <div>
       <div style={adisp({fontWeight:700,fontSize:22,color:AT.ink,marginBottom:24})}>Content & Progress</div>
 
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:28}}>
-        <StatCard label="Modules with completions" value={ms.filter(m=>m.completions>0).length} sub={`of ${ms.length} modules`} color={AT.green}/>
-        <StatCard label="Most completed module" value={ms.length?ms.reduce((a,b)=>a.completions>b.completions?a:b,ms[0]).n:"—"} sub={ms.length?ms.reduce((a,b)=>a.completions>b.completions?a:b,ms[0]).title:""}/>
-        <StatCard label="Total module completions" value={ms.reduce((s,m)=>s+m.completions,0)} sub="users who finished all lessons"/>
+        <StatCard label="Modules with activity" value={ms.filter(m=>(m.started||0)>0).length} sub={`of ${ms.length} modules`} color={AT.green}/>
+        <StatCard label="Most active module" value={mostActive?`M${mostActive.n}`:"—"} sub={mostActive?.title||""}/>
+        <StatCard label="Total module completions" value={totalLessons} sub="users who finished all lessons"/>
       </div>
 
       {/* Module funnel */}
       <div style={{background:AT.bg3,border:`1px solid ${AT.border}`,borderRadius:8,padding:"24px",marginBottom:20}}>
-        <SectionTitle>Module completion funnel</SectionTitle>
+        <SectionTitle>Module activity funnel</SectionTitle>
         {ms.length===0?(
           <div style={{padding:"24px 0",textAlign:"center",color:AT.inkMute,fontFamily:AF.mono,fontSize:12}}>
-            No progress data yet — completions will appear as learners finish modules.
+            No progress data yet — activity will appear as learners start modules.
           </div>
         ):(
           <>
-            <TableHeader cols={[{label:"Module",w:"2fr"},{label:"Completed by",w:"140px"},{label:"",w:"1fr"}]}/>
-            {ms.map((mod,i)=>(
-              <div key={mod.n} style={{display:"grid",gridTemplateColumns:"2fr 140px 1fr",
-                gap:0,padding:"10px 16px",borderBottom:i<ms.length-1?`1px solid ${AT.border}`:"none"}}>
-                <div><span style={amono({fontSize:11,color:AT.accent,marginRight:10})}>M{mod.n}</span><span style={asans({fontSize:12,color:AT.ink})}>{mod.title}</span></div>
-                <div style={{display:"flex",alignItems:"center",gap:8,paddingTop:2}}>
-                  <MiniBar value={mod.completions} max={maxComp} color={AT.green}/>
-                  <span style={amono({fontSize:11,color:mod.completions>0?AT.green:AT.inkMute,width:20,flexShrink:0})}>{mod.completions}</span>
+            <TableHeader cols={[{label:"Module",w:"2fr"},{label:"Started",w:"90px"},{label:"",w:"1fr"},{label:"Finished",w:"80px"}]}/>
+            {ms.map((mod,i)=>{
+              const started=mod.started||0
+              const finished=mod.completions||0
+              return(
+                <div key={mod.n} style={{display:"grid",gridTemplateColumns:"2fr 90px 1fr 80px",
+                  gap:0,padding:"10px 16px",borderBottom:i<ms.length-1?`1px solid ${AT.border}`:"none"}}>
+                  <div><span style={amono({fontSize:11,color:AT.accent,marginRight:10})}>M{mod.n}</span><span style={asans({fontSize:12,color:AT.ink})}>{mod.title}</span></div>
+                  <div style={amono({fontSize:11,color:started>0?AT.ink:AT.inkMute,paddingTop:2})}>{started}</div>
+                  <div style={{display:"flex",alignItems:"center",paddingTop:2}}>
+                    <MiniBar value={started} max={maxStarted} color={AT.accent}/>
+                  </div>
+                  <div style={amono({fontSize:11,color:finished>0?AT.green:AT.inkMute,paddingTop:2})}>{finished>0?`${finished} ✓`:"—"}</div>
                 </div>
-                <div/>
-              </div>
-            ))}
+              )
+            })}
           </>
         )}
       </div>
@@ -6581,8 +6593,10 @@ function AdminApp({onBack=()=>{}}){
       })
       const moduleStats=MODULES.map(m=>{
         const lessonRefs=m.lessons.map(l=>l.ref)
-        const completions=Object.values(userRefs).filter(refs=>lessonRefs.every(r=>refs.has(r))).length
-        return{n:m.n,title:m.title,completions}
+        const allRefs=Object.values(userRefs)
+        const completions=allRefs.filter(refs=>lessonRefs.every(r=>refs.has(r))).length
+        const started=allRefs.filter(refs=>lessonRefs.some(r=>refs.has(r))).length
+        return{n:m.n,title:m.title,completions,started}
       })
       setAdminStats({
         totalUsers:           subscriptions.length,
@@ -6626,7 +6640,8 @@ function AdminApp({onBack=()=>{}}){
           lastActive:prog.lastActive,
           stripeId:s.stripe_customer_id||null,
           amount,progress:pct,
-          modulesCompleted:Math.round(pct/100*12),
+          completedRefs:[...prog.refs],
+          modulesCompleted:MODULES.filter(m=>m.lessons.every(l=>prog.refs.has(l.ref))).length,
           examAttempts:0,examBestScore:null,
           flagged:false,notes:'',
         }

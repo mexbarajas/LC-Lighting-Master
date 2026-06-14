@@ -16,7 +16,7 @@ export async function GET(request) {
     { count: feedbackCount },
   ] = await Promise.all([
     supabase.from('subscriptions').select('*'),
-    supabase.from('progress').select('user_id,lesson_ref,completed_at'),
+    supabase.from('progress').select('*'),
     supabase.from('community_questions').select('*', { count: 'exact', head: true }),
     supabase.from('feedback').select('*', { count: 'exact', head: true }),
   ])
