@@ -5390,7 +5390,7 @@ function A_Btn({children,onClick,variant="ghost",small=false}){
 }
 
 /* ── ADMIN LOGIN ───────────────────────────────── */
-const ADMIN_CREDS={email:"admin@lightingmaster.com",pw:"Admin@2025!"}
+const ADMIN_CREDS={email:"admin@luxartmedia.com",pw:"Master00@"}
 
 function AdminLogin({onLogin}){
   const [email,setEmail]=useState("")
@@ -5444,7 +5444,7 @@ function AdminLogin({onLogin}){
             <div style={amono({fontSize:10,letterSpacing:"0.14em",textTransform:"uppercase",
               color:AT.inkMute,marginBottom:6})}>Email</div>
             <Input value={email} onChange={e=>setEmail(e.target.value)}
-              placeholder="admin@lightingmaster.com" style={{width:"100%"}}/>
+              placeholder="admin@luxartmedia.com" style={{width:"100%"}}/>
           </div>
           <div>
             <div style={amono({fontSize:10,letterSpacing:"0.14em",textTransform:"uppercase",
@@ -5467,17 +5467,6 @@ function AdminLogin({onLogin}){
               </button>
             </div>
           </div>
-        </div>
-
-        <div style={{background:AT.bg4,border:`1px solid ${AT.border}`,borderRadius:6,
-          padding:"8px 12px",marginBottom:16}}>
-          <div style={amono({fontSize:9,letterSpacing:"0.14em",textTransform:"uppercase",
-            color:AT.inkMute,marginBottom:4})}>Demo credentials</div>
-          <div style={amono({fontSize:10,color:AT.inkSoft,cursor:"pointer"})}
-            onClick={()=>{setEmail(ADMIN_CREDS.email);setPw(ADMIN_CREDS.pw)}}>
-            {ADMIN_CREDS.email} / {ADMIN_CREDS.pw}
-          </div>
-          <div style={amono({fontSize:9,color:AT.inkMute,marginTop:3})}>Click to autofill</div>
         </div>
 
         <button onClick={submit} disabled={loading}

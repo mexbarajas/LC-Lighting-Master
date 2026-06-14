@@ -1,6 +1,6 @@
 import { createServiceClient } from '@/lib/supabase/service'
 
-const ADMIN_PW = process.env.ADMIN_PASSWORD || 'Admin@2025!'
+const ADMIN_PW = process.env.ADMIN_PASSWORD || 'Master00@'
 
 export async function GET(request) {
   if (request.headers.get('x-admin-password') !== ADMIN_PW) {
