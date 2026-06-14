@@ -63,7 +63,7 @@ export async function POST(request) {
     quantity = 1
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://lightingmasterlc.com'
+  const appUrl = 'https://lightingmasterlc.com'
 
   try {
     const checkoutSession = await stripe.checkout.sessions.create({
