@@ -2107,6 +2107,8 @@ function FilamentBar({pct,color,glow,h=5}) {
 
 function isLessonLocked(lessonRef, user) {
   const plan = user?.plan || 'free'
+  const status = user?.status || 'free'
+  if (status === 'refunded' || status === 'disputed') return true
   if (plan === 't2' || plan === 't3') return false
   if (plan === 't1') return true
   const moduleNum = parseInt(lessonRef.split('.')[0])
@@ -3543,7 +3545,8 @@ function AccountPage({ user, setUser, setRoute }) {
   const PLAN_LABELS = { free: 'Free', t1: 'LC Preparation Test', t2: 'Full Course', t3: 'Full Course + Exam', team_admin: 'Team Plan', team_member: 'Team Plan' }
   const planKey = user?.plan || 'free'
   const planName = PLAN_LABELS[planKey] || 'Free'
-  const isPaid = planKey !== 'free'
+  const isActiveStatus = user?.status === 'active'
+  const isPaid = isActiveStatus && planKey !== 'free'
 
   const tabs = [["profile","Profile"],["billing","Billing"],["notifications","Notifications"]]
   return (
@@ -4319,7 +4322,8 @@ function getNextLesson(completedLessons) {
 /* ── COMMUNITY KNOWLEDGE HUB ─────────────────────────────── */
 function CommunityPage({ setRoute, user }) {
   const supabase = createClient()
-  const isPaid = ['t1','t2','t3'].includes(user?.plan)
+  const isActiveStatus = ['active'].includes(user?.status)
+  const isPaid = isActiveStatus && ['t1','t2','t3'].includes(user?.plan)
 
   const [view, setView] = useState('list')
   const [questions, setQuestions] = useState([])

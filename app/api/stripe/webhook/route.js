@@ -1,3 +1,9 @@
+// IMPORTANT: Register these events in Stripe Dashboard:
+// Stripe → Developers → Webhooks → your endpoint → Add events:
+//   ✅ checkout.session.completed  (already registered)
+//   ✅ charge.refunded             (ADD THIS)
+//   ✅ charge.dispute.created      (ADD THIS)
+
 // Run in Supabase SQL Editor if not already present:
 // ALTER TABLE public.subscriptions
 //   ADD COLUMN IF NOT EXISTS seats integer DEFAULT 1,
@@ -118,6 +124,80 @@ export async function POST(request) {
     if (error) {
       console.error('Supabase write error:', error)
       return new Response('Database error', { status: 500 })
+    }
+  }
+
+  // ── REFUND HANDLER ────────────────────────────────────
+  if (event.type === 'charge.refunded') {
+    const charge = event.data.object
+
+    const isFullRefund = charge.amount_refunded >= charge.amount
+    if (!isFullRefund) {
+      console.log('Partial refund — no access change')
+      return new Response('Partial refund ignored', { status: 200 })
+    }
+
+    const customerId = charge.customer
+    const paymentIntent = charge.payment_intent
+
+    if (!customerId && !paymentIntent) {
+      console.error('Refund: no customer or payment intent on charge')
+      return new Response('Missing identifiers', { status: 200 })
+    }
+
+    const supabase = createServiceClient()
+    let result
+
+    if (customerId) {
+      result = await supabase
+        .from('subscriptions')
+        .update({
+          plan:                  'free',
+          status:                'refunded',
+          current_period_end:    null,
+          exam_addon:            false,
+          stripe_payment_intent: paymentIntent || null,
+          updated_at:            new Date().toISOString(),
+        })
+        .eq('stripe_customer_id', customerId)
+    } else {
+      result = await supabase
+        .from('subscriptions')
+        .update({
+          plan:               'free',
+          status:             'refunded',
+          current_period_end: null,
+          exam_addon:         false,
+          updated_at:         new Date().toISOString(),
+        })
+        .eq('stripe_payment_intent', paymentIntent)
+    }
+
+    if (result.error) {
+      console.error('Refund DB update error:', result.error)
+      return new Response('DB error', { status: 500 })
+    }
+
+    console.log(`✓ Refund processed — access revoked for customer ${customerId}`)
+  }
+
+  // ── DISPUTE / CHARGEBACK HANDLER ─────────────────────
+  if (event.type === 'charge.dispute.created') {
+    const dispute = event.data.object
+    const customerId = dispute.customer
+
+    if (customerId) {
+      const supabase = createServiceClient()
+      await supabase
+        .from('subscriptions')
+        .update({
+          plan:       'free',
+          status:     'disputed',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('stripe_customer_id', customerId)
+
+      console.log(`⚠ Dispute created — access suspended for customer ${customerId}`)
     }
   }
 
