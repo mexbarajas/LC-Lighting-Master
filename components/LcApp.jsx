@@ -6528,36 +6528,33 @@ function AdminApp({onBack=()=>{}}){
 
   const flagCount = users.filter(u=>u.flagged||u.status==="past_due").length
 
-  async function loadAdminStats(){
+  async function loadAdminData(){
     try{
-      const {count:totalUsers}=await supabase
-        .from("subscriptions").select("*",{count:"exact",head:true})
+      const res=await fetch('/api/admin/data',{
+        headers:{'x-admin-password':ADMIN_CREDS.pw}
+      })
+      if(!res.ok) throw new Error(`Admin API ${res.status}`)
+      const {subscriptions,progress,communityQuestions,feedbackCount}=await res.json()
 
-      const {data:planData}=await supabase
-        .from("subscriptions").select("plan,email,created_at,user_id,status,seats")
-
+      // ── Stats ─────────────────────────────────────
+      const PLAN_PRICES={t1:250,t2:395,t3:595,team:360}
       const planCounts={free:0,t1:0,t2:0,t3:0,team:0}
-      planData?.forEach(r=>{
+      subscriptions.forEach(r=>{
         if(planCounts[r.plan]!==undefined) planCounts[r.plan]++
         else planCounts.free++
       })
-
-      const PLAN_PRICES={t1:250,t2:395,t3:595,team:360}
-      const revenue=planData
-        ?.filter(r=>r.plan!=="free")
+      const revenue=subscriptions
+        .filter(r=>r.plan!=="free")
         .reduce((s,r)=>{
           const price=r.plan==="team"?(r.seats||1)*360:(PLAN_PRICES[r.plan]||0)
           return s+price
-        },0)||0
-
-      const recentUsers=[...(planData||[])]
+        },0)
+      const recentUsers=[...subscriptions]
         .sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))
         .slice(0,10)
         .map(u=>({...u,email:u.email||u.user_id?.slice(0,8)+"..."}))
-
-      // Monthly revenue grouped by created_at
       const revMap={}
-      planData?.filter(r=>r.plan!=="free"&&r.created_at).forEach(r=>{
+      subscriptions.filter(r=>r.plan!=="free"&&r.created_at).forEach(r=>{
         const d=new Date(r.created_at)
         const key=d.toLocaleDateString("en-US",{month:"short",year:"numeric"})
         if(!revMap[key]) revMap[key]={month:key,mrr:0,t1:0,t2:0,t3:0,team:0,users:0}
@@ -6567,22 +6564,13 @@ function AdminApp({onBack=()=>{}}){
         revMap[key].users++
       })
       const revenueMonths=Object.values(revMap).sort((a,b)=>new Date(a.month)-new Date(b.month))
-
       const thirtyDaysAgo=new Date()
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate()-30)
-      const {data:recentProgress}=await supabase
-        .from("progress").select("user_id")
-        .gte("completed_at",thirtyDaysAgo.toISOString())
-      const activeUsers=new Set(recentProgress?.map(r=>r.user_id)).size
-
-      const {count:totalLessonsCompleted}=await supabase
-        .from("progress").select("*",{count:"exact",head:true})
-
-      // Module completion stats
-      const {data:allProgress}=await supabase
-        .from("progress").select("user_id,lesson_ref")
+      const activeUsers=new Set(
+        progress.filter(p=>p.completed_at>=thirtyDaysAgo.toISOString()).map(p=>p.user_id)
+      ).size
       const userRefs={}
-      allProgress?.forEach(p=>{
+      progress.forEach(p=>{
         if(!userRefs[p.user_id]) userRefs[p.user_id]=new Set()
         userRefs[p.user_id].add(p.lesson_ref)
       })
@@ -6591,39 +6579,22 @@ function AdminApp({onBack=()=>{}}){
         const completions=Object.values(userRefs).filter(refs=>lessonRefs.every(r=>refs.has(r))).length
         return{n:m.n,title:m.title,completions}
       })
-
-      const {count:communityQuestions}=await supabase
-        .from("community_questions").select("*",{count:"exact",head:true})
-
-      const {count:feedbackCount}=await supabase
-        .from("feedback").select("*",{count:"exact",head:true})
-
       setAdminStats({
-        totalUsers:           totalUsers||0,
+        totalUsers:           subscriptions.length,
         planCounts,
         revenue,
-        activeUsers:          activeUsers||0,
-        totalLessonsCompleted:totalLessonsCompleted||0,
-        communityQuestions:   communityQuestions||0,
-        feedbackCount:        feedbackCount||0,
+        activeUsers,
+        totalLessonsCompleted:progress.length,
+        communityQuestions,
+        feedbackCount,
         recentUsers,
         revenueMonths,
         moduleStats,
       })
-    }catch(e){
-      console.error("loadAdminStats:",e)
-    }
-  }
 
-  async function loadUsers(){
-    try{
-      const {data:subs}=await supabase
-        .from("subscriptions")
-        .select("user_id,plan,status,email,stripe_customer_id,seats,updated_at,created_at")
-      const {data:progRows}=await supabase
-        .from("progress").select("user_id,lesson_ref,completed_at")
+      // ── Users ─────────────────────────────────────
       const progMap={}
-      progRows?.forEach(p=>{
+      progress.forEach(p=>{
         if(!progMap[p.user_id]){progMap[p.user_id]={refs:new Set(),lastActive:null}}
         progMap[p.user_id].refs.add(p.lesson_ref)
         if(!progMap[p.user_id].lastActive||p.completed_at>progMap[p.user_id].lastActive)
@@ -6631,7 +6602,7 @@ function AdminApp({onBack=()=>{}}){
       })
       const PP={t1:250,t2:395,t3:595}
       const cap=w=>w?(w[0].toUpperCase()+w.slice(1)):''
-      setUsers((subs||[]).map(s=>{
+      setUsers(subscriptions.map(s=>{
         const prog=progMap[s.user_id]||{refs:new Set(),lastActive:null}
         const pct=Math.round((prog.refs.size/74)*100)
         const local=(s.email||'').split('@')[0]
@@ -6656,11 +6627,11 @@ function AdminApp({onBack=()=>{}}){
         }
       }))
     }catch(e){
-      console.error("loadUsers:",e)
+      console.error("loadAdminData:",e)
     }
   }
 
-  useEffect(()=>{ loadAdminStats(); loadUsers() },[])
+  useEffect(()=>{ loadAdminData() },[])
 
   function handleSelectUser(user){
     setSelectedUser(user)
