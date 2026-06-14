@@ -30,6 +30,19 @@
 // SELECT column_name, data_type
 // FROM information_schema.columns
 // WHERE table_name = 'subscriptions';
+//
+// Run in Supabase SQL Editor to speed up refund lookups:
+// CREATE INDEX IF NOT EXISTS idx_subscriptions_email
+//   ON public.subscriptions(email)
+//   WHERE email IS NOT NULL;
+//
+// CREATE INDEX IF NOT EXISTS idx_subscriptions_customer
+//   ON public.subscriptions(stripe_customer_id)
+//   WHERE stripe_customer_id IS NOT NULL;
+//
+// CREATE INDEX IF NOT EXISTS idx_subscriptions_payment
+//   ON public.subscriptions(stripe_payment_intent)
+//   WHERE stripe_payment_intent IS NOT NULL;
 
 import Stripe from 'stripe'
 import { createServiceClient } from '@/lib/supabase/service'
@@ -92,34 +105,24 @@ export async function POST(request) {
       }
     }
 
-    let error
-    if (plan === 'exam_addon') {
-      // Add exam access to existing subscription without changing the plan
-      ;({ error } = await supabase
-        .from('subscriptions')
-        .update({
-          exam_addon:            true,
-          stripe_payment_intent: session.payment_intent || null,
-          updated_at:            new Date().toISOString(),
-        })
-        .eq('user_id', userId))
-      if (!error) console.log(`✓ exam_addon activated for user ${userId}`)
-    } else {
-      ;({ error } = await supabase
-        .from('subscriptions')
-        .upsert({
-          user_id:               userId,
-          plan:                  plan,
-          status:                'active',
-          email:                 session.customer_email || null,
-          stripe_customer_id:    session.customer || null,
-          stripe_payment_intent: session.payment_intent || null,
-          current_period_end:    expiry.toISOString(),
-          seats:                 plan === 'team' ? seats : 1,
-          updated_at:            new Date().toISOString(),
-        }, { onConflict: 'user_id' }))
-      if (!error) console.log(`✓ Plan ${plan} activated for user ${userId}, expires ${expiry.toISOString()}`)
-    }
+    const { error } = await supabase
+      .from('subscriptions')
+      .upsert({
+        user_id:               userId,
+        plan:                  plan,
+        status:                'active',
+        stripe_customer_id:    session.customer || null,
+        stripe_payment_intent: session.payment_intent || null,
+        email:                 session.customer_email || null,
+        current_period_end:    expiry.toISOString(),
+        seats:                 plan === 'team' ? seats : 1,
+        exam_addon:            plan === 'exam_addon' ? true : false,
+        updated_at:            new Date().toISOString(),
+      }, { onConflict: 'user_id' })
+
+    console.log('Stored stripe_customer_id:', session.customer)
+    console.log('Stored payment_intent:', session.payment_intent)
+    console.log('Stored email:', session.customer_email)
 
     if (error) {
       console.error('Supabase write error:', error)
@@ -130,55 +133,78 @@ export async function POST(request) {
   // ── REFUND HANDLER ────────────────────────────────────
   if (event.type === 'charge.refunded') {
     const charge = event.data.object
-
     const isFullRefund = charge.amount_refunded >= charge.amount
+
+    console.log('Refund event:', {
+      customer:       charge.customer,
+      paymentIntent:  charge.payment_intent,
+      receiptEmail:   charge.receipt_email,
+      isFullRefund,
+      amountRefunded: charge.amount_refunded,
+      amount:         charge.amount,
+    })
+
     if (!isFullRefund) {
-      console.log('Partial refund — no access change')
-      return new Response('Partial refund ignored', { status: 200 })
-    }
-
-    const customerId = charge.customer
-    const paymentIntent = charge.payment_intent
-
-    if (!customerId && !paymentIntent) {
-      console.error('Refund: no customer or payment intent on charge')
-      return new Response('Missing identifiers', { status: 200 })
+      return new Response('Partial refund — no action', { status: 200 })
     }
 
     const supabase = createServiceClient()
-    let result
-
-    if (customerId) {
-      result = await supabase
-        .from('subscriptions')
-        .update({
-          plan:                  'free',
-          status:                'refunded',
-          current_period_end:    null,
-          exam_addon:            false,
-          stripe_payment_intent: paymentIntent || null,
-          updated_at:            new Date().toISOString(),
-        })
-        .eq('stripe_customer_id', customerId)
-    } else {
-      result = await supabase
-        .from('subscriptions')
-        .update({
-          plan:               'free',
-          status:             'refunded',
-          current_period_end: null,
-          exam_addon:         false,
-          updated_at:         new Date().toISOString(),
-        })
-        .eq('stripe_payment_intent', paymentIntent)
+    let updated = false
+    const revokePayload = {
+      plan:               'free',
+      status:             'refunded',
+      current_period_end: null,
+      exam_addon:         false,
+      updated_at:         new Date().toISOString(),
     }
 
-    if (result.error) {
-      console.error('Refund DB update error:', result.error)
-      return new Response('DB error', { status: 500 })
+    // Try 1: match by stripe_customer_id
+    if (charge.customer) {
+      const { data, error } = await supabase
+        .from('subscriptions')
+        .update(revokePayload)
+        .eq('stripe_customer_id', charge.customer)
+        .select()
+      if (!error && data?.length > 0) {
+        updated = true
+        console.log('✓ Refund: matched by customer ID', charge.customer)
+      }
     }
 
-    console.log(`✓ Refund processed — access revoked for customer ${customerId}`)
+    // Try 2: match by stripe_payment_intent
+    if (!updated && charge.payment_intent) {
+      const { data, error } = await supabase
+        .from('subscriptions')
+        .update(revokePayload)
+        .eq('stripe_payment_intent', charge.payment_intent)
+        .select()
+      if (!error && data?.length > 0) {
+        updated = true
+        console.log('✓ Refund: matched by payment intent', charge.payment_intent)
+      }
+    }
+
+    // Try 3: match by email
+    if (!updated && charge.receipt_email) {
+      const { data, error } = await supabase
+        .from('subscriptions')
+        .update(revokePayload)
+        .eq('email', charge.receipt_email.toLowerCase())
+        .select()
+      if (!error && data?.length > 0) {
+        updated = true
+        console.log('✓ Refund: matched by email', charge.receipt_email)
+      }
+    }
+
+    if (!updated) {
+      console.error('✗ Refund: could not find user to revoke', {
+        customer:      charge.customer,
+        paymentIntent: charge.payment_intent,
+        email:         charge.receipt_email,
+      })
+      // Return 200 so Stripe doesn't keep retrying — handle edge cases manually
+    }
   }
 
   // ── DISPUTE / CHARGEBACK HANDLER ─────────────────────
