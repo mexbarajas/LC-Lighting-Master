@@ -2762,33 +2762,33 @@ function ExamPage({setRoute, isMobile=false}) {
 /* ── MODULE LESSON VIEW ── */
 /* ── PER-MODULE SHARE COPY ── */
 const MODULE_SHARE_COPY = {
-  '01': "Just completed Module 01 of LC · Lighting Master: Theory, Light, Sight & Color. Covered the visible spectrum, SPD, photopic vs scotopic vision, color rendering (CRI, TM-30), CCT, and the four photometric quantities — lumens, candelas, lux, and luminance. NCQLP prep in progress. 💡",
-  '02': "Module 02 done — Light Sources & Ballasts. Deep dive into fluorescent, HID, HPS, metal halide, and LED fundamentals. Covered efficacy, lumen maintenance, ballast types, and source selection criteria for commercial specs. 2 CEU hrs earned. 💡",
-  '03': "Module 03 complete — LED Technology Deep Dive. Junction physics, phosphor conversion, binning, SDCM, driver types, dimming protocols (0-10V, DALI, PWM), LM-80 lumen maintenance, and TM-21 lifetime projections. The technical backbone of modern lighting. 💡",
-  '04': "Module 04 done — Photometry & IES Files. Covered LM-79 full luminaire testing, LM-63 IES file structure, point-by-point calculations, the cosine law, zonal cavity method, and DLC qualification requirements. NCQLP math section covered. 💡",
-  '05': "Module 05 complete — Lighting Controls. Covered occupancy vs vacancy sensors, photosensors, DALI vs 0-10V, daylight harvesting (closed-loop vs open-loop), ASHRAE 90.1 controls requirements, and LEED v4.1 sDA/ASE metrics. 💡",
-  '06': "Module 06 done — Downlighting & Interior Design. Trim selection, beam spread, spacing criteria, wall washing vs wall grazing, glare control (UGR), layered lighting design, and hospitality vs office application strategies. 💡",
-  '07': "Module 07 complete — Exterior, Emergency & Codes. BUG ratings, light trespass, IESNA RP-8 roadway standards, NFPA 101 emergency lighting (1fc, 90 min, 10 sec), egress path requirements, and Title 24 outdoor LPD. 💡",
-  '08': "Module 08 done — Industrial Lighting & Human Health. High-bay design, IP/IK ratings, hazardous location classifications (Class I/II/III), circadian entrainment, melanopic lux (EML), WELL v2 L04, and flicker standards. 💡",
-  '09': "Module 09 complete — Energy, Environment & Sustainable Design. ASHRAE 90.1 LPD compliance, LEED v4.1 credits, Title 24 whole-building approach, DLC QPL, energy modeling, and sustainable material spec for luminaires. 💡",
-  '10': "Module 10 done — Design Process I: Programming to Design Development. Covered lighting programming, schematic design deliverables, photometric software workflow, mock-up strategy, DD submittal requirements, and client presentation techniques. 💡",
-  '11': "Module 11 complete — Design Process II: Construction Documents to POE. CD set components (RCP, fixture schedule, controls drawings), specification writing (CSI Div 26), construction administration, punch lists, and post-occupancy evaluation. 💡",
-  '12': "All 12 modules of LC · Lighting Master — COMPLETE. 74 lessons, 24 CEU credit hours, and the full NCQLP blueprint covered: photometry, LED tech, controls, codes, energy compliance, and design process. Exam ready. 💡",
+  "01": `Module 01 complete — Light & the Visual Environment. Electromagnetic spectrum, photopic vs scotopic vision, the inverse square law, footcandles vs lux, luminous efficacy, and the fundamentals that underpin every lighting calculation. 💡 I strongly recommend this course at lightingmasterlc.com`,
+  "02": `Module 02 complete — Light Sources & Lamps. Incandescent, fluorescent, HID, and LED technology compared. Lamp life, lumen depreciation, CCT, CRI, TM-30 Rf and Rg, and how to select the right source for any application. 💡 I strongly recommend this course at lightingmasterlc.com`,
+  "03": `Module 03 complete — LED Technology Deep Dive. COB, SMD, discrete, filament, tape, high-power, UV, IR, and OLED packages. Thermal management, lumen maintenance, L70/L80/L90 ratings, LEED v4.1 EQ credits, and WELL Building Standard melanopic lux targets. 💡 I strongly recommend this course at lightingmasterlc.com`,
+  "04": `Module 04 complete — Lighting Controls & Systems. DALI, 0-10V dimming, occupancy and daylight sensors, BACnet integration, Title 24 mandatory controls, ASHRAE 90.1 lighting control requirements, and demand response strategies. 💡 I strongly recommend this course at lightingmasterlc.com`,
+  "05": `Module 05 complete — Photometry & Luminaire Performance. IES files, candela distribution curves, spacing criteria, coefficient of utilization, the zonal cavity method, luminance ratios, glare metrics UGR and VCP. 💡 I strongly recommend this course at lightingmasterlc.com`,
+  "06": `Module 06 complete — Interior Lighting Design. Illuminance targets per task, layered lighting, accent ratios, color rendering in retail and healthcare, office lighting ergonomics, museum conservation lux limits, and hospitality atmosphere design. 💡 I strongly recommend this course at lightingmasterlc.com`,
+  "07": `Module 07 complete — Exterior, Emergency & Codes. BUG ratings, light trespass, IESNA RP-8 roadway standards, IES distribution Types I–V, NFPA 101 emergency lighting (1fc, 90 min, 10 sec), egress path requirements, and Title 24 outdoor LPD. 💡 I strongly recommend this course at lightingmasterlc.com`,
+  "08": `Module 08 complete — Energy Codes & Standards. ASHRAE 90.1 LPD tables, building area vs space-by-space methods, Title 24 residential and nonresidential, IECC compliance paths, EPAct, energy modeling basics, and power allowance calculations. 💡 I strongly recommend this course at lightingmasterlc.com`,
+  "09": `Module 09 complete — Daylighting & Human-Centric Lighting. sDA, ASE, daylight autonomy, Ev and melanopic lux, circadian entrainment, tunable white strategies, WELL L01–L09 requirements, glare control with dynamic shading, and daylight harvesting controls. 💡 I strongly recommend this course at lightingmasterlc.com`,
+  "10": `Module 10 complete — Lighting Economics & Project Management. Life-cycle cost analysis, simple payback vs ROI, utility rebate programs, lighting audits, retrofit project scoping, maintenance factor calculations, and group relamping strategies. 💡 I strongly recommend this course at lightingmasterlc.com`,
+  "11": `Module 11 complete — Sustainability & Green Building. LEED v4.1 BD+C lighting credits, WELL Building Standard Light concept, LCA for luminaires, DLC QPL qualification, EnergyStar luminaire requirements, and how to document compliance for third-party certification. 💡 I strongly recommend this course at lightingmasterlc.com`,
+  "12": `Module 12 complete — Lighting Design Practice & Documentation. Design process from schematic to construction documents, photometric reports, lighting schedules, point-by-point calculations, commissioning checklists, RFIs, submittals, and post-occupancy evaluation. 💡 I strongly recommend this course at lightingmasterlc.com`,
 }
 
 const MODULE_HASHTAGS = {
-  '01': "#NCQLP #LightingDesign #ColorRendering #CRI #TM30 #Photometry #LightingCertified #IES #IESNA #LightingEducation #LC #Luxart lightingmasterlc.com",
-  '02': "#NCQLP #LightingDesign #LEDLighting #LightSources #HID #MetalHalide #LightingSpec #IES #LightingCertified #LC #Luxart lightingmasterlc.com",
-  '03': "#NCQLP #LEDTechnology #DALIDimming #LM80 #TM21 #LumenMaintenance #LEDDrivers #IES #LightingDesign #LightingCertified #LC #Luxart lightingmasterlc.com",
-  '04': "#NCQLP #Photometry #IESFile #LM79 #DLC #ZonalCavity #LightingMath #IES #IESNA #LightingDesign #LightingCertified #LC #Luxart lightingmasterlc.com",
-  '05': "#NCQLP #LightingControls #DALI #DaylightHarvesting #ASHRAE901 #LEEDv4 #SmartLighting #IES #LightingDesign #LightingCertified #LC #Luxart lightingmasterlc.com",
-  '06': "#NCQLP #LightingDesign #Downlighting #UGR #GlareControl #InteriorDesign #WallWash #IES #IESNA #LightingCertified #LC #Luxart lightingmasterlc.com",
-  '07': "#NCQLP #ExteriorLighting #BUGRating #NFPA101 #EmergencyLighting #Title24 #LightTrespass #IES #LightingDesign #LightingCertified #LC #Luxart lightingmasterlc.com",
-  '08': "#NCQLP #IndustrialLighting #CircadianLighting #WELLBuilding #MelanopicLux #HazardousLocation #HighBay #IES #LightingDesign #LightingCertified #LC #Luxart lightingmasterlc.com",
-  '09': "#NCQLP #SustainableLighting #ASHRAE901 #LEEDv4 #DLC #EnergyEfficiency #GreenBuilding #IES #LightingDesign #LightingCertified #LC #Luxart lightingmasterlc.com",
-  '10': "#NCQLP #LightingDesign #DesignProcess #Photometrics #LightingSpec #ArchitecturalLighting #IES #IESNA #LightingCertified #LC #Luxart lightingmasterlc.com",
-  '11': "#NCQLP #LightingDesign #ConstructionDocuments #CSISpec #LightingCA #RCP #IES #ArchitecturalLighting #LightingCertified #LC #Luxart lightingmasterlc.com",
-  '12': "#NCQLP #LightingCertified #LightingDesign #IES #IESNA #DALI #ASHRAE #LEEDv4 #WELLBuilding #DLC #Title24 #LC #Luxart #ExamReady lightingmasterlc.com",
+  "01": `#NCQLP #LightingCertified #LC #IES #LightingDesign #LightingEducation #LightingScience #PhotopicVision #InverseSquareLaw #Footcandles #LumensVsLux #LightingProfessional #LuxartMedia lightingmasterlc.com`,
+  "02": `#NCQLP #LightingCertified #LC #IES #LEDLighting #LightSources #CRI #TM30 #ColorRenderingIndex #CCT #LampDepreciation #LightingEducation #LightingProfessional #LuxartMedia lightingmasterlc.com`,
+  "03": `#NCQLP #LightingCertified #LC #IES #LEDTechnology #COBled #SMDled #OLEDlighting #LEED #WELLBuilding #MelanopicLux #CircadianLighting #LumenMaintenance #L70 #LightingEducation #LuxartMedia lightingmasterlc.com`,
+  "04": `#NCQLP #LightingCertified #LC #IES #LightingControls #DALI #Dimming #OccupancySensor #DaylightHarvesting #Title24 #ASHRAE901 #BACnet #SmartLighting #LightingAutomation #LuxartMedia lightingmasterlc.com`,
+  "05": `#NCQLP #LightingCertified #LC #IES #Photometry #IESfiles #CandalaDistribution #ZonalCavityMethod #CoefficientOfUtilization #UGR #Glare #LuminanceRatio #SpacingCriteria #LightingEducation #LuxartMedia lightingmasterlc.com`,
+  "06": `#NCQLP #LightingCertified #LC #IES #InteriorLighting #LightingDesign #RetailLighting #HealthcareLighting #HospitalityLighting #MuseumLighting #OfficeErgonomics #LayeredLighting #LightingProfessional #LuxartMedia lightingmasterlc.com`,
+  "07": `#NCQLP #LightingCertified #LC #IES #ExteriorLighting #BUGrating #LightTrespass #IESNARPP8 #RoadwayLighting #EmergencyLighting #NFPA101 #EgressLighting #Title24 #OutdoorLighting #LuxartMedia lightingmasterlc.com`,
+  "08": `#NCQLP #LightingCertified #LC #IES #EnergyCode #ASHRAE901 #LPD #Title24 #IECC #EnergyEfficiency #LightingPowerDensity #GreenBuilding #EnergyModeling #LightingCompliance #LuxartMedia lightingmasterlc.com`,
+  "09": `#NCQLP #LightingCertified #LC #IES #Daylighting #HumanCentricLighting #CircadianLighting #WELL #sDA #MelanopicLux #TunableWhite #DaylightAutonomy #BiophilicDesign #HealthyBuildings #LuxartMedia lightingmasterlc.com`,
+  "10": `#NCQLP #LightingCertified #LC #IES #LightingEconomics #LifeCycleCost #LightingAudit #EnergyRetrofit #UtilityRebate #ROI #MaintenanceFactor #LightingROI #GreenBuilding #SustainableLighting #LuxartMedia lightingmasterlc.com`,
+  "11": `#NCQLP #LightingCertified #LC #IES #Sustainability #LEED #WELLBuilding #DLC #EnergyStar #GreenBuilding #SustainableLighting #LightingCertification #NetZero #CircularEconomy #LuxartMedia lightingmasterlc.com`,
+  "12": `#NCQLP #LightingCertified #LC #IES #LightingDesign #LightingDocumentation #PhotometricReport #LightingCommissioning #ConstructionDocuments #LightingSchedule #DesignProcess #LightingProfessional #LuxartMedia lightingmasterlc.com`,
 }
 
 /* ── SHARE BUTTON (used inside ModuleCompleteModal) ── */
@@ -2814,7 +2814,7 @@ function ModuleCompleteModal({module, courseComplete, onClose, onNextLesson, nex
   const shareBody=MODULE_SHARE_COPY[moduleKey]||`I just completed Module ${module.n}: ${module.title} in LC · Lighting Master. ${module.ceu} CEU credit hours earned. 💡`
   const hashtags=MODULE_HASHTAGS[moduleKey]||"#NCQLP #LightingDesign #IES #LightingCertified #LC"
   const shareText=shareBody+"\n\n"+hashtags
-  const shareUrl="https://master-lighting.vercel.app"
+  const shareUrl="https://lightingmasterlc.com"
 
   useEffect(()=>{
     function onKey(e){ if(e.key==="Escape") onClose() }
@@ -2822,11 +2822,12 @@ function ModuleCompleteModal({module, courseComplete, onClose, onNextLesson, nex
     return ()=>window.removeEventListener("keydown",onKey)
   },[onClose])
 
-  const twitterUrl=`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`
-  const facebookUrl=`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(shareText)}`
+  const linkedInUrl=`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}&summary=${encodeURIComponent(shareText)}`
+  const twitterUrl=`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`
+  const facebookUrl=`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(shareBody)}`
 
   async function copyLink(){
-    await navigator.clipboard.writeText(shareText+" "+shareUrl)
+    await navigator.clipboard.writeText(shareText)
     setCopied(true)
     setTimeout(()=>setCopied(false),2000)
   }
@@ -2868,7 +2869,7 @@ function ModuleCompleteModal({module, courseComplete, onClose, onNextLesson, nex
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:22}}>
           <ShareBtn icon="in" label="LinkedIn"
             hoverBg="#0077B5" hoverColor="#fff" defaultColor="#0077B5"
-            onClick={()=>window.open("https://www.linkedin.com/sharing/share-offsite/?url="+encodeURIComponent(shareUrl)+"&summary="+encodeURIComponent(shareText),"_blank","width=600,height=600")}/>
+            onClick={()=>window.open(linkedInUrl,"_blank","width=600,height=600")}/>
           <ShareBtn icon="𝕏" label="X / Twitter"
             hoverBg="#000" hoverColor="#fff"
             onClick={()=>window.open(twitterUrl,"_blank","width=600,height=400")}/>
