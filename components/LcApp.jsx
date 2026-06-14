@@ -5418,9 +5418,13 @@ function AdminLogin({onLogin}){
         borderRadius:12,padding:"40px 36px",width:"100%",maxWidth:380}}>
         <div style={{marginBottom:28}}>
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
-            <div style={{width:32,height:32,borderRadius:7,background:AT.accent,
-              display:"flex",alignItems:"center",justifyContent:"center",
-              fontFamily:AF.display,fontWeight:800,fontSize:12,color:"#fff"}}>LC</div>
+            <img
+              src="/brand/logo-transparent.png"
+              alt="LC Lighting Master"
+              style={{width:38,height:38,borderRadius:9,
+                border:"1px solid rgba(242,230,218,0.28)",
+                boxShadow:"0 0 14px rgba(232,160,32,0.35)",
+                flexShrink:0}}/>
             <div>
               <div style={adisp({fontWeight:700,fontSize:14,color:AT.ink})}>Lighting Master</div>
               <div style={amono({fontSize:9,letterSpacing:"0.16em",textTransform:"uppercase",
@@ -5444,7 +5448,7 @@ function AdminLogin({onLogin}){
             <div style={amono({fontSize:10,letterSpacing:"0.14em",textTransform:"uppercase",
               color:AT.inkMute,marginBottom:6})}>Email</div>
             <Input value={email} onChange={e=>setEmail(e.target.value)}
-              placeholder="admin@luxartmedia.com" style={{width:"100%"}}/>
+              placeholder="sample@test.com" style={{width:"100%"}}/>
           </div>
           <div>
             <div style={amono({fontSize:10,letterSpacing:"0.14em",textTransform:"uppercase",
