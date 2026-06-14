@@ -2327,16 +2327,42 @@ function BookmarksPage({setRoute, bookmarks=new Set(), toggleBookmark=async()=>{
 
 
 /* ── NOTES PAGE ──────────────────────────────────────────────── */
-function NotesPage({setRoute}) {
+function relativeDate(iso){
+  const sec=Math.floor((Date.now()-new Date(iso))/1000)
+  if(sec<60) return "just now"
+  if(sec<3600) return `${Math.floor(sec/60)} min ago`
+  if(sec<86400) return `${Math.floor(sec/3600)} hr ago`
+  const days=Math.floor(sec/86400)
+  if(days<8) return `${days} day${days>1?"s":""} ago`
+  return new Date(iso).toLocaleDateString("en-US",{month:"short",day:"numeric"})
+}
+
+function NotesPage({setRoute, user}) {
   const [q,setQ] = useState("")
   const [sort,setSort] = useState("recent")
-  const notes = NOTES.map(n=>({...n,lesson:ALL_LESSONS.find(l=>l.ref===n.ref)}))
-  const filtered = notes.filter(n=>{
-    if (!q) return true
+  const [notes,setNotes] = useState([])
+  const [loading,setLoading] = useState(true)
+
+  useEffect(()=>{
+    if(!user){ setLoading(false); return }
+    supabase.from("notes").select("lesson_ref,body,updated_at")
+      .eq("user_id",user.id).neq("body","").order("updated_at",{ascending:false})
+      .then(({data})=>{
+        if(data) setNotes(data.map(n=>({
+          ref:n.lesson_ref, body:n.body, updated_at:n.updated_at,
+          edited:relativeDate(n.updated_at), chars:n.body.length,
+          lesson:ALL_LESSONS.find(l=>l.ref===n.lesson_ref),
+        })))
+        setLoading(false)
+      })
+  },[user?.id])
+
+  const filtered=notes.filter(n=>{
+    if(!q) return true
     return [n.body,n.lesson?.title,n.lesson?.moduleTitle,n.ref].join(" ").toLowerCase().includes(q.toLowerCase())
   })
-  const sorted = sort==="module"?[...filtered].sort((a,b)=>parseInt(a.lesson?.module||99)-parseInt(b.lesson?.module||99)):filtered
-  const distinctLessons = new Set(notes.map(n=>n.ref)).size
+  const sorted=sort==="module"?[...filtered].sort((a,b)=>parseFloat(a.ref)-parseFloat(b.ref)):filtered
+  const distinctLessons=new Set(notes.map(n=>n.ref)).size
 
   return (
     <div style={{padding:"0 36px 48px"}}>
@@ -2350,43 +2376,57 @@ function NotesPage({setRoute}) {
           ))}
         </div>}
       />
-      <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:16,alignItems:"center",margin:"24px 0 8px"}}>
-        <div style={{position:"relative"}}>
-          <span style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",fontFamily:F.mono,fontSize:14,color:C.inkMute}}>⌕</span>
-          <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search across all your notes — keyword, topic, or lesson…"
-            style={{width:"100%",boxSizing:"border-box",padding:"13px 14px 13px 40px",fontFamily:F.body,fontSize:14,color:C.ink,background:C.paper,border:`1px solid ${C.ruleStrong}`,borderRadius:4,outline:"none"}}
-            onFocus={e=>e.target.style.borderColor=C.accent} onBlur={e=>e.target.style.borderColor=C.ruleStrong}/>
+      {loading?(
+        <div style={{padding:"48px 0",textAlign:"center",fontFamily:F.mono,fontSize:12,color:C.inkMute}}>Loading notes…</div>
+      ):notes.length===0?(
+        <div style={{background:C.paper,border:`1px solid ${C.rule}`,borderRadius:6,padding:"48px 36px",textAlign:"center",marginTop:28}}>
+          <div style={{fontFamily:F.display,fontWeight:700,fontSize:18,color:C.ink,marginBottom:10}}>No notes yet</div>
+          <p style={{fontFamily:F.body,fontSize:14,color:C.inkMute,lineHeight:1.6,maxWidth:380,margin:"0 auto"}}>
+            Open any lesson and use the Notes section to capture key concepts. They'll all appear here.
+          </p>
         </div>
-        <div style={{display:"inline-flex",border:`1px solid ${C.rule}`,borderRadius:99,overflow:"hidden",background:C.cream}}>
-          {[["recent","Most recent"],["module","By module"]].map(([v,label])=>(
-            <button key={v} onClick={()=>setSort(v)} style={{fontFamily:F.display,fontWeight:600,fontSize:12,color:sort===v?"#fff":C.inkSoft,background:sort===v?C.ink:"none",border:"none",padding:"9px 16px",cursor:"pointer",transition:"all 140ms"}}>{label}</button>
-          ))}
-        </div>
-      </div>
-      <div style={mono({fontSize:10,letterSpacing:"0.18em",textTransform:"uppercase",color:C.inkMute,margin:"16px 0 14px"})}>
-        <b style={{color:C.accent}}>{sorted.length}</b> {sorted.length===1?"note":"notes"}{q?` matching "${q}"`:""}
-      </div>
-      <div style={{columns:2,columnGap:16}}>
-        {sorted.map((n,i)=>{
-          const l=n.lesson
-          return (
-            <article key={i} onClick={()=>l&&(window.scrollTo({top:0,behavior:'smooth'}),setRoute("lesson-"+l.ref))} style={{breakInside:"avoid",marginBottom:16,background:C.paper,border:`1px solid ${C.rule}`,borderRadius:4,borderLeft:`3px solid ${l?.done?C.forest:C.accent}`,padding:"18px 20px",cursor:"pointer",transition:"box-shadow 150ms"}}
-              onMouseEnter={e=>e.currentTarget.style.boxShadow="0 6px 20px -12px rgba(40,30,20,0.3)"}
-              onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}>
-              <div style={{display:"flex",alignItems:"baseline",justifyContent:"space-between",gap:12,marginBottom:10}}>
-                <span style={mono({fontSize:10,letterSpacing:"0.16em",textTransform:"uppercase",color:C.accent})}>M{l?.module} · Lesson {n.ref}</span>
-                <span style={mono({fontSize:9,letterSpacing:"0.12em",color:C.inkMute})}>{n.edited}</span>
-              </div>
-              {l&&<div style={{fontFamily:F.display,fontWeight:700,fontSize:15,letterSpacing:"-0.01em",color:C.ink,lineHeight:1.2,marginBottom:9}}><Mark text={l.title} q={q}/></div>}
-              <div style={{fontFamily:F.body,fontSize:13,lineHeight:1.6,color:C.inkSoft}}><Mark text={n.body} q={q}/></div>
-              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginTop:14,paddingTop:11,borderTop:`1px dashed ${C.rule}`}}>
-                <span style={mono({fontSize:9,letterSpacing:"0.14em",textTransform:"uppercase",color:C.inkMute})}>{n.chars} chars</span>
-                <span style={{fontFamily:F.display,fontWeight:600,fontSize:12,color:C.ink}}>Go to lesson →</span>
-              </div>
-            </article>
-          )
-        })}
-      </div>
+      ):(
+        <>
+          <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:16,alignItems:"center",margin:"24px 0 8px"}}>
+            <div style={{position:"relative"}}>
+              <span style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",fontFamily:F.mono,fontSize:14,color:C.inkMute}}>⌕</span>
+              <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search across all your notes — keyword, topic, or lesson…"
+                style={{width:"100%",boxSizing:"border-box",padding:"13px 14px 13px 40px",fontFamily:F.body,fontSize:14,color:C.ink,background:C.paper,border:`1px solid ${C.ruleStrong}`,borderRadius:4,outline:"none"}}
+                onFocus={e=>e.target.style.borderColor=C.accent} onBlur={e=>e.target.style.borderColor=C.ruleStrong}/>
+            </div>
+            <div style={{display:"inline-flex",border:`1px solid ${C.rule}`,borderRadius:99,overflow:"hidden",background:C.cream}}>
+              {[["recent","Most recent"],["module","By module"]].map(([v,label])=>(
+                <button key={v} onClick={()=>setSort(v)} style={{fontFamily:F.display,fontWeight:600,fontSize:12,color:sort===v?"#fff":C.inkSoft,background:sort===v?C.ink:"none",border:"none",padding:"9px 16px",cursor:"pointer",transition:"all 140ms"}}>{label}</button>
+              ))}
+            </div>
+          </div>
+          <div style={mono({fontSize:10,letterSpacing:"0.18em",textTransform:"uppercase",color:C.inkMute,margin:"16px 0 14px"})}>
+            <b style={{color:C.accent}}>{sorted.length}</b> {sorted.length===1?"note":"notes"}{q?` matching "${q}"`:""}
+          </div>
+          <div style={{columns:2,columnGap:16}}>
+            {sorted.map((n,i)=>{
+              const l=n.lesson
+              return(
+                <article key={i} onClick={()=>l&&(window.scrollTo({top:0,behavior:"smooth"}),setRoute("lesson-"+l.ref))}
+                  style={{breakInside:"avoid",marginBottom:16,background:C.paper,border:`1px solid ${C.rule}`,borderRadius:4,borderLeft:`3px solid ${C.accent}`,padding:"18px 20px",cursor:"pointer",transition:"box-shadow 150ms"}}
+                  onMouseEnter={e=>e.currentTarget.style.boxShadow="0 6px 20px -12px rgba(40,30,20,0.3)"}
+                  onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}>
+                  <div style={{display:"flex",alignItems:"baseline",justifyContent:"space-between",gap:12,marginBottom:10}}>
+                    <span style={mono({fontSize:10,letterSpacing:"0.16em",textTransform:"uppercase",color:C.accent})}>M{l?.module} · Lesson {n.ref}</span>
+                    <span style={mono({fontSize:9,letterSpacing:"0.12em",color:C.inkMute})}>{n.edited}</span>
+                  </div>
+                  {l&&<div style={{fontFamily:F.display,fontWeight:700,fontSize:15,letterSpacing:"-0.01em",color:C.ink,lineHeight:1.2,marginBottom:9}}><Mark text={l.title} q={q}/></div>}
+                  <div style={{fontFamily:F.body,fontSize:13,lineHeight:1.6,color:C.inkSoft}}><Mark text={n.body} q={q}/></div>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginTop:14,paddingTop:11,borderTop:`1px dashed ${C.rule}`}}>
+                    <span style={mono({fontSize:9,letterSpacing:"0.14em",textTransform:"uppercase",color:C.inkMute})}>{n.chars} chars</span>
+                    <span style={{fontFamily:F.display,fontWeight:600,fontSize:12,color:C.ink}}>Go to lesson →</span>
+                  </div>
+                </article>
+              )
+            })}
+          </div>
+        </>
+      )}
     </div>
   )
 }
@@ -3195,6 +3235,71 @@ function TtsPlayer({lessonRef}){
   )
 }
 
+// Run once in Supabase SQL Editor:
+// CREATE TABLE IF NOT EXISTS public.notes (
+//   id uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
+//   user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+//   lesson_ref text NOT NULL,
+//   body text NOT NULL DEFAULT '',
+//   updated_at timestamptz DEFAULT now(),
+//   UNIQUE(user_id, lesson_ref)
+// );
+// ALTER TABLE public.notes ENABLE ROW LEVEL SECURITY;
+// CREATE POLICY "Users manage own notes" ON public.notes FOR ALL USING (auth.uid() = user_id);
+
+function LessonNote({lessonRef, user}){
+  const [text,setText]=useState("")
+  const [status,setStatus]=useState("idle")
+  const timerRef=useRef(null)
+  const textRef=useRef("")
+  const loaded=useRef(false)
+
+  useEffect(()=>{
+    if(!user) return
+    setText(""); textRef.current=""; loaded.current=false
+    supabase.from("notes").select("body").eq("user_id",user.id).eq("lesson_ref",lessonRef).single()
+      .then(({data})=>{
+        if(data?.body){setText(data.body);textRef.current=data.body}
+        loaded.current=true
+      })
+    return()=>clearTimeout(timerRef.current)
+  },[lessonRef,user?.id])
+
+  async function doSave(){
+    if(!user||!loaded.current) return
+    setStatus("saving")
+    await supabase.from("notes").upsert(
+      {user_id:user.id,lesson_ref:lessonRef,body:textRef.current,updated_at:new Date().toISOString()},
+      {onConflict:"user_id,lesson_ref"}
+    )
+    setStatus("saved")
+    setTimeout(()=>setStatus("idle"),2000)
+  }
+
+  function handleChange(e){
+    const val=e.target.value
+    setText(val); textRef.current=val; setStatus("idle")
+    clearTimeout(timerRef.current)
+    timerRef.current=setTimeout(doSave,1200)
+  }
+
+  if(!user) return null
+  return(
+    <div style={{background:C.paper,border:`1px solid ${C.rule}`,borderRadius:6,padding:"20px 24px",marginBottom:18}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+        <div style={{fontFamily:F.display,fontSize:13,fontWeight:700,color:C.ink,letterSpacing:"0.06em",textTransform:"uppercase"}}>My notes</div>
+        {status==="saving"&&<span style={mono({fontSize:9,color:C.inkMute})}>Saving…</span>}
+        {status==="saved"&&<span style={mono({fontSize:9,color:C.forest})}>✓ Saved</span>}
+      </div>
+      <textarea value={text} onChange={handleChange} placeholder="Write your notes for this lesson — key concepts, things to remember, your own examples…" rows={4}
+        style={{width:"100%",boxSizing:"border-box",fontFamily:F.body,fontSize:14,lineHeight:1.7,color:C.ink,background:C.creamWarm,border:`1px solid ${C.rule}`,borderRadius:4,padding:"12px 14px",outline:"none",resize:"vertical",minHeight:96}}
+        onFocus={e=>e.target.style.borderColor=C.accent}
+        onBlur={e=>{e.target.style.borderColor=C.rule;clearTimeout(timerRef.current);if(loaded.current)doSave()}}
+      />
+    </div>
+  )
+}
+
 function LessonPage({lessonRef,setRoute,user,setShowUpgrade,completedLessons=new Set(),markLessonComplete=async()=>{},bookmarks=new Set(),toggleBookmark=async()=>{},isMobile=false}) {
   const [showShareModal,setShowShareModal]=useState(false)
   const [imgFullscreen,setImgFullscreen]=useState(null)
@@ -3333,6 +3438,8 @@ function LessonPage({lessonRef,setRoute,user,setShowUpgrade,completedLessons=new
           <p style={{fontFamily:F.body,fontSize:14,lineHeight:1.7,color:C.inkSoft}}>Lesson <strong>{lesson.title}</strong> · Module {module.n}: {module.title}</p>
         </div>
       )}
+
+      <LessonNote lessonRef={lessonRef} user={user}/>
 
       <div style={{display:"flex",justifyContent:"space-between",gap:12}}>
         {prev?<button onClick={()=>{if(typeof _stopTTS!=='undefined')_stopTTS();window.scrollTo({top:0,behavior:'smooth'});setRoute("lesson-"+prev.ref)}} style={{fontFamily:F.display,fontWeight:600,fontSize:13,background:"none",color:C.inkSoft,border:`1px solid ${C.rule}`,borderRadius:99,padding:"9px 18px",cursor:"pointer"}}>← {prev.ref} · {prev.title}</button>:<div/>}
@@ -4718,7 +4825,7 @@ function AppShell({user, setUser, onSignOut, completedLessons=new Set(), markLes
         {route==="home"&&user?.plan!=="team_admin"&&user?.plan!=="team_member" && <Dashboard setRoute={setRoute} user={user} completedLessons={completedLessons} isMobile={isMobile}/>}
         {route==="search"    && <SearchPage setRoute={setRoute} user={user} setShowUpgrade={setShowUpgrade}/>}
         {route==="bookmarks" && <BookmarksPage setRoute={setRoute} bookmarks={bookmarks} toggleBookmark={toggleBookmark}/>}
-        {route==="notes"     && <NotesPage setRoute={setRoute}/>}
+        {route==="notes"     && <NotesPage setRoute={setRoute} user={user}/>}
         {route==="continue"  && <ContinuePage setRoute={setRoute} completedLessons={completedLessons}/>}
         {route==="exam"      && <ExamPage setRoute={setRoute} isMobile={isMobile}/>}
         {route==="cert"      && <CertPage completedLessons={completedLessons}/>}
