@@ -3971,33 +3971,54 @@ function Dashboard({ setRoute, completedLessons = new Set(), user, userSubscript
 
           {/* Module completion bar chart */}
           <div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {moduleData.map(mod => (
-                <div key={mod.n}
-                  onMouseEnter={() => setHoveredMod(mod.n)}
-                  onMouseLeave={() => setHoveredMod(null)}
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => setRoute('home')}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                    <span style={{ fontFamily: F.display, fontWeight: 600, fontSize: 12, color: hoveredMod === mod.n ? C.accent : C.ink }}>
-                      M{mod.n} · {mod.label}
-                    </span>
-                    <span style={mono({ fontSize: 9, color: mod.pct === 100 ? C.forest : C.inkMute })}>
-                      {mod.pct === 100 ? '✓ Complete' : `${mod.done}/${mod.total}`}
-                    </span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {MODULES.map(mod => {
+                const done = mod.lessons.filter(l => completedLessons.has(l.ref)).length
+                const total = mod.lessons.length
+                const pct = Math.round((done / total) * 100)
+                return (
+                  <div key={mod.n}
+                    onMouseEnter={() => setHoveredMod(mod.n)}
+                    onMouseLeave={() => setHoveredMod(null)}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                      <span style={{ fontFamily: F.display, fontWeight: 600, fontSize: 12, color: hoveredMod === mod.n ? C.accent : C.ink }}>
+                        M{mod.n} · {mod.label}
+                      </span>
+                      <span style={mono({ fontSize: 9, color: pct === 100 ? C.forest : C.inkMute })}>
+                        {pct === 100 ? '✓ Complete' : `${done}/${total}`}
+                      </span>
+                    </div>
+                    <div style={{ height: 6, background: C.rule, borderRadius: 99, overflow: 'hidden', marginBottom: 6 }}>
+                      <div style={{
+                        height: '100%',
+                        width: `${pct}%`,
+                        background: pct === 100 ? C.forest : hoveredMod === mod.n ? C.accent : `${C.accent}99`,
+                        borderRadius: 99,
+                        transition: 'width 600ms ease, background 200ms'
+                      }}/>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                      {mod.lessons.map(l => {
+                        const isDone = completedLessons.has(l.ref)
+                        return (
+                          <div key={l.ref}
+                            onClick={() => { window.scrollTo({ top: 0, behavior: 'smooth' }); setRoute('lesson-' + l.ref) }}
+                            style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer', padding: '3px 4px', borderRadius: 4, transition: 'background 120ms' }}
+                            onMouseEnter={e => e.currentTarget.style.background = C.creamWarm}
+                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                          >
+                            <span style={{ width: 6, height: 6, borderRadius: '50%', flexShrink: 0, background: isDone ? C.forest : C.rule, border: isDone ? 'none' : `1.5px solid ${C.inkMute}` }}/>
+                            <span style={{ fontFamily: F.body, fontSize: 11, color: isDone ? C.inkMute : C.ink, textDecoration: 'none' }}>
+                              {l.ref} · {l.title}
+                            </span>
+                          </div>
+                        )
+                      })}
+                    </div>
                   </div>
-                  <div style={{ height: 6, background: C.rule, borderRadius: 99, overflow: 'hidden' }}>
-                    <div style={{
-                      height: '100%',
-                      width: `${mod.pct}%`,
-                      background: mod.pct === 100 ? C.forest : hoveredMod === mod.n ? C.accent : `${C.accent}99`,
-                      borderRadius: 99,
-                      transition: 'width 600ms ease, background 200ms'
-                    }}/>
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
 
