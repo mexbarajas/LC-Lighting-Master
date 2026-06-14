@@ -3133,7 +3133,7 @@ function PodcastPlayer({url,lessonRef}){
       <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:16}}>
         <div style={{background:C.accent,borderRadius:99,padding:'3px 10px',display:'flex',alignItems:'center',gap:5}}>
           <span style={{fontSize:9}}>🎙</span>
-          <span style={{fontFamily:F.mono,fontSize:9,fontWeight:600,letterSpacing:'0.14em',textTransform:'uppercase',color:'#fff'}}>Podcast Narration</span>
+          <span style={{fontFamily:F.mono,fontSize:9,fontWeight:600,letterSpacing:'0.14em',textTransform:'uppercase',color:'#fff'}}>Lesson Podcast</span>
         </div>
         <span style={{fontFamily:F.display,fontSize:12,color:'rgba(253,250,246,0.5)'}}>Professional audio · Lesson {lessonRef}</span>
       </div>
