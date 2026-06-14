@@ -3482,7 +3482,7 @@ function AccountPage({ user, setUser, setRoute }) {
   const planName = PLAN_LABELS[planKey] || 'Free'
   const isPaid = planKey !== 'free'
 
-  const tabs = [["profile","Profile"],["billing","Billing"],["notifications","Notifications"],["export","Export data"]]
+  const tabs = [["profile","Profile"],["billing","Billing"],["notifications","Notifications"]]
   return (
     <div style={{padding:"0 36px 48px"}}>
       <PageHead eyebrow="Account" title="Account &" em="billing."/>
@@ -3570,12 +3570,6 @@ function AccountPage({ user, setUser, setRoute }) {
         </div>
       )}
 
-      {tab==="export"&&(
-        <div style={{maxWidth:480}}>
-          <p style={{fontFamily:F.body,fontSize:14,lineHeight:1.6,color:C.inkMute,marginBottom:24}}>Export all your learning data — notes, bookmarks, progress, and exam attempts — as a JSON file.</p>
-          <button style={{fontFamily:F.display,fontWeight:700,fontSize:14,background:C.ink,color:"#fff",border:"none",borderRadius:99,padding:"12px 24px",cursor:"pointer"}}>Export data →</button>
-        </div>
-      )}
     </div>
   )
 }
