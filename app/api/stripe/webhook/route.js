@@ -70,25 +70,38 @@ export async function POST(request) {
       }
     }
 
-    const { error } = await supabase
-      .from('subscriptions')
-      .upsert({
-        user_id:               userId,
-        plan:                  plan,
-        status:                'active',
-        stripe_customer_id:    session.customer || null,
-        stripe_payment_intent: session.payment_intent || null,
-        current_period_end:    expiry.toISOString(),
-        seats:                 plan === 'team' ? seats : 1,
-        updated_at:            new Date().toISOString(),
-      }, { onConflict: 'user_id' })
-
-    if (error) {
-      console.error('Supabase upsert error:', error)
-      return new Response('Database error', { status: 500 })
+    let error
+    if (plan === 'exam_addon') {
+      // Add exam access to existing subscription without changing the plan
+      ;({ error } = await supabase
+        .from('subscriptions')
+        .update({
+          exam_addon:            true,
+          stripe_payment_intent: session.payment_intent || null,
+          updated_at:            new Date().toISOString(),
+        })
+        .eq('user_id', userId))
+      if (!error) console.log(`✓ exam_addon activated for user ${userId}`)
+    } else {
+      ;({ error } = await supabase
+        .from('subscriptions')
+        .upsert({
+          user_id:               userId,
+          plan:                  plan,
+          status:                'active',
+          stripe_customer_id:    session.customer || null,
+          stripe_payment_intent: session.payment_intent || null,
+          current_period_end:    expiry.toISOString(),
+          seats:                 plan === 'team' ? seats : 1,
+          updated_at:            new Date().toISOString(),
+        }, { onConflict: 'user_id' }))
+      if (!error) console.log(`✓ Plan ${plan} activated for user ${userId}, expires ${expiry.toISOString()}`)
     }
 
-    console.log(`✓ Plan ${plan} activated for user ${userId}, expires ${expiry.toISOString()}`)
+    if (error) {
+      console.error('Supabase write error:', error)
+      return new Response('Database error', { status: 500 })
+    }
   }
 
   return new Response('OK', { status: 200 })

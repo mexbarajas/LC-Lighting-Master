@@ -2538,8 +2538,8 @@ function CertPage({completedLessons=new Set()}) {
 
 /* ── EXAM PAGE ───────────────────────────────────────────────── */
 
-function ExamPage({setRoute, isMobile=false}) {
-  const [examState,setExamState] = useState("addon") // addon | purchased | playing
+function ExamPage({setRoute, user, userSubscription, isMobile=false}) {
+  const [examLoading, setExamLoading] = useState(false)
   const [screen,setScreen] = useState("landing") // landing | start | play | results
   const [session,setSession] = useState({questions:[],idx:0,answers:[],score:0,streak:0,bestStreak:0,startTime:Date.now()})
   const [timeLeft,setTimeLeft] = useState(25)
@@ -2604,6 +2604,54 @@ function ExamPage({setRoute, isMobile=false}) {
   const timerPct = (timeLeft/25)*100
   const circumference = 2*Math.PI*22
   const dashOffset = circumference*(1-timerPct/100)
+
+  const plan = userSubscription?.plan || user?.plan || 'free'
+  const examAddon = userSubscription?.exam_addon || user?.examAddon || false
+  const hasExamAccess = examAccess(plan, examAddon)
+
+  async function handleExamCheckout() {
+    if (!user) { setRoute('auth'); return }
+    setExamLoading(true)
+    try {
+      const res = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: 'exam_addon' }),
+      })
+      const data = await res.json()
+      if (data.url) { window.location.href = data.url }
+      else { alert(data.error || 'Checkout failed. Please try again.') }
+    } catch { alert('Network error. Please try again.') }
+    finally { setExamLoading(false) }
+  }
+
+  if (!hasExamAccess) {
+    return (
+      <div style={{padding:"60px 36px",maxWidth:560}}>
+        <div style={mono({fontSize:9,letterSpacing:"0.18em",textTransform:"uppercase",color:C.accent,marginBottom:12})}>Practice Exam</div>
+        <h2 style={{fontFamily:F.display,fontWeight:700,fontSize:28,color:C.ink,margin:"0 0 16px",letterSpacing:"-0.015em"}}>Unlock the Practice Exam</h2>
+        <p style={{fontFamily:F.body,fontSize:15,color:C.inkMute,lineHeight:1.75,margin:"0 0 28px"}}>
+          129 timed questions across 13 NCQLP topics, scored for accuracy and speed.
+          Available as a standalone add-on or included in the Course + Exam plan.
+        </p>
+        <div style={{display:"flex",flexDirection:"column",gap:12,maxWidth:380}}>
+          <button
+            onClick={handleExamCheckout}
+            disabled={examLoading}
+            style={{fontFamily:F.display,fontWeight:700,fontSize:14,background:C.accent,color:"#fff",border:"none",borderRadius:99,padding:"13px 28px",cursor:examLoading?"not-allowed":"pointer",opacity:examLoading?0.7:1}}
+          >
+            {examLoading ? 'Loading...' : 'Add Practice Exam — $200 →'}
+          </button>
+          <button
+            onClick={()=>setRoute('account')}
+            style={{fontFamily:F.display,fontWeight:600,fontSize:13,background:"transparent",color:C.inkMute,border:`1px solid ${C.rule}`,borderRadius:99,padding:"11px 24px",cursor:"pointer"}}
+          >
+            View all plans →
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   if (screen==="play") {
     const q = session.questions[session.idx]
@@ -2753,22 +2801,12 @@ function ExamPage({setRoute, isMobile=false}) {
       {/* Access hero */}
       <div style={{background:C.ink,borderRadius:6,display:"grid",gridTemplateColumns:"1.5fr 1fr",gap:40,padding:"32px 36px",margin:"32px 0 0"}}>
         <div>
-          {examState==="addon"&&<>
-            <div style={mono({fontSize:9,letterSpacing:"0.22em",textTransform:"uppercase",color:C.tan,marginBottom:12})}>Add-on · not yet included</div>
-            <h2 style={{fontFamily:F.display,fontWeight:700,fontSize:26,letterSpacing:"-0.02em",lineHeight:1.1,margin:"0 0 12px",color:"#fff"}}>Add the <em style={{fontStyle:"normal",color:C.accent}}>certification exam</em> to your window.</h2>
-            <div style={{display:"flex",alignItems:"baseline",gap:10,marginBottom:12}}>
-              <span style={{fontFamily:F.display,fontWeight:700,fontSize:28,color:"#fff",letterSpacing:"-0.02em"}}>$200</span>
-              <span style={mono({fontSize:10,letterSpacing:"0.16em",textTransform:"uppercase",color:"rgba(249,244,237,0.6)"})}>one-time · 6-Month plan</span>
-            </div>
-            <p style={{fontFamily:F.body,fontSize:14,lineHeight:1.55,color:"rgba(249,244,237,0.75)",margin:"0 0 16px",maxWidth:420}}>129 timed questions across 13 topics. Keep it for the life of your window with unlimited attempts.</p>
-            <button onClick={()=>setExamState("purchased")} style={{fontFamily:F.display,fontWeight:700,fontSize:14,background:C.accent,color:"#fff",border:"none",borderRadius:99,padding:"12px 24px",cursor:"pointer"}}>Add the exam — $200 →</button>
-          </>}
-          {(examState==="purchased"||examState==="included")&&<>
-            <div style={mono({fontSize:9,letterSpacing:"0.22em",textTransform:"uppercase",color:C.tan,marginBottom:12})}>{examState==="included"?"Included with 12-Month plan":"Add-on active · unlocked"}</div>
+          <>
+            <div style={mono({fontSize:9,letterSpacing:"0.22em",textTransform:"uppercase",color:C.tan,marginBottom:12})}>{plan==="t3"?"Included with Course + Exam plan":"Add-on active · unlocked"}</div>
             <h2 style={{fontFamily:F.display,fontWeight:700,fontSize:26,letterSpacing:"-0.02em",lineHeight:1.1,margin:"0 0 12px",color:"#fff"}}>Your practice exam is <em style={{fontStyle:"normal",color:C.accent}}>ready.</em></h2>
             <p style={{fontFamily:F.body,fontSize:14,lineHeight:1.55,color:"rgba(249,244,237,0.75)",margin:"0 0 16px",maxWidth:420}}>129 questions · 13 topics · 25 seconds each. Unlimited attempts, fresh order every run.</p>
             <button onClick={()=>setScreen("start")} style={{fontFamily:F.display,fontWeight:700,fontSize:14,background:C.accent,color:"#fff",border:"none",borderRadius:99,padding:"12px 24px",cursor:"pointer"}}>Launch exam →</button>
-          </>}
+          </>
         </div>
         <div style={{background:"rgba(248,243,236,0.06)",border:`1px solid rgba(248,243,236,0.12)`,borderRadius:4,padding:22}}>
           <div style={mono({fontSize:9,letterSpacing:"0.22em",textTransform:"uppercase",color:C.tan,marginBottom:12})}>At a glance</div>
@@ -4836,7 +4874,7 @@ function AppShell({user, setUser, onSignOut, completedLessons=new Set(), markLes
         {route==="bookmarks" && <BookmarksPage setRoute={setRoute} bookmarks={bookmarks} toggleBookmark={toggleBookmark}/>}
         {route==="notes"     && <NotesPage setRoute={setRoute} user={user}/>}
         {route==="continue"  && <ContinuePage setRoute={setRoute} completedLessons={completedLessons}/>}
-        {route==="exam"      && <ExamPage setRoute={setRoute} isMobile={isMobile}/>}
+        {route==="exam"      && <ExamPage setRoute={setRoute} user={user} userSubscription={user?.plan ? {plan:user.plan,exam_addon:user.examAddon||false} : null} isMobile={isMobile}/>}
         {route==="cert"      && <CertPage completedLessons={completedLessons}/>}
         {route==="account"   && <AccountPage user={user} setUser={setUser} setRoute={setRoute}/>}
         {route==="community" && <CommunityPage setRoute={setRoute} user={user}/>}

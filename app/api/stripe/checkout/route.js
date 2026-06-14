@@ -13,7 +13,7 @@ import { checkOrigin, originError } from '@/lib/csrf'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 
-const VALID_PLANS = ['t1', 't2', 't3', 'team']
+const VALID_PLANS = ['t1', 't2', 't3', 'team', 'exam_addon']
 
 export async function POST(request) {
   if (!checkOrigin(request)) return originError()
@@ -63,6 +63,10 @@ export async function POST(request) {
     unitAmount = tier.perSeat * 100
     productName = `Team License (${tier.label})`
     quantity = seatCount
+  } else if (plan === 'exam_addon') {
+    unitAmount = 20000 // $200
+    productName = 'Practice Exam Add-on'
+    quantity = 1
   } else {
     const priceInfo = getPriceForTier(plan)
     const isStudent = isStudentEmail(email)
