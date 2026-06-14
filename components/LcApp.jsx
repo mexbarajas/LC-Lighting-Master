@@ -4681,7 +4681,7 @@ function TrendsPage({ setRoute }) {
   )
 }
 
-function AppShell({user, onSignOut, completedLessons=new Set(), markLessonComplete=async()=>{}, bookmarks=new Set(), toggleBookmark=async()=>{}}){
+function AppShell({user, setUser, onSignOut, completedLessons=new Set(), markLessonComplete=async()=>{}, bookmarks=new Set(), toggleBookmark=async()=>{}}){
   const [route, setRoute] = useState("home")
   const [showUpgrade, setShowUpgrade] = useState(false)
   const isMobile = useIsMobile()
@@ -5136,7 +5136,7 @@ function LearnerRoot({onAdminClick=()=>{}}){
       )}
 
       {page==="app"&&(
-        <AppShell user={user} onSignOut={handleSignOut} completedLessons={completedLessons} markLessonComplete={markLessonComplete} bookmarks={bookmarks} toggleBookmark={toggleBookmark}/>
+        <AppShell user={user} setUser={setUser} onSignOut={handleSignOut} completedLessons={completedLessons} markLessonComplete={markLessonComplete} bookmarks={bookmarks} toggleBookmark={toggleBookmark}/>
       )}
     </>
   )
