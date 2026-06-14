@@ -83,8 +83,8 @@ export async function POST(request) {
         },
         quantity,
       }],
-      success_url: `${appUrl}/dashboard?purchase=success&plan=${plan}`,
-      cancel_url:  `${appUrl}/pricing?cancelled=true`,
+      success_url: `${appUrl}/?purchase=success&plan=${plan}`,
+      cancel_url:  `${appUrl}/?cancelled=true`,
     })
 
     return new Response(

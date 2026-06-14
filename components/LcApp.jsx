@@ -5085,6 +5085,15 @@ function LearnerRoot({onAdminClick=()=>{}}){
   const [legalDoc, setLegalDoc] = useState(null) // null | privacy | terms | cookies | refund
   const [successToast, setSuccessToast] = useState(null)
   const [sessionConflict, setSessionConflict] = useState(null)
+  const [purchaseSuccess, setPurchaseSuccess] = useState(null)
+
+  async function loadSubscription(){
+    const { data:{ session } } = await supabase.auth.getSession()
+    if(!session) return
+    const u = session.user
+    const { data:sub } = await supabase.from("subscriptions").select("*").eq("user_id", u.id).single()
+    if(sub) setUser(prev=>prev?{...prev,plan:sub.plan,examAddon:sub.exam_addon||false}:prev)
+  }
 
   function openAuth(mode){ setAuthMode(mode) }
   function closeAuth(){ setAuthMode(null) }
@@ -5118,26 +5127,17 @@ function LearnerRoot({onAdminClick=()=>{}}){
     return ()=>subscription.unsubscribe()
   },[])
 
-  // Re-fetch subscription on purchase=success redirect
   useEffect(()=>{
-    if(typeof window==="undefined") return
     const params = new URLSearchParams(window.location.search)
-    if(params.get("purchase")!=="success") return
-    // Small delay to allow webhook to process
-    const t = setTimeout(async ()=>{
-      const { data:{ session } } = await supabase.auth.getSession()
-      if(!session) return
-      const u = session.user
-      const { data:sub } = await supabase.from("subscriptions").select("*").eq("user_id", u.id).single()
-      if(sub){
-        setUser(prev=>prev?{...prev,plan:sub.plan,examAddon:sub.exam_addon||false}:prev)
-        setSuccessToast("Access unlocked! Welcome to LC · Lighting Master.")
-        setTimeout(()=>setSuccessToast(null), 6000)
-      }
-      // Remove query param without reload
-      window.history.replaceState({}, "", window.location.pathname)
-    }, 2000)
-    return ()=>clearTimeout(t)
+    if(params.get("purchase")==="success"){
+      const plan = params.get("plan") || "your plan"
+      setPurchaseSuccess(plan)
+      window.history.replaceState({}, "", "/")
+      loadSubscription()
+    }
+    if(params.get("cancelled")==="true"){
+      window.history.replaceState({}, "", "/")
+    }
   },[])
 
   useEffect(()=>{
@@ -5233,6 +5233,21 @@ function LearnerRoot({onAdminClick=()=>{}}){
           <FAQ/>
           <FinalCTA onSignUp={()=>openAuth("signup")}/>
           <Footer onSignIn={()=>openAuth("signin")} onSignUp={()=>openAuth("signup")} onAdminClick={onAdminClick} onLegal={setLegalDoc}/>
+        </div>
+      )}
+
+      {page==="app"&&purchaseSuccess&&(
+        <div style={{background:`${C.forest}18`,border:`1px solid ${C.forest}`,borderRadius:8,padding:"16px 24px",margin:"16px 24px 0",display:"flex",alignItems:"center",justifyContent:"space-between",gap:16}}>
+          <div>
+            <span style={{fontSize:20,marginRight:10}}>🎉</span>
+            <span style={{fontFamily:F.display,fontWeight:700,fontSize:15,color:C.ink}}>
+              Payment confirmed — your access is now active!
+            </span>
+            <span style={{fontFamily:F.body,fontSize:13,color:C.inkMute,marginLeft:10}}>
+              Welcome to LC · Lighting Master. Start with lesson 1.1 →
+            </span>
+          </div>
+          <button onClick={()=>setPurchaseSuccess(null)} style={{background:"none",border:"none",cursor:"pointer",fontSize:18,color:C.inkMute,flexShrink:0}}>✕</button>
         </div>
       )}
 
