@@ -48,8 +48,8 @@ export async function POST(request) {
   let unitAmount, productName, quantity
 
   if (plan === 'team') {
-    const seatCount = parseInt(seats) || 2
-    if (seatCount < 2 || seatCount > 10) {
+    const seatCount = Math.floor(Number(seats))
+    if (!Number.isInteger(seatCount) || seatCount < 2 || seatCount > 10) {
       return new Response(JSON.stringify({
         error: seatCount > 10
           ? 'For 11+ seats please contact admin@luxartmedia.com'
@@ -72,15 +72,6 @@ export async function POST(request) {
   }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://lightingmasterlc.com'
-
-  console.log('Creating Stripe session:', {
-    plan,
-    unitAmount,
-    productName,
-    quantity,
-    email,
-    stripeKeyPrefix: process.env.STRIPE_SECRET_KEY?.slice(0, 12),
-  })
 
   try {
     const checkoutSession = await stripe.checkout.sessions.create({
@@ -109,21 +100,10 @@ export async function POST(request) {
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     )
   } catch (err) {
-    console.error('Stripe error:', {
-      message: err.message,
-      type: err.type,
-      code: err.code,
-      statusCode: err.statusCode,
-      param: err.param,
-      raw: err.raw,
-    })
+    // Log internally without exposing Stripe internals to the client
+    console.error('Stripe checkout error:', err.type || err.code || 'unknown')
     return new Response(
-      JSON.stringify({
-        error: 'Checkout session creation failed',
-        detail: err.message,
-        code: err.code,
-        type: err.type,
-      }),
+      JSON.stringify({ error: 'Checkout unavailable. Please try again or contact support.' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     )
   }

@@ -42,3 +42,10 @@ next-env.d.ts
 
 # Claude Code local settings
 .claude/
+
+# Backup files — keep locally, never commit
+*.backup.js
+*.backup.jsx
+*.backup.ts
+*.backup.tsx
+.backups/

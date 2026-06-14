@@ -17,6 +17,9 @@ const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
 
 export async function POST(request) {
   const body = await request.text()
+  if (body.length > 65536) {
+    return new Response('Payload too large', { status: 413 })
+  }
   const sig  = request.headers.get('stripe-signature')
 
   let event
