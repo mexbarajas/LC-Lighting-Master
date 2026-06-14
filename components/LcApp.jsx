@@ -5017,11 +5017,11 @@ function LearnerRoot({onAdminClick=()=>{}}){
     return ()=>subscription.unsubscribe()
   },[])
 
-  // Re-fetch subscription on payment=success redirect
+  // Re-fetch subscription on purchase=success redirect
   useEffect(()=>{
     if(typeof window==="undefined") return
     const params = new URLSearchParams(window.location.search)
-    if(params.get("payment")!=="success") return
+    if(params.get("purchase")!=="success") return
     // Small delay to allow webhook to process
     const t = setTimeout(async ()=>{
       const { data:{ session } } = await supabase.auth.getSession()

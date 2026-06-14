@@ -15,8 +15,6 @@ export default async function PricingPage() {
   const userId = session?.user?.id || null
   const isStudent = isStudentEmail(userEmail)
 
-  console.log('isStudent:', isStudent, 'email:', userEmail)
-
   return (
     <PricingPageClient
       isStudent={isStudent}

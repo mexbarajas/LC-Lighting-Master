@@ -1,16 +1,11 @@
 import Stripe from 'stripe'
 import { createClient } from '@/lib/supabase/server'
-import { isStudentEmail, STUDENT_DISCOUNT, getTeamPerSeat } from '@/lib/pricing'
+import { isStudentEmail, getPriceForTier, studentPrice, getTeamPerSeat } from '@/lib/pricing'
 import { checkOrigin, originError } from '@/lib/csrf'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 
-const PLANS = {
-  t1:   { name: 'Practice Exam',  amount: 25000 },
-  t2:   { name: 'Full Course',    amount: 39500 },
-  t3:   { name: 'Course + Exam',  amount: 59500 },
-  team: { name: 'Team License',   amount: null  },
-}
+const VALID_PLANS = ['t1', 't2', 't3', 'team']
 
 export async function POST(request) {
   if (!checkOrigin(request)) return originError()
@@ -30,7 +25,7 @@ export async function POST(request) {
   }
 
   const { plan, seats } = body
-  if (!plan || !PLANS[plan]) {
+  if (!plan || !VALID_PLANS.includes(plan)) {
     return new Response(JSON.stringify({ error: 'Invalid plan' }), { status: 400 })
   }
 
@@ -61,14 +56,11 @@ export async function POST(request) {
     productName = `Team License (${tier.label})`
     quantity = seatCount
   } else {
-    unitAmount = PLANS[plan].amount
-    productName = PLANS[plan].name
+    const priceInfo = getPriceForTier(plan)
+    const isStudent = isStudentEmail(email)
+    unitAmount = isStudent ? studentPrice(priceInfo.amountCents) : priceInfo.amountCents
+    productName = priceInfo.label + (isStudent ? ' — Student 40% off' : '')
     quantity = 1
-    // Apply student discount server-side only
-    if (isStudentEmail(email)) {
-      unitAmount = Math.round(unitAmount * (1 - STUDENT_DISCOUNT))
-      productName += ' — Student 40% off'
-    }
   }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://lightingmasterlc.com'
