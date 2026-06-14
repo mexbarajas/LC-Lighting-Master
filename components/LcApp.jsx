@@ -6519,6 +6519,7 @@ function AdminApp({onBack=()=>{}}){
   const [route, setRoute] = useState("overview")
   const [users, setUsers] = useState([])
   const [selectedUser, setSelectedUser] = useState(null)
+  const [dataError, setDataError] = useState(null)
   const [adminStats, setAdminStats] = useState({
     totalUsers:0, planCounts:{}, revenue:0,
     activeUsers:0, totalLessonsCompleted:0,
@@ -6529,11 +6530,15 @@ function AdminApp({onBack=()=>{}}){
   const flagCount = users.filter(u=>u.flagged||u.status==="past_due").length
 
   async function loadAdminData(){
+    setDataError(null)
     try{
       const res=await fetch('/api/admin/data',{
         headers:{'x-admin-password':ADMIN_CREDS.pw}
       })
-      if(!res.ok) throw new Error(`Admin API ${res.status}`)
+      if(!res.ok){
+        const body=await res.json().catch(()=>({}))
+        throw new Error(body.error||`HTTP ${res.status}`)
+      }
       const {subscriptions,progress,communityQuestions,feedbackCount}=await res.json()
 
       // ── Stats ─────────────────────────────────────
@@ -6550,12 +6555,12 @@ function AdminApp({onBack=()=>{}}){
           return s+price
         },0)
       const recentUsers=[...subscriptions]
-        .sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))
+        .sort((a,b)=>new Date(b.created_at||b.updated_at)-new Date(a.created_at||a.updated_at))
         .slice(0,10)
         .map(u=>({...u,email:u.email||u.user_id?.slice(0,8)+"..."}))
       const revMap={}
-      subscriptions.filter(r=>r.plan!=="free"&&r.created_at).forEach(r=>{
-        const d=new Date(r.created_at)
+      subscriptions.filter(r=>r.plan!=="free"&&(r.created_at||r.updated_at)).forEach(r=>{
+        const d=new Date(r.created_at||r.updated_at)
         const key=d.toLocaleDateString("en-US",{month:"short",year:"numeric"})
         if(!revMap[key]) revMap[key]={month:key,mrr:0,t1:0,t2:0,t3:0,team:0,users:0}
         const price=r.plan==="team"?360*(r.seats||1):(PLAN_PRICES[r.plan]||0)
@@ -6628,6 +6633,7 @@ function AdminApp({onBack=()=>{}}){
       }))
     }catch(e){
       console.error("loadAdminData:",e)
+      setDataError(e.message||"Failed to load admin data")
     }
   }
 
@@ -6666,6 +6672,21 @@ function AdminApp({onBack=()=>{}}){
       `}</style>
       <AdminSidebar route={route} setRoute={navigate} flagCount={flagCount} onSignOut={handleSignOut} onBack={onBack}/>
       <main style={{flex:1,padding:"32px 36px",overflowY:"auto",minHeight:"100vh"}}>
+        {dataError&&(
+          <div style={{marginBottom:20,background:"#3b1a1a",border:"1px solid #c65a3a",
+            borderRadius:8,padding:"12px 16px",display:"flex",alignItems:"center",
+            justifyContent:"space-between",gap:12}}>
+            <div>
+              <span style={{fontFamily:AF.mono,fontSize:11,color:"#e07070",marginRight:8}}>⚠ Admin data failed to load:</span>
+              <span style={{fontFamily:AF.mono,fontSize:11,color:"#c09090"}}>{dataError}</span>
+            </div>
+            <button onClick={loadAdminData}
+              style={{background:AT.accent,color:"#fff",border:"none",borderRadius:6,
+                padding:"5px 12px",fontFamily:AF.mono,fontSize:10,cursor:"pointer",flexShrink:0}}>
+              Retry
+            </button>
+          </div>
+        )}
         {route==="overview"     && <Overview adminStats={adminStats} onNavigate={navigate}/>}
         {route==="users"        && <UsersView users={users} setUsers={setUsers} onSelectUser={handleSelectUser}/>}
         {route==="user-detail"  && selectedUser && <UserDetail user={selectedUser} onBack={()=>navigate("users")} onUpdate={handleUpdateUser}/>}
