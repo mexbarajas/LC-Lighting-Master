@@ -1676,29 +1676,6 @@ const PARTS = [
   {id:3,title:"Design practice & sustainability",modules:[9,10,11,12]},
 ]
 
-const BOOKMARKS = [
-  {ref:"1.4",note:"Kruithof curve relationship — review before exam"},
-  {ref:"1.5",note:"CRI vs TM-30 tradeoffs for retail projects"},
-  {ref:"2.3",note:"Three retrofit paths — client keeps asking about this"},
-  {ref:"3.1",note:"P-N junction — always on the exam"},
-  {ref:"3.3",note:"Thermal path diagram is brilliant for explaining to clients"},
-  {ref:"4.1",note:"IES LM-63 field format — memorize the structure"},
-  {ref:"4.4",note:"Inverse-square law derivation"},
-]
-
-const NOTES = [
-  {ref:"1.4",body:"CCT is the temperature of a blackbody radiator matching the source chromaticity. Not the actual lamp temp! Planckian locus is the path on the CIE diagram.",edited:"2 days ago",chars:161},
-  {ref:"1.5",body:"TM-30 Rf = fidelity (like CRI but better), Rg = gamut. Rg>100 means colors look MORE saturated, Rg<100 means less. Use both numbers together.",edited:"3 days ago",chars:141},
-  {ref:"3.1",body:"P-N junction — electrons fall from n-layer to p-layer, release photon at bandgap energy. Bandgap determines wavelength = color. Blue chip + phosphor = white LED.",edited:"4 days ago",chars:162},
-  {ref:"3.3",body:"Driver = the four parts. Locked-in last bit: thermal management lives between the chip and the heat sink, not ON the heat sink. Junction → solder → MCPCB → TIM → heat sink → ambient.",edited:"18 hr ago",chars:182},
-  {ref:"4.1",body:"LM-63 IES file: header block (TILT, lamp data), then candela values by vertical then horizontal angles. The photometric web is sampled at discrete angle pairs.",edited:"5 days ago",chars:159},
-  {ref:"2.2",body:"Magnetic ballasts run at 60Hz — cause visible flicker. Electronic run at 20–50kHz — no flicker, 10-15% better efficacy. Always specify electronic for dimming.",edited:"1 week ago",chars:158},
-  {ref:"2.3",body:"Three LED retrofit paths: (1) direct lamp swap — easiest, (2) lamp + driver swap — better, (3) full fixture replacement — best optical performance.",edited:"1 week ago",chars:143},
-  {ref:"4.2",body:"Polar plot: intensity (cd) radially, angle around. The 'blob' shape shows the beam. Cartesian is the same data unrolled flat — better for comparing distributions.",edited:"6 days ago",chars:165},
-  {ref:"3.2",body:"Four parts of a luminaire: (1) LED package/module, (2) driver, (3) heatsink/thermal path, (4) optical system. All four must work together for system performance.",edited:"4 days ago",chars:162},
-  {ref:"1.3",body:"Scotopic = rods = low light. Photopic = cones = bright light. Mesopic = transition zone. S/P ratio matters in parking — high S/P LED looks brighter at low levels.",edited:"1 week ago",chars:162},
-]
-
 const QUESTIONS = [
   {id:"q001",topic:"Light Sources & Lamps",prompt:"Which lamp type produces light through electroluminescence at a P-N semiconductor junction?",choices:["High-pressure sodium (HPS)","LED","Compact fluorescent (CFL)","Metal halide"],correct:"LED",explanation:"LEDs produce light through electroluminescence when current passes through a P-N semiconductor junction, exciting electrons that release photons."},
   {id:"q002",topic:"Photometry & Calculations",prompt:"According to the inverse-square law, if the distance from a point source doubles, illuminance:",choices:["Doubles","Halves","Reduces to one-quarter","Remains the same"],correct:"Reduces to one-quarter",explanation:"E = I/d². When distance doubles, E = I/(2d)² = I/4d² — illuminance reduces to 1/4 of the original value."},
@@ -4052,8 +4029,8 @@ function Dashboard({ setRoute, completedLessons = new Set(), user, userSubscript
     return { n: mod.n, label: mod.label, done, total, pct: Math.round((done/total)*100) }
   })
 
-  const communityAvg = 31
-  const topQuartile = 68
+  const communityAvg = null
+  const topQuartile = null
 
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
@@ -4215,30 +4192,38 @@ function Dashboard({ setRoute, completedLessons = new Set(), user, userSubscript
 
             <div style={{ background: C.creamWarm, border: `1px solid ${C.rule}`, borderRadius: 8, padding: 18 }}>
               <div style={mono({ fontSize: 9, letterSpacing: '0.18em', textTransform: 'uppercase', color: C.inkMute, marginBottom: 14 })}>Community benchmark</div>
-              {[
-                { label: 'You', pct: overallPct, color: C.accent, bold: true },
-                { label: 'Avg learner', pct: communityAvg, color: C.inkMute, bold: false },
-                { label: 'Top 25%', pct: topQuartile, color: C.forest, bold: false },
-              ].map(({ label, pct, color, bold }) => (
-                <div key={label} style={{ marginBottom: 12 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-                    <span style={{ fontFamily: F.display, fontWeight: bold ? 700 : 500, fontSize: 12, color: bold ? C.ink : C.inkMute }}>{label}</span>
-                    <span style={{ fontFamily: F.mono, fontSize: 10, color }}>{pct}%</span>
-                  </div>
-                  <div style={{ height: 5, background: C.rule, borderRadius: 99, overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 99, transition: 'width 800ms ease', opacity: bold ? 1 : 0.6 }}/>
-                  </div>
+              {communityAvg === null ? (
+                <div style={{ fontFamily: F.body, fontSize: 13, color: C.inkMute, lineHeight: 1.6 }}>
+                  Community benchmark coming soon — available once more learners join.
                 </div>
-              ))}
-              <div style={{ fontFamily: F.body, fontSize: 12, color: C.inkMute, marginTop: 8, lineHeight: 1.5 }}>
-                {overallPct > topQuartile
-                  ? '🏆 You are in the top 25% of all learners!'
-                  : overallPct > communityAvg
-                  ? '⚡ You are ahead of the average learner. Keep going!'
-                  : overallPct > 0
-                  ? '📈 You are getting started. The average learner is at ' + communityAvg + '%.'
-                  : '🚀 Start your first lesson to see how you compare.'}
-              </div>
+              ) : (
+                <>
+                  {[
+                    { label: 'You', pct: overallPct, color: C.accent, bold: true },
+                    { label: 'Avg learner', pct: communityAvg, color: C.inkMute, bold: false },
+                    { label: 'Top 25%', pct: topQuartile, color: C.forest, bold: false },
+                  ].map(({ label, pct, color, bold }) => (
+                    <div key={label} style={{ marginBottom: 12 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+                        <span style={{ fontFamily: F.display, fontWeight: bold ? 700 : 500, fontSize: 12, color: bold ? C.ink : C.inkMute }}>{label}</span>
+                        <span style={{ fontFamily: F.mono, fontSize: 10, color }}>{pct}%</span>
+                      </div>
+                      <div style={{ height: 5, background: C.rule, borderRadius: 99, overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 99, transition: 'width 800ms ease', opacity: bold ? 1 : 0.6 }}/>
+                      </div>
+                    </div>
+                  ))}
+                  <div style={{ fontFamily: F.body, fontSize: 12, color: C.inkMute, marginTop: 8, lineHeight: 1.5 }}>
+                    {overallPct > topQuartile
+                      ? '🏆 You are in the top 25% of all learners!'
+                      : overallPct > communityAvg
+                      ? '⚡ You are ahead of the average learner. Keep going!'
+                      : overallPct > 0
+                      ? '📈 You are getting started. The average learner is at ' + communityAvg + '%.'
+                      : '🚀 Start your first lesson to see how you compare.'}
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -4285,7 +4270,7 @@ function Dashboard({ setRoute, completedLessons = new Set(), user, userSubscript
           </div>
           <div style={{ background: 'rgba(248,243,236,0.06)', border: '1px solid rgba(248,243,236,0.12)', borderRadius: 4, padding: 22 }}>
             <div style={mono({ fontSize: 9, letterSpacing: '0.22em', textTransform: 'uppercase', color: C.tan, marginBottom: 12 })}>Exam at a glance</div>
-            {[['Questions','129'],['Topics','13'],['Per question','25 sec'],['Your best score', totalDone > 10 ? Math.round(55 + overallPct * 0.4) + '%' : 'Not yet taken']].map(([k,v]) => (
+            {[['Questions','129'],['Topics','13'],['Per question','25 sec'],['Your best score', 'Not yet taken']].map(([k,v]) => (
               <div key={k} style={{ display: 'flex', justifyContent: 'space-between', fontFamily: F.body, fontSize: 13, color: 'rgba(248,243,236,0.75)', padding: '6px 0', borderBottom: '1px dashed rgba(248,243,236,0.10)' }}>
                 <span>{k}</span><span style={{ fontFamily: F.display, fontWeight: 600, color: C.cream }}>{v}</span>
               </div>
@@ -5298,147 +5283,16 @@ function daysAgo(n){const d=new Date();d.setDate(d.getDate()-n);return d.toISOSt
 function fmtDate(iso){return new Date(iso).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}
 function fmtMoney(n){return"$"+n.toLocaleString()}
 
-// Seed with fixed values for determinism
-const SEED_USERS = [
-  {id:"u001",firstName:"Marcus",lastName:"Thompson",email:"m.thompson@gensler.com",company:"Gensler",state:"California",plan:"t3",status:"active",joinDate:daysAgo(142),lastActive:daysAgo(1),modulesCompleted:9,examAttempts:3,examBestScore:91,progress:75,stripeId:"cus_abc001",amount:695,flagged:false,notes:""},
-  {id:"u002",firstName:"Priya",lastName:"Kapoor",email:"p.kapoor@hlb.com",company:"HLB Lighting",state:"New York",plan:"t2",status:"active",joinDate:daysAgo(98),lastActive:daysAgo(3),modulesCompleted:6,examAttempts:0,examBestScore:null,progress:50,stripeId:"cus_abc002",amount:495,flagged:false,notes:""},
-  {id:"u003",firstName:"Sarah",lastName:"Lindqvist",email:"sarah.l@aecom.com",company:"AECOM",state:"Texas",plan:"t3",status:"active",joinDate:daysAgo(200),lastActive:daysAgo(0),modulesCompleted:12,examAttempts:5,examBestScore:97,progress:100,stripeId:"cus_abc003",amount:695,flagged:false,notes:"Top performer. Potential testimonial."},
-  {id:"u004",firstName:"Devon",lastName:"Walsh",email:"d.walsh@arup.com",company:"Arup",state:"Illinois",plan:"t1",status:"active",joinDate:daysAgo(22),lastActive:daysAgo(5),modulesCompleted:0,examAttempts:2,examBestScore:74,progress:0,stripeId:"cus_abc004",amount:250,flagged:false,notes:""},
-  {id:"u005",firstName:"Amara",lastName:"Osei",email:"amara@selfemployed.com",company:"Self-employed",state:"Florida",plan:"free",status:"free",joinDate:daysAgo(12),lastActive:daysAgo(2),modulesCompleted:1,examAttempts:0,examBestScore:null,progress:8,stripeId:null,amount:0,flagged:false,notes:""},
-  {id:"u006",firstName:"James",lastName:"Park",email:"j.park@wsp.com",company:"WSP",state:"Washington",plan:"t3",status:"past_due",joinDate:daysAgo(167),lastActive:daysAgo(18),modulesCompleted:7,examAttempts:1,examBestScore:68,progress:58,stripeId:"cus_abc006",amount:695,flagged:true,notes:"Payment failed twice. Follow up."},
-  {id:"u007",firstName:"Elena",lastName:"Rossi",email:"e.rossi@lam.com",company:"Lam Partners",state:"Massachusetts",plan:"t2",status:"active",joinDate:daysAgo(55),lastActive:daysAgo(1),modulesCompleted:8,examAttempts:0,examBestScore:null,progress:67,stripeId:"cus_abc007",amount:395,flagged:false,notes:""},
-  {id:"u008",firstName:"Carlos",lastName:"Mendez",email:"c.mendez@stantec.com",company:"Stantec",state:"Arizona",plan:"t2",status:"canceled",joinDate:daysAgo(210),lastActive:daysAgo(45),modulesCompleted:3,examAttempts:0,examBestScore:null,progress:25,stripeId:"cus_abc008",amount:495,flagged:false,notes:"Canceled mid-course. Potential win-back."},
-  {id:"u009",firstName:"Nina",lastName:"Volkova",email:"n.volkova@hdr.com",company:"HDR",state:"Colorado",plan:"t3",status:"active",joinDate:daysAgo(88),lastActive:daysAgo(0),modulesCompleted:11,examAttempts:4,examBestScore:88,progress:92,stripeId:"cus_abc009",amount:595,flagged:false,notes:""},
-  {id:"u010",firstName:"Tyler",lastName:"Brooks",email:"t.brooks@arcadis.com",company:"Arcadis",state:"Georgia",plan:"free",status:"free",joinDate:daysAgo(4),lastActive:daysAgo(4),modulesCompleted:1,examAttempts:0,examBestScore:null,progress:12,stripeId:null,amount:0,flagged:false,notes:""},
-  {id:"u011",firstName:"Hana",lastName:"Suzuki",email:"h.suzuki@atelier10.com",company:"Atelier Ten",state:"New York",plan:"t3",status:"active",joinDate:daysAgo(130),lastActive:daysAgo(2),modulesCompleted:10,examAttempts:3,examBestScore:85,progress:83,stripeId:"cus_abc011",amount:695,flagged:false,notes:""},
-  {id:"u012",firstName:"Kwame",lastName:"Asante",email:"k.asante@gensler.com",company:"Gensler",state:"California",plan:"t2",status:"active",joinDate:daysAgo(71),lastActive:daysAgo(6),modulesCompleted:5,examAttempts:0,examBestScore:null,progress:42,stripeId:"cus_abc012",amount:495,flagged:false,notes:""},
-  {id:"u013",firstName:"Rachel",lastName:"Kim",email:"r.kim@lumenpulse.com",company:"Lumenpulse",state:"Pennsylvania",plan:"t1",status:"active",joinDate:daysAgo(9),lastActive:daysAgo(1),modulesCompleted:0,examAttempts:1,examBestScore:61,progress:0,stripeId:"cus_abc013",amount:250,flagged:false,notes:""},
-  {id:"u014",firstName:"Omar",lastName:"Hassan",email:"o.hassan@wsp.com",company:"WSP",state:"Ohio",plan:"t3",status:"trialing",joinDate:daysAgo(3),lastActive:daysAgo(0),modulesCompleted:1,examAttempts:0,examBestScore:null,progress:8,stripeId:"cus_abc014",amount:695,flagged:false,notes:""},
-  {id:"u015",firstName:"Isabelle",lastName:"Dubois",email:"i.dubois@arup.com",company:"Arup",state:"Texas",plan:"t2",status:"active",joinDate:daysAgo(44),lastActive:daysAgo(3),modulesCompleted:4,examAttempts:0,examBestScore:null,progress:33,stripeId:"cus_abc015",amount:395,flagged:false,notes:""},
-  {id:"u016",firstName:"Marcus",lastName:"Reid",email:"m.reid@hdr.com",company:"HDR",state:"Florida",plan:"free",status:"free",joinDate:daysAgo(7),lastActive:daysAgo(7),modulesCompleted:1,examAttempts:0,examBestScore:null,progress:5,stripeId:null,amount:0,flagged:true,notes:"Suspicious signup — duplicate IP."},
-  {id:"u017",firstName:"Yuki",lastName:"Tanaka",email:"y.tanaka@stantec.com",company:"Stantec",state:"Washington",plan:"t3",status:"active",joinDate:daysAgo(115),lastActive:daysAgo(1),modulesCompleted:9,examAttempts:2,examBestScore:82,progress:75,stripeId:"cus_abc017",amount:695,flagged:false,notes:""},
-  {id:"u018",firstName:"Bianca",lastName:"Ferreira",email:"b.ferreira@arcadis.com",company:"Arcadis",state:"Colorado",plan:"t2",status:"active",joinDate:daysAgo(33),lastActive:daysAgo(4),modulesCompleted:3,examAttempts:0,examBestScore:null,progress:25,stripeId:"cus_abc018",amount:395,flagged:false,notes:""},
-  {id:"u019",firstName:"Alex",lastName:"Chen",email:"a.chen@lam.com",company:"Lam Partners",state:"California",plan:"t3",status:"active",joinDate:daysAgo(180),lastActive:daysAgo(0),modulesCompleted:12,examAttempts:6,examBestScore:99,progress:100,stripeId:"cus_abc019",amount:695,flagged:false,notes:"Perfect score. Great testimonial candidate."},
-  {id:"u020",firstName:"Diana",lastName:"Okafor",email:"d.okafor@selfemployed.com",company:"Self-employed",state:"Georgia",plan:"t1",status:"active",joinDate:daysAgo(18),lastActive:daysAgo(2),modulesCompleted:0,examAttempts:3,examBestScore:79,progress:0,stripeId:"cus_abc020",amount:250,flagged:false,notes:""},
-  {id:"u021",firstName:"Lucas",lastName:"Andersen",email:"l.andersen@gensler.com",company:"Gensler",state:"New York",plan:"t3",status:"canceled",joinDate:daysAgo(290),lastActive:daysAgo(120),modulesCompleted:12,examAttempts:2,examBestScore:90,progress:100,stripeId:"cus_abc021",amount:695,flagged:false,notes:"Completed course. Passed exam. Access expired."},
-  {id:"u022",firstName:"Mia",lastName:"Johansson",email:"m.jo@atelier10.com",company:"Atelier Ten",state:"Massachusetts",plan:"free",status:"free",joinDate:daysAgo(1),lastActive:daysAgo(0),modulesCompleted:0,examAttempts:0,examBestScore:null,progress:2,stripeId:null,amount:0,flagged:false,notes:""},
-  {id:"u023",firstName:"Theo",lastName:"Papadopoulos",email:"t.papa@hlb.com",company:"HLB Lighting",state:"Pennsylvania",plan:"t2",status:"past_due",joinDate:daysAgo(160),lastActive:daysAgo(30),modulesCompleted:5,examAttempts:0,examBestScore:null,progress:42,stripeId:"cus_abc023",amount:495,flagged:true,notes:"Payment past due 30 days."},
-  {id:"u024",firstName:"Sofia",lastName:"Martinez",email:"s.martinez@luxartmedia.com",company:"Luxartmedia",state:"Florida",plan:"t3",status:"active",joinDate:daysAgo(250),lastActive:daysAgo(0),modulesCompleted:12,examAttempts:4,examBestScore:95,progress:100,stripeId:"cus_abc024",amount:695,flagged:false,notes:"Internal test account."},
-]
+const SEED_USERS = []
 
-const SEED_TEAMS = [
-  {
-    id:"team_001",
-    name:"Gensler LA Studio",
-    adminUserId:"ta_001",
-    adminName:"Marcus Thompson",
-    adminEmail:"m.thompson@gensler.com",
-    company:"Gensler",
-    state:"California",
-    seats:5,
-    stripeId:"cus_team_001",
-    amount:1800,
-    status:"active",
-    joinDate:daysAgo(98),
-    members:[
-      {id:"tm1",name:"Priya Kapoor",  email:"p.kapoor@gensler.com",  progress:72,modulesCompleted:8, examBestScore:88,lastActive:daysAgo(1), status:"active"},
-      {id:"tm2",name:"Devon Walsh",   email:"d.walsh@gensler.com",   progress:45,modulesCompleted:5, examBestScore:71,lastActive:daysAgo(3), status:"active"},
-      {id:"tm3",name:"Elena Rossi",   email:"e.rossi@gensler.com",   progress:91,modulesCompleted:11,examBestScore:94,lastActive:daysAgo(0), status:"active"},
-      {id:"tm4",name:"Invite pending",email:"c.jones@gensler.com",   progress:0, modulesCompleted:0, examBestScore:null,lastActive:null,     status:"invited"},
-      {id:"tm5",name:"Seat available",email:null,                    progress:0, modulesCompleted:0, examBestScore:null,lastActive:null,     status:"empty"},
-    ]
-  },
-  {
-    id:"team_002",
-    name:"HLB SF Office",
-    adminUserId:"ta_002",
-    adminName:"Hana Suzuki",
-    adminEmail:"h.suzuki@hlb.com",
-    company:"HLB Lighting",
-    state:"California",
-    seats:3,
-    stripeId:"cus_team_002",
-    amount:1080,
-    status:"active",
-    joinDate:daysAgo(44),
-    members:[
-      {id:"tm6",name:"Kwame Asante",   email:"k.asante@hlb.com",    progress:42,modulesCompleted:5, examBestScore:null,lastActive:daysAgo(4), status:"active"},
-      {id:"tm7",name:"Rachel Kim",     email:"r.kim@hlb.com",       progress:17,modulesCompleted:2, examBestScore:null,lastActive:daysAgo(7), status:"active"},
-      {id:"tm8",name:"Invite pending", email:"t.wong@hlb.com",      progress:0, modulesCompleted:0, examBestScore:null,lastActive:null,      status:"invited"},
-    ]
-  },
-  {
-    id:"team_003",
-    name:"Arup Global Lighting",
-    adminUserId:"ta_003",
-    adminName:"Isabelle Dubois",
-    adminEmail:"i.dubois@arup.com",
-    company:"Arup",
-    state:"New York",
-    seats:8,
-    stripeId:"cus_team_003",
-    amount:2240,
-    status:"past_due",
-    joinDate:daysAgo(180),
-    members:[
-      {id:"tm9", name:"Omar Hassan",  email:"o.hassan@arup.com",   progress:83,modulesCompleted:10,examBestScore:87, lastActive:daysAgo(2), status:"active"},
-      {id:"tm10",name:"Bianca Ferr.", email:"b.f@arup.com",        progress:58,modulesCompleted:7, examBestScore:74, lastActive:daysAgo(5), status:"active"},
-      {id:"tm11",name:"Theo Papa.",   email:"t.p@arup.com",        progress:33,modulesCompleted:4, examBestScore:null,lastActive:daysAgo(11),status:"active"},
-      {id:"tm12",name:"Seat available",email:null,                 progress:0, modulesCompleted:0, examBestScore:null,lastActive:null,      status:"empty"},
-      {id:"tm13",name:"Seat available",email:null,                 progress:0, modulesCompleted:0, examBestScore:null,lastActive:null,      status:"empty"},
-      {id:"tm14",name:"Seat available",email:null,                 progress:0, modulesCompleted:0, examBestScore:null,lastActive:null,      status:"empty"},
-      {id:"tm15",name:"Seat available",email:null,                 progress:0, modulesCompleted:0, examBestScore:null,lastActive:null,      status:"empty"},
-      {id:"tm16",name:"Seat available",email:null,                 progress:0, modulesCompleted:0, examBestScore:null,lastActive:null,      status:"empty"},
-    ]
-  },
-]
+const SEED_TEAMS = []
 
 
-const REVENUE_MONTHS = [
-  {month:"Jul 2024",mrr:2840,t1:0,t2:1440,t3:1400,users:6},
-  {month:"Aug 2024",mrr:5290,t1:0,t2:2370,t3:2920,users:11},
-  {month:"Sep 2024",mrr:7650,t1:0,t2:3465,t3:4185,users:16},
-  {month:"Oct 2024",mrr:4200,t1:1500,t2:1395,t3:1305,users:14},
-  {month:"Nov 2024",mrr:1390,t1:250,t2:790,t3:350,users:4},
-  {month:"Dec 2024",mrr:980,t1:0,t2:590,t3:390,users:3},
-  {month:"Jan 2025",mrr:590,t1:0,t2:395,t3:195,users:2},
-  {month:"Feb 2025",mrr:790,t1:0,t2:395,t3:395,users:2},
-  {month:"Mar 2025",mrr:1185,t1:0,t2:790,t3:395,users:3},
-  {month:"Apr 2025",mrr:1580,t1:0,t2:790,t3:790,users:4},
-  {month:"May 2025",mrr:3560,t1:0,t2:1580,t3:1980,users:9},
-  {month:"Jun 2025",mrr:5330,t1:0,t2:2370,t3:2960,users:13},
-]
+const REVENUE_MONTHS = []
 
-const MODULE_STATS = [
-  {n:"01",title:"Theory, Light, Sight & Color",completions:22,dropoffs:0,avgTime:38},
-  {n:"02",title:"Light Sources & Ballasts",completions:18,dropoffs:4,avgTime:42},
-  {n:"03",title:"LED Technology Deep Dive",completions:14,dropoffs:4,avgTime:55},
-  {n:"04",title:"Photometry & IES Files",completions:11,dropoffs:3,avgTime:61},
-  {n:"05",title:"Lighting Controls",completions:10,dropoffs:1,avgTime:44},
-  {n:"06",title:"Downlighting & Interior Design",completions:10,dropoffs:0,avgTime:39},
-  {n:"07",title:"Exterior, Emergency & Codes",completions:9,dropoffs:1,avgTime:48},
-  {n:"08",title:"Industrial Lighting & Human Health",completions:9,dropoffs:0,avgTime:41},
-  {n:"09",title:"Energy, Environment & Sustainable",completions:8,dropoffs:1,avgTime:52},
-  {n:"10",title:"Design Process I: Planning to DD",completions:8,dropoffs:0,avgTime:46},
-  {n:"11",title:"Design Process II: Documents to POE",completions:8,dropoffs:0,avgTime:43},
-  {n:"12",title:"LC Exam Strategy & Practice",completions:7,dropoffs:1,avgTime:58},
-]
+const MODULE_STATS = []
 
-const EXAM_TOPIC_STATS = [
-  {topic:"Photometry",avgScore:72,attempts:14},
-  {topic:"Color & Vision",avgScore:81,attempts:14},
-  {topic:"Light Sources",avgScore:78,attempts:14},
-  {topic:"Controls",avgScore:65,attempts:14},
-  {topic:"Daylighting",avgScore:70,attempts:14},
-  {topic:"Energy Codes",avgScore:61,attempts:14},
-  {topic:"Glare",avgScore:74,attempts:14},
-  {topic:"Optics",avgScore:68,attempts:14},
-  {topic:"Design Standards",avgScore:75,attempts:14},
-  {topic:"Exterior Lighting",avgScore:77,attempts:14},
-  {topic:"Ballasts",avgScore:83,attempts:14},
-  {topic:"Conservation",avgScore:69,attempts:14},
-  {topic:"Sustainability",avgScore:71,attempts:14},
-]
+const EXAM_TOPIC_STATS = []
 
 /* ── SHARED PRIMITIVES ─────────────────────────── */
 function Badge({label,color,bg}){
@@ -6154,6 +6008,14 @@ function Subscriptions({users}){
 
 /* ── REVENUE ───────────────────────────────────── */
 function Revenue(){
+  if(!REVENUE_MONTHS.length){
+    return(
+      <div>
+        <div style={adisp({fontWeight:700,fontSize:22,color:AT.ink,marginBottom:24})}>Revenue</div>
+        <div style={{color:AT.inkMute,fontFamily:AF.body,fontSize:14}}>No revenue data yet — purchases will appear here.</div>
+      </div>
+    )
+  }
   const totalAll=REVENUE_MONTHS.reduce((s,m)=>s+m.mrr,0)
   const thisM=REVENUE_MONTHS[REVENUE_MONTHS.length-1]
   const maxMrr=Math.max(...REVENUE_MONTHS.map(m=>m.mrr))
@@ -6232,16 +6094,16 @@ function Revenue(){
 
 /* ── CONTENT & PROGRESS ────────────────────────── */
 function ContentView(){
-  const maxComp=Math.max(...MODULE_STATS.map(m=>m.completions))
+  const maxComp=MODULE_STATS.length?Math.max(...MODULE_STATS.map(m=>m.completions)):0
   return(
     <div>
       <div style={adisp({fontWeight:700,fontSize:22,color:AT.ink,marginBottom:24})}>Content & Progress</div>
 
       <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:28}}>
-        <StatCard label="Avg completion" value={`${Math.round(MODULE_STATS.reduce((s,m)=>s+m.completions,0)/MODULE_STATS.length/SEED_USERS.length*100)}%`}/>
-        <StatCard label="Full completions" value={SEED_USERS.filter(u=>u.progress===100).length} sub="completed all 12 modules" color={AT.green}/>
-        <StatCard label="Exam pass rate" value={`${Math.round(SEED_USERS.filter(u=>u.examBestScore&&u.examBestScore>=85).length/SEED_USERS.filter(u=>u.examAttempts>0).length*100)}%`} sub="≥85% accuracy" color={AT.purple}/>
-        <StatCard label="Avg exam score" value={`${Math.round(SEED_USERS.filter(u=>u.examBestScore).reduce((s,u)=>s+u.examBestScore,0)/SEED_USERS.filter(u=>u.examBestScore).length)}%`}/>
+        <StatCard label="Avg completion" value="—"/>
+        <StatCard label="Full completions" value="—" sub="completed all 12 modules" color={AT.green}/>
+        <StatCard label="Exam pass rate" value="—" sub="≥85% accuracy" color={AT.purple}/>
+        <StatCard label="Avg exam score" value="—"/>
       </div>
 
       {/* Module funnel */}
@@ -6289,14 +6151,16 @@ function ContentView(){
             </div>
           ))}
         </div>
-        <div style={{marginTop:12,padding:"10px 16px",background:AT.redDim,
-          border:`1px solid ${AT.red}20`,borderRadius:6}}>
-          <span style={amono({fontSize:10,color:AT.red})}>⚠ Weak topics (below 70%): </span>
-          <span style={amono({fontSize:10,color:AT.inkSoft})}>
-            {EXAM_TOPIC_STATS.filter(t=>t.avgScore<70).map(t=>t.topic).join(", ")}
-          </span>
-          <span style={amono({fontSize:10,color:AT.inkMute})}> — consider adding more content</span>
-        </div>
+        {EXAM_TOPIC_STATS.filter(t=>t.avgScore<70).length>0&&(
+          <div style={{marginTop:12,padding:"10px 16px",background:AT.redDim,
+            border:`1px solid ${AT.red}20`,borderRadius:6}}>
+            <span style={amono({fontSize:10,color:AT.red})}>⚠ Weak topics (below 70%): </span>
+            <span style={amono({fontSize:10,color:AT.inkSoft})}>
+              {EXAM_TOPIC_STATS.filter(t=>t.avgScore<70).map(t=>t.topic).join(", ")}
+            </span>
+            <span style={amono({fontSize:10,color:AT.inkMute})}> — consider adding more content</span>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -6404,7 +6268,7 @@ function SupportFlags({users,setUsers,onSelectUser}){
 
 /* ── TEAMS ─────────────────────────────────────── */
 function TeamsView(){
-  const [teams,setTeams]=useState(SEED_TEAMS)
+  const [teams,setTeams]=useState([])
   const [selected,setSelected]=useState(null)
   const [inviteEmail,setInviteEmail]=useState("")
   const [inviteSent,setInviteSent]=useState(false)
@@ -6772,7 +6636,7 @@ function AdminSidebar({route,setRoute,flagCount,onSignOut,onBack=()=>{}}){
 function AdminApp({onBack=()=>{}}){
   const [authed, setAuthed] = useState(false)
   const [route, setRoute] = useState("overview")
-  const [users, setUsers] = useState(SEED_USERS)
+  const [users, setUsers] = useState([])
   const [selectedUser, setSelectedUser] = useState(null)
   const [adminStats, setAdminStats] = useState({
     totalUsers:0, planCounts:{}, revenue:0,
