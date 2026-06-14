@@ -15,6 +15,11 @@ const PLANS = {
 export async function POST(request) {
   if (!checkOrigin(request)) return originError()
 
+  const contentType = request.headers.get('content-type') || ''
+  if (!contentType.includes('application/json')) {
+    return new Response(JSON.stringify({ error: 'Content-Type must be application/json' }), { status: 415 })
+  }
+
   let body
   try {
     const text = await request.text()

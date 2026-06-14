@@ -4,7 +4,16 @@ Allow: /pricing
 Allow: /resources
 Disallow: /dashboard
 Disallow: /api/
-Disallow: /login
 Disallow: /reset-password
+
+User-agent: Googlebot
+Allow: /
+Disallow: /dashboard
+Disallow: /api/
+
+User-agent: Bingbot
+Allow: /
+Disallow: /dashboard
+Disallow: /api/
 
 Sitemap: https://lightingmasterlc.com/sitemap.xml

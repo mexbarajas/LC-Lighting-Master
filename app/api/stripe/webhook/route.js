@@ -54,6 +54,19 @@ export async function POST(request) {
 
     const supabase = createServiceClient()
 
+    // Idempotency: skip if this payment_intent was already processed
+    if (session.payment_intent) {
+      const { data: existing } = await supabase
+        .from('subscriptions')
+        .select('stripe_payment_intent')
+        .eq('stripe_payment_intent', session.payment_intent)
+        .single()
+      if (existing) {
+        console.log(`Duplicate webhook skipped — payment already processed: ${session.payment_intent}`)
+        return new Response('Already processed', { status: 200 })
+      }
+    }
+
     const { error } = await supabase
       .from('subscriptions')
       .upsert({
