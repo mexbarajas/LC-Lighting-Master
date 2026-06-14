@@ -3001,7 +3001,7 @@ const LC_MEDIA = {
 }
 
 const LC_AUDIO = {
-  "1.1": "https://res.cloudinary.com/dreuglb2j/video/upload/v1780936730/Lesson_101_qfxduz.mp4",
+  "1.1": "https://res.cloudinary.com/dreuglb2j/video/upload/v1781457100/Lesson_101_c7gmt2.mp4",
   "1.2": "https://res.cloudinary.com/dreuglb2j/video/upload/v1780937194/Lesson_102_lrftbl.mp4",
   "1.3": "https://res.cloudinary.com/dreuglb2j/video/upload/v1780937199/Lesson_103_nccty5.mp4",
   "1.4": "https://res.cloudinary.com/dreuglb2j/video/upload/v1780937207/Lesson_104_azebuk.mp4",
@@ -3023,6 +3023,7 @@ const LC_AUDIO = {
   "4.2": "https://res.cloudinary.com/dreuglb2j/video/upload/v1780938812/Lesson_402_bouves.mp4",
   "4.3": "https://res.cloudinary.com/dreuglb2j/video/upload/v1781454336/Lesson_403_ur6w49.mp4",
   "4.4": "https://res.cloudinary.com/dreuglb2j/video/upload/v1780938863/Lesson_404_zbtrb3.mp4",
+  "4.5": "https://res.cloudinary.com/dreuglb2j/video/upload/v1781457090/Lesson_405_utrdl9.mp4",
   "4.6": "https://res.cloudinary.com/dreuglb2j/video/upload/v1781453880/Lesson_406_rcde7y.mp4",
   "5.1": "https://res.cloudinary.com/dreuglb2j/video/upload/v1781453890/Lesson_501_fwylst.mp4",
   "5.2": "https://res.cloudinary.com/dreuglb2j/video/upload/v1780938844/Lesson_502_haejrn.mp4",
@@ -3032,6 +3033,7 @@ const LC_AUDIO = {
   "5.6": "https://res.cloudinary.com/dreuglb2j/video/upload/v1781453899/Lesson_506_k34vbn.mp4",
   "6.1": "https://res.cloudinary.com/dreuglb2j/video/upload/v1781031990/Lesson_601_wb63d7.mp4",
   "6.2": "https://res.cloudinary.com/dreuglb2j/video/upload/v1781031999/Lesson_602_j99nu1.mp4",
+  "6.3": "https://res.cloudinary.com/dreuglb2j/video/upload/v1781458176/Lesson_603_w81mvt.mp4",
   "6.4": "https://res.cloudinary.com/dreuglb2j/video/upload/v1781032000/Lesson_604_wmnpqg.mp4",
   "6.5": "https://res.cloudinary.com/dreuglb2j/video/upload/v1781454486/Lesson_605_vcrqnq.mp4",
   "6.6": "https://res.cloudinary.com/dreuglb2j/video/upload/v1781454505/Lesson_606_sy1opg.mp4",
@@ -3039,8 +3041,10 @@ const LC_AUDIO = {
   "7.2": "https://res.cloudinary.com/dreuglb2j/video/upload/v1781454042/Lesson_702_oykxvc.mp4",
   "7.3": "https://res.cloudinary.com/dreuglb2j/video/upload/v1781454021/Lesson_703_qroawy.mp4",
   "7.4": "https://res.cloudinary.com/dreuglb2j/video/upload/v1781454016/Lesson_704_wtq0cq.mp4",
+  "7.5": "https://res.cloudinary.com/dreuglb2j/video/upload/v1781457085/Lesson_705_apofiu.mp4",
   "7.6": "https://res.cloudinary.com/dreuglb2j/video/upload/v1781454014/Lesson_706_gbbzyt.mp4",
   "8.1": "https://res.cloudinary.com/dreuglb2j/video/upload/v1781454094/Lesson_801_bfxvw6.mp4",
+  "8.2": "https://res.cloudinary.com/dreuglb2j/video/upload/v1781457088/Lesson_802_bzqkx7.mp4",
   "8.3": "https://res.cloudinary.com/dreuglb2j/video/upload/v1781454073/Lesson_803_cdftax.mp4",
   "8.4": "https://res.cloudinary.com/dreuglb2j/video/upload/v1781454034/Lesson_804_xibsou.mp4",
   "8.5": "https://res.cloudinary.com/dreuglb2j/video/upload/v1781454034/Lesson_805_v9eup2.mp4",
@@ -3062,6 +3066,7 @@ const LC_AUDIO = {
   "11.3": "https://res.cloudinary.com/dreuglb2j/video/upload/v1781454025/Lesson_1103_husjbg.mp4",
   "11.4": "https://res.cloudinary.com/dreuglb2j/video/upload/v1781454002/Lesson_1104_liiiyj.mp4",
   "11.5": "https://res.cloudinary.com/dreuglb2j/video/upload/v1781454055/Lesson_1105_fj0dxr.mp4",
+  "11.6": "https://res.cloudinary.com/dreuglb2j/video/upload/v1781458179/Lesson_1106_yar9gn.mp4",
   "12.1": "https://res.cloudinary.com/dreuglb2j/video/upload/v1781454093/Lesson_1201_tmghvu.mp4",
   "12.2": "https://res.cloudinary.com/dreuglb2j/video/upload/v1781454006/Lesson_1202_vjxdoa.mp4",
   "12.3": "https://res.cloudinary.com/dreuglb2j/video/upload/v1781453999/Lesson_1203_j03hbs.mp4",
@@ -3418,11 +3423,53 @@ function ContinuePage({setRoute, completedLessons=new Set()}) {
 
 
 /* ── ACCOUNT PAGE ────────────────────────────────────────────── */
-function AccountPage() {
+function AccountPage({ user, setUser, setRoute }) {
   const [tab,setTab] = useState("profile")
-  const [form,setForm] = useState({name:"Reema Malhotra",firm:"Atelier Vue",email:"reema@atelier-vue.in",role:"Principal · Lighting Lead",location:"Mumbai, IN"})
+  const [form,setForm] = useState({
+    name: user?.name || '',
+    firm: user?.company || '',
+    email: user?.email || '',
+    role: user?.role || '',
+    location: user?.state || '',
+  })
   const [saved,setSaved] = useState(false)
-  function save() {setSaved(true);setTimeout(()=>setSaved(false),2000)}
+  const [saving,setSaving] = useState(false)
+  const [checkoutLoading,setCheckoutLoading] = useState(null)
+  const [checkoutError,setCheckoutError] = useState(null)
+
+  async function save() {
+    setSaving(true)
+    await supabase.auth.updateUser({ data: { name: form.name, company: form.firm, role: form.role, state: form.location } })
+    if (setUser) setUser(prev => prev ? { ...prev, name: form.name, company: form.firm, state: form.location } : prev)
+    setSaving(false)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
+  }
+
+  async function startCheckout(plan) {
+    setCheckoutLoading(plan)
+    setCheckoutError(null)
+    try {
+      const res = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan }),
+      })
+      const data = await res.json()
+      if (data.url) { window.location.href = data.url }
+      else setCheckoutError(data.error || 'Could not start checkout. Please try again.')
+    } catch {
+      setCheckoutError('Could not connect. Please try again.')
+    } finally {
+      setCheckoutLoading(null)
+    }
+  }
+
+  const PLAN_LABELS = { free: 'Free', t1: 'Practice Exam', t2: 'Full Course', t3: 'Course + Exam', team_admin: 'Team Plan', team_member: 'Team Plan' }
+  const planKey = user?.plan || 'free'
+  const planName = PLAN_LABELS[planKey] || 'Free'
+  const isPaid = planKey !== 'free'
+
   const tabs = [["profile","Profile"],["billing","Billing"],["notifications","Notifications"],["export","Export data"]]
   return (
     <div style={{padding:"0 36px 48px"}}>
@@ -3436,12 +3483,12 @@ function AccountPage() {
       {tab==="profile"&&(
         <div style={{maxWidth:560}}>
           <div style={{display:"grid",gap:20}}>
-            {[{key:"name",label:"Display name"},{key:"firm",label:"Firm"},{key:"email",label:"Email",type:"email"},{key:"role",label:"Role"},{key:"location",label:"Location"}].map(({key,label,type="text"})=>(
+            {[{key:"name",label:"Display name"},{key:"firm",label:"Firm"},{key:"email",label:"Email",type:"email",readOnly:true},{key:"role",label:"Role"},{key:"location",label:"Location"}].map(({key,label,type="text",readOnly=false})=>(
               <div key={key}>
                 <label style={{display:"block",fontFamily:F.mono,fontSize:9,letterSpacing:"0.18em",textTransform:"uppercase",color:C.inkMute,marginBottom:8}}>{label}</label>
-                <input type={type} value={form[key]} onChange={e=>setForm(f=>({...f,[key]:e.target.value}))}
-                  style={{width:"100%",boxSizing:"border-box",padding:"12px 14px",fontFamily:F.display,fontSize:14,color:C.ink,background:C.paper,border:`1px solid ${C.ruleStrong}`,borderRadius:4,outline:"none"}}
-                  onFocus={e=>e.target.style.borderColor=C.accent} onBlur={e=>e.target.style.borderColor=C.ruleStrong}/>
+                <input type={type} value={form[key]} readOnly={readOnly} onChange={e=>!readOnly&&setForm(f=>({...f,[key]:e.target.value}))}
+                  style={{width:"100%",boxSizing:"border-box",padding:"12px 14px",fontFamily:F.display,fontSize:14,color:readOnly?C.inkMute:C.ink,background:readOnly?C.creamWarm:C.paper,border:`1px solid ${C.ruleStrong}`,borderRadius:4,outline:"none",cursor:readOnly?"default":"text"}}
+                  onFocus={e=>{if(!readOnly)e.target.style.borderColor=C.accent}} onBlur={e=>e.target.style.borderColor=C.ruleStrong}/>
               </div>
             ))}
             <div>
@@ -3451,8 +3498,8 @@ function AccountPage() {
                 onFocus={e=>e.target.style.borderColor=C.accent} onBlur={e=>e.target.style.borderColor=C.ruleStrong}/>
             </div>
           </div>
-          <button onClick={save} style={{marginTop:24,fontFamily:F.display,fontWeight:700,fontSize:14,background:saved?C.forest:C.accent,color:"#fff",border:"none",borderRadius:99,padding:"12px 28px",cursor:"pointer",transition:"background 200ms"}}>
-            {saved?"Saved ✓":"Save changes"}
+          <button onClick={save} disabled={saving} style={{marginTop:24,fontFamily:F.display,fontWeight:700,fontSize:14,background:saved?C.forest:C.accent,color:"#fff",border:"none",borderRadius:99,padding:"12px 28px",cursor:"pointer",transition:"background 200ms",opacity:saving?0.7:1}}>
+            {saved?"Saved ✓":saving?"Saving…":"Save changes"}
           </button>
         </div>
       )}
@@ -3461,20 +3508,42 @@ function AccountPage() {
         <div style={{maxWidth:640}}>
           <div style={{background:C.ink,borderRadius:6,padding:"28px 32px",marginBottom:24}}>
             <div style={mono({fontSize:9,letterSpacing:"0.22em",textTransform:"uppercase",color:C.tan,marginBottom:10})}>Current plan</div>
-            <div style={{fontFamily:F.display,fontWeight:700,fontSize:24,color:"#fff",marginBottom:6}}>6-Month plan</div>
-            <div style={mono({fontSize:10,letterSpacing:"0.14em",color:"rgba(249,244,237,0.5)",marginBottom:18})}>Expires 28 Aug 2026 · 97 days remaining</div>
-            <div style={{display:"flex",gap:12}}>
-              <button style={{fontFamily:F.display,fontWeight:600,fontSize:13,background:C.accent,color:"#fff",border:"none",borderRadius:99,padding:"10px 20px",cursor:"pointer"}}>Upgrade to 12-Month →</button>
-              <button style={{fontFamily:F.display,fontWeight:600,fontSize:13,background:"none",color:"rgba(249,244,237,0.7)",border:`1px solid rgba(249,244,237,0.3)`,borderRadius:99,padding:"10px 20px",cursor:"pointer"}}>Add exam ($200)</button>
+            <div style={{fontFamily:F.display,fontWeight:700,fontSize:24,color:"#fff",marginBottom:6}}>{planName}</div>
+            <div style={mono({fontSize:10,letterSpacing:"0.14em",color:"rgba(249,244,237,0.5)",marginBottom:18})}>
+              {isPaid ? `Active · ${user?.examAddon ? 'Includes practice exam' : 'Course access'}` : 'No active plan — upgrade to unlock all lessons'}
+            </div>
+            {checkoutError && <div style={{fontFamily:F.body,fontSize:13,color:"#f87171",marginBottom:12}}>{checkoutError}</div>}
+            <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+              {planKey==="free"&&(
+                <button onClick={()=>startCheckout('t2')} disabled={!!checkoutLoading} style={{fontFamily:F.display,fontWeight:600,fontSize:13,background:C.accent,color:"#fff",border:"none",borderRadius:99,padding:"10px 20px",cursor:"pointer",opacity:checkoutLoading?0.7:1}}>
+                  {checkoutLoading==='t2'?'Opening…':'Get Full Course →'}
+                </button>
+              )}
+              {planKey==="free"&&(
+                <button onClick={()=>startCheckout('t3')} disabled={!!checkoutLoading} style={{fontFamily:F.display,fontWeight:600,fontSize:13,background:"none",color:"rgba(249,244,237,0.7)",border:`1px solid rgba(249,244,237,0.3)`,borderRadius:99,padding:"10px 20px",cursor:"pointer",opacity:checkoutLoading?0.7:1}}>
+                  {checkoutLoading==='t3'?'Opening…':'Course + Exam ($595)'}
+                </button>
+              )}
+              {planKey==="t2"&&!user?.examAddon&&(
+                <button onClick={()=>startCheckout('t1')} disabled={!!checkoutLoading} style={{fontFamily:F.display,fontWeight:600,fontSize:13,background:C.accent,color:"#fff",border:"none",borderRadius:99,padding:"10px 20px",cursor:"pointer",opacity:checkoutLoading?0.7:1}}>
+                  {checkoutLoading==='t1'?'Opening…':'Add Practice Exam ($250) →'}
+                </button>
+              )}
+              {planKey==="t1"&&(
+                <button onClick={()=>startCheckout('t2')} disabled={!!checkoutLoading} style={{fontFamily:F.display,fontWeight:600,fontSize:13,background:C.accent,color:"#fff",border:"none",borderRadius:99,padding:"10px 20px",cursor:"pointer",opacity:checkoutLoading?0.7:1}}>
+                  {checkoutLoading==='t2'?'Opening…':'Upgrade to Full Course →'}
+                </button>
+              )}
             </div>
           </div>
-          <div style={{background:C.paper,border:`1px solid ${C.rule}`,borderRadius:4,padding:"24px 28px"}}>
-            <div style={mono({fontSize:9,letterSpacing:"0.18em",textTransform:"uppercase",color:C.inkMute,marginBottom:14})}>Payment method</div>
-            <div style={{display:"flex",alignItems:"center",gap:12,fontFamily:F.display,fontSize:14,color:C.ink}}>
-              <span style={{background:C.rule,borderRadius:3,padding:"4px 10px",fontFamily:F.mono,fontSize:11}}>VISA</span>
-              {"**** **** **** 4242 - expires 12/27"}
+          {isPaid&&(
+            <div style={{background:C.paper,border:`1px solid ${C.rule}`,borderRadius:4,padding:"24px 28px"}}>
+              <div style={mono({fontSize:9,letterSpacing:"0.18em",textTransform:"uppercase",color:C.inkMute,marginBottom:10})}>Questions about billing?</div>
+              <div style={{fontFamily:F.body,fontSize:13,color:C.inkMute,lineHeight:1.6}}>
+                Email <a href="mailto:admin@luxartmedia.com" style={{color:C.accent}}>admin@luxartmedia.com</a> for refunds, receipts, or plan changes.
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
 
@@ -3966,33 +4035,54 @@ function Dashboard({ setRoute, completedLessons = new Set(), user, userSubscript
 
           {/* Module completion bar chart */}
           <div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {moduleData.map(mod => (
-                <div key={mod.n}
-                  onMouseEnter={() => setHoveredMod(mod.n)}
-                  onMouseLeave={() => setHoveredMod(null)}
-                  style={{ cursor: 'pointer' }}
-                  onClick={() => setRoute('home')}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                    <span style={{ fontFamily: F.display, fontWeight: 600, fontSize: 12, color: hoveredMod === mod.n ? C.accent : C.ink }}>
-                      M{mod.n} · {mod.label}
-                    </span>
-                    <span style={mono({ fontSize: 9, color: mod.pct === 100 ? C.forest : C.inkMute })}>
-                      {mod.pct === 100 ? '✓ Complete' : `${mod.done}/${mod.total}`}
-                    </span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {MODULES.map(mod => {
+                const done = mod.lessons.filter(l => completedLessons.has(l.ref)).length
+                const total = mod.lessons.length
+                const pct = Math.round((done / total) * 100)
+                return (
+                  <div key={mod.n}
+                    onMouseEnter={() => setHoveredMod(mod.n)}
+                    onMouseLeave={() => setHoveredMod(null)}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                      <span style={{ fontFamily: F.display, fontWeight: 600, fontSize: 12, color: hoveredMod === mod.n ? C.accent : C.ink }}>
+                        M{mod.n} · {mod.label}
+                      </span>
+                      <span style={mono({ fontSize: 9, color: pct === 100 ? C.forest : C.inkMute })}>
+                        {pct === 100 ? '✓ Complete' : `${done}/${total}`}
+                      </span>
+                    </div>
+                    <div style={{ height: 6, background: C.rule, borderRadius: 99, overflow: 'hidden', marginBottom: 6 }}>
+                      <div style={{
+                        height: '100%',
+                        width: `${pct}%`,
+                        background: pct === 100 ? C.forest : hoveredMod === mod.n ? C.accent : `${C.accent}99`,
+                        borderRadius: 99,
+                        transition: 'width 600ms ease, background 200ms'
+                      }}/>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                      {mod.lessons.map(l => {
+                        const isDone = completedLessons.has(l.ref)
+                        return (
+                          <div key={l.ref}
+                            onClick={() => { window.scrollTo({ top: 0, behavior: 'smooth' }); setRoute('lesson-' + l.ref) }}
+                            style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer', padding: '3px 4px', borderRadius: 4, transition: 'background 120ms' }}
+                            onMouseEnter={e => e.currentTarget.style.background = C.creamWarm}
+                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                          >
+                            <span style={{ width: 6, height: 6, borderRadius: '50%', flexShrink: 0, background: isDone ? C.forest : C.rule, border: isDone ? 'none' : `1.5px solid ${C.inkMute}` }}/>
+                            <span style={{ fontFamily: F.body, fontSize: 11, color: isDone ? C.inkMute : C.ink, textDecoration: 'none' }}>
+                              {l.ref} · {l.title}
+                            </span>
+                          </div>
+                        )
+                      })}
+                    </div>
                   </div>
-                  <div style={{ height: 6, background: C.rule, borderRadius: 99, overflow: 'hidden' }}>
-                    <div style={{
-                      height: '100%',
-                      width: `${mod.pct}%`,
-                      background: mod.pct === 100 ? C.forest : hoveredMod === mod.n ? C.accent : `${C.accent}99`,
-                      borderRadius: 99,
-                      transition: 'width 600ms ease, background 200ms'
-                    }}/>
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
 
@@ -4626,7 +4716,7 @@ function AppShell({user, onSignOut, completedLessons=new Set(), markLessonComple
         {route==="continue"  && <ContinuePage setRoute={setRoute} completedLessons={completedLessons}/>}
         {route==="exam"      && <ExamPage setRoute={setRoute} isMobile={isMobile}/>}
         {route==="cert"      && <CertPage completedLessons={completedLessons}/>}
-        {route==="account"   && <AccountPage/>}
+        {route==="account"   && <AccountPage user={user} setUser={setUser} setRoute={setRoute}/>}
         {route==="community" && <CommunityPage setRoute={setRoute} user={user}/>}
         {route==="trends"    && <TrendsPage setRoute={setRoute}/>}
         {route==="feedback"  && <FeedbackPage user={user} userSubscription={user?.plan ? {plan:user.plan} : null}/>}
