@@ -5280,7 +5280,7 @@ const STATUS_COLORS={active:AT.green,past_due:AT.amber,canceled:AT.red,trialing:
 function rnd(min,max){return Math.floor(Math.random()*(max-min+1))+min}
 function pick(arr){return arr[Math.floor(Math.random()*arr.length)]}
 function daysAgo(n){const d=new Date();d.setDate(d.getDate()-n);return d.toISOString().split("T")[0]}
-function fmtDate(iso){return new Date(iso).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}
+function fmtDate(iso){return iso?new Date(iso).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}):'—'}
 function fmtMoney(n){return"$"+n.toLocaleString()}
 
 const SEED_USERS = []
@@ -5652,11 +5652,11 @@ function UsersView({users,setUsers,onSelectUser}){
   const filtered=users
     .filter(u=>{
       const q=search.toLowerCase()
-      return !q||u.firstName.toLowerCase().includes(q)||
-        u.lastName.toLowerCase().includes(q)||
-        u.email.toLowerCase().includes(q)||
-        u.company.toLowerCase().includes(q)||
-        u.state.toLowerCase().includes(q)
+      return !q||(u.firstName||'').toLowerCase().includes(q)||
+        (u.lastName||'').toLowerCase().includes(q)||
+        (u.email||'').toLowerCase().includes(q)||
+        (u.company||'').toLowerCase().includes(q)||
+        (u.state||'').toLowerCase().includes(q)
     })
     .filter(u=>planFilter==="all"||u.plan===planFilter)
     .filter(u=>statusFilter==="all"||u.status===statusFilter)
@@ -5743,7 +5743,7 @@ function UsersView({users,setUsers,onSelectUser}){
                   background:AT.accent+"30",border:`1px solid ${AT.accent}40`,
                   display:"flex",alignItems:"center",justifyContent:"center",
                   fontFamily:AF.display,fontWeight:700,fontSize:9,color:AT.accent,flexShrink:0}}>
-                  {u.firstName[0]}{u.lastName[0]}
+                  {(u.firstName||'?')[0]}{(u.lastName||'')[0]}
                 </div>
                 <div>
                   <div style={asans({fontSize:13,color:AT.ink,fontWeight:500})}>
@@ -5815,7 +5815,7 @@ function UserDetail({user,onBack,onUpdate}){
             background:AT.accent+"30",border:`2px solid ${AT.accent}40`,
             display:"flex",alignItems:"center",justifyContent:"center",
             fontFamily:AF.display,fontWeight:700,fontSize:18,color:AT.accent}}>
-            {user.firstName[0]}{user.lastName[0]}
+            {(user.firstName||'?')[0]}{(user.lastName||'')[0]}
           </div>
           <div>
             <div style={adisp({fontWeight:700,fontSize:22,color:AT.ink,marginBottom:4})}>
@@ -5844,10 +5844,10 @@ function UserDetail({user,onBack,onUpdate}){
           {[
             ["User ID",user.id],
             ["Email",user.email],
-            ["Company",user.company],
-            ["State",user.state],
-            ["Joined",fmtDate(user.joinDate)],
-            ["Last active",fmtDate(user.lastActive)],
+            ["Company",user.company||'—'],
+            ["State",user.state||'—'],
+            ["Joined",user.joinDate?fmtDate(user.joinDate):'—'],
+            ["Last active",user.lastActive?fmtDate(user.lastActive):'—'],
             ["Stripe ID",user.stripeId||"—"],
           ].map(([k,v])=>(
             <div key={k} style={{display:"flex",justifyContent:"space-between",
@@ -6007,8 +6007,8 @@ function Subscriptions({users}){
 }
 
 /* ── REVENUE ───────────────────────────────────── */
-function Revenue(){
-  if(!REVENUE_MONTHS.length){
+function Revenue({revenueMonths=[]}){
+  if(!revenueMonths.length){
     return(
       <div>
         <div style={adisp({fontWeight:700,fontSize:22,color:AT.ink,marginBottom:24})}>Revenue</div>
@@ -6016,9 +6016,10 @@ function Revenue(){
       </div>
     )
   }
-  const totalAll=REVENUE_MONTHS.reduce((s,m)=>s+m.mrr,0)
-  const thisM=REVENUE_MONTHS[REVENUE_MONTHS.length-1]
-  const maxMrr=Math.max(...REVENUE_MONTHS.map(m=>m.mrr))
+  const totalAll=revenueMonths.reduce((s,m)=>s+m.mrr,0)
+  const thisM=revenueMonths[revenueMonths.length-1]
+  const maxMrr=Math.max(...revenueMonths.map(m=>m.mrr))
+  const totalUsers=revenueMonths.reduce((s,m)=>s+m.users,0)
 
   return(
     <div>
@@ -6026,41 +6027,31 @@ function Revenue(){
 
       <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:28}}>
         <StatCard label="All-time revenue" value={fmtMoney(totalAll)} color={AT.green}/>
-        <StatCard label="This month" value={fmtMoney(thisM.mrr)} sub={`${thisM.users} enrollments`} color={AT.accent}/>
-        <StatCard label="Peak month" value={fmtMoney(maxMrr)} sub="Oct 2024"/>
-        <StatCard label="Avg per user" value={fmtMoney(Math.round(totalAll/REVENUE_MONTHS.reduce((s,m)=>s+m.users,0)))}/>
+        <StatCard label="This month" value={fmtMoney(thisM.mrr)} sub={`${thisM.users} enrollment${thisM.users!==1?"s":""}`} color={AT.accent}/>
+        <StatCard label="Peak month" value={fmtMoney(maxMrr)} sub={revenueMonths.find(m=>m.mrr===maxMrr)?.month||""}/>
+        <StatCard label="Avg per user" value={totalUsers>0?fmtMoney(Math.round(totalAll/totalUsers)):"—"}/>
       </div>
 
       {/* Revenue chart */}
       <div style={{background:AT.bg3,border:`1px solid ${AT.border}`,borderRadius:8,padding:"24px",marginBottom:20}}>
-        <SectionTitle>Monthly revenue — 12 months</SectionTitle>
+        <SectionTitle>Monthly revenue</SectionTitle>
         <div style={{display:"flex",alignItems:"flex-end",gap:6,height:160,marginBottom:8}}>
-          {REVENUE_MONTHS.map((mo,i)=>{
+          {revenueMonths.map((mo,i)=>{
             const h=Math.round((mo.mrr/maxMrr)*140)
-            const isLast=i===REVENUE_MONTHS.length-1
+            const isLast=i===revenueMonths.length-1
             return(
               <div key={mo.month} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
                 <div style={amono({fontSize:9,color:AT.inkMute})}>{fmtMoney(mo.mrr)}</div>
-                <div style={{width:"100%",height:h,background:isLast?AT.accent:
-                  mo.month.includes("Oct")?AT.amber:AT.blue+"80",
-                  borderRadius:"3px 3px 0 0",position:"relative",
-                  transition:"height 0.4s"}}/>
+                <div style={{width:"100%",height:h,background:isLast?AT.accent:AT.blue+"80",
+                  borderRadius:"3px 3px 0 0",transition:"height 0.4s"}}/>
               </div>
             )
           })}
         </div>
         <div style={{display:"flex",gap:6}}>
-          {REVENUE_MONTHS.map(mo=>(
+          {revenueMonths.map(mo=>(
             <div key={mo.month} style={{flex:1,textAlign:"center"}}>
               <div style={amono({fontSize:8,color:AT.inkMute})}>{mo.month.split(" ")[0]}</div>
-            </div>
-          ))}
-        </div>
-        <div style={{display:"flex",gap:16,marginTop:12}}>
-          {[["Current month",AT.accent],["Oct (Last-Minute)",AT.amber],["Other months",AT.blue+"80"]].map(([label,color])=>(
-            <div key={label} style={{display:"flex",alignItems:"center",gap:6}}>
-              <div style={{width:10,height:10,borderRadius:2,background:color}}/>
-              <span style={amono({fontSize:9,color:AT.inkMute})}>{label}</span>
             </div>
           ))}
         </div>
@@ -6069,13 +6060,13 @@ function Revenue(){
       {/* Tier breakdown */}
       <div style={{background:AT.bg3,border:`1px solid ${AT.border}`,borderRadius:8,padding:"24px"}}>
         <SectionTitle>Revenue by tier</SectionTitle>
-        <TableHeader cols={[{label:"Month",w:"120px"},{label:"LC Preparation Test",w:"1fr"},
-          {label:"Full Course",w:"1fr"},{label:"Course+Exam",w:"1fr"},{label:"Total",w:"100px",right:true},{label:"Users",w:"70px",right:true}]}/>
-        {[...REVENUE_MONTHS].reverse().map((mo,i)=>(
+        <TableHeader cols={[{label:"Month",w:"120px"},{label:"LC Prep Test",w:"1fr"},
+          {label:"Full Course",w:"1fr"},{label:"Course+Exam",w:"1fr"},{label:"Team",w:"1fr"},{label:"Total",w:"100px",right:true},{label:"Users",w:"70px",right:true}]}/>
+        {[...revenueMonths].reverse().map((mo,i)=>(
           <div key={mo.month} style={{display:"grid",
-            gridTemplateColumns:"120px 1fr 1fr 1fr 100px 70px",
+            gridTemplateColumns:"120px 1fr 1fr 1fr 1fr 100px 70px",
             gap:0,padding:"8px 16px",
-            borderBottom:i<REVENUE_MONTHS.length-1?`1px solid ${AT.border}`:"none",
+            borderBottom:i<revenueMonths.length-1?`1px solid ${AT.border}`:"none",
             transition:"background 0.1s"}}
             onMouseEnter={e=>e.currentTarget.style.background=AT.bg4}
             onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
@@ -6083,6 +6074,7 @@ function Revenue(){
             <div style={amono({fontSize:11,color:mo.t1>0?AT.blue:AT.inkMute})}>{mo.t1>0?fmtMoney(mo.t1):"—"}</div>
             <div style={amono({fontSize:11,color:mo.t2>0?AT.green:AT.inkMute})}>{mo.t2>0?fmtMoney(mo.t2):"—"}</div>
             <div style={amono({fontSize:11,color:mo.t3>0?AT.purple:AT.inkMute})}>{mo.t3>0?fmtMoney(mo.t3):"—"}</div>
+            <div style={amono({fontSize:11,color:mo.team>0?AT.blue:AT.inkMute})}>{mo.team>0?fmtMoney(mo.team):"—"}</div>
             <div style={amono({fontSize:12,color:AT.accent,textAlign:"right",fontWeight:700})}>{fmtMoney(mo.mrr)}</div>
             <div style={amono({fontSize:11,color:AT.inkMute,textAlign:"right"})}>{mo.users}</div>
           </div>
@@ -6093,74 +6085,50 @@ function Revenue(){
 }
 
 /* ── CONTENT & PROGRESS ────────────────────────── */
-function ContentView(){
-  const maxComp=MODULE_STATS.length?Math.max(...MODULE_STATS.map(m=>m.completions)):0
+function ContentView({moduleStats=[]}){
+  const ms=moduleStats
+  const maxComp=ms.length?Math.max(...ms.map(m=>m.completions),1):1
   return(
     <div>
       <div style={adisp({fontWeight:700,fontSize:22,color:AT.ink,marginBottom:24})}>Content & Progress</div>
 
-      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:28}}>
-        <StatCard label="Avg completion" value="—"/>
-        <StatCard label="Full completions" value="—" sub="completed all 12 modules" color={AT.green}/>
-        <StatCard label="Exam pass rate" value="—" sub="≥85% accuracy" color={AT.purple}/>
-        <StatCard label="Avg exam score" value="—"/>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:28}}>
+        <StatCard label="Modules with completions" value={ms.filter(m=>m.completions>0).length} sub={`of ${ms.length} modules`} color={AT.green}/>
+        <StatCard label="Most completed module" value={ms.length?ms.reduce((a,b)=>a.completions>b.completions?a:b,ms[0]).n:"—"} sub={ms.length?ms.reduce((a,b)=>a.completions>b.completions?a:b,ms[0]).title:""}/>
+        <StatCard label="Total module completions" value={ms.reduce((s,m)=>s+m.completions,0)} sub="users who finished all lessons"/>
       </div>
 
       {/* Module funnel */}
       <div style={{background:AT.bg3,border:`1px solid ${AT.border}`,borderRadius:8,padding:"24px",marginBottom:20}}>
         <SectionTitle>Module completion funnel</SectionTitle>
-        <TableHeader cols={[{label:"Module",w:"2fr"},{label:"Completions",w:"120px"},
-          {label:"Drop-offs",w:"100px"},{label:"Avg time (min)",w:"120px"},{label:"",w:"1fr"}]}/>
-        {MODULE_STATS.map((mod,i)=>(
-          <div key={mod.n} style={{display:"grid",gridTemplateColumns:"2fr 120px 100px 120px 1fr",
-            gap:0,padding:"10px 16px",borderBottom:i<MODULE_STATS.length-1?`1px solid ${AT.border}`:"none"}}>
-            <div><span style={amono({fontSize:11,color:AT.accent,marginRight:10})}>M{mod.n}</span><span style={asans({fontSize:12,color:AT.ink})}>{mod.title}</span></div>
-            <div style={{display:"flex",alignItems:"center",gap:8,paddingTop:2}}>
-              <MiniBar value={mod.completions} max={maxComp} color={AT.green}/>
-              <span style={amono({fontSize:11,color:AT.green,width:20,flexShrink:0})}>{mod.completions}</span>
-            </div>
-            <div style={amono({fontSize:12,color:mod.dropoffs>0?AT.red:AT.inkMute,paddingTop:4})}>
-              {mod.dropoffs>0?`-${mod.dropoffs}`:"—"}
-            </div>
-            <div style={amono({fontSize:12,color:AT.inkSoft,paddingTop:4})}>{mod.avgTime}m</div>
-            <div/>
+        {ms.length===0?(
+          <div style={{padding:"24px 0",textAlign:"center",color:AT.inkMute,fontFamily:AF.mono,fontSize:12}}>
+            No progress data yet — completions will appear as learners finish modules.
           </div>
-        ))}
+        ):(
+          <>
+            <TableHeader cols={[{label:"Module",w:"2fr"},{label:"Completed by",w:"140px"},{label:"",w:"1fr"}]}/>
+            {ms.map((mod,i)=>(
+              <div key={mod.n} style={{display:"grid",gridTemplateColumns:"2fr 140px 1fr",
+                gap:0,padding:"10px 16px",borderBottom:i<ms.length-1?`1px solid ${AT.border}`:"none"}}>
+                <div><span style={amono({fontSize:11,color:AT.accent,marginRight:10})}>M{mod.n}</span><span style={asans({fontSize:12,color:AT.ink})}>{mod.title}</span></div>
+                <div style={{display:"flex",alignItems:"center",gap:8,paddingTop:2}}>
+                  <MiniBar value={mod.completions} max={maxComp} color={AT.green}/>
+                  <span style={amono({fontSize:11,color:mod.completions>0?AT.green:AT.inkMute,width:20,flexShrink:0})}>{mod.completions}</span>
+                </div>
+                <div/>
+              </div>
+            ))}
+          </>
+        )}
       </div>
 
       {/* Exam topic breakdown */}
       <div style={{background:AT.bg3,border:`1px solid ${AT.border}`,borderRadius:8,padding:"24px"}}>
-        <SectionTitle>
-          Exam topic accuracy
-          <span style={amono({fontSize:10,color:AT.inkMute})}>Average across all attempts</span>
-        </SectionTitle>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:1}}>
-          {EXAM_TOPIC_STATS.sort((a,b)=>a.avgScore-b.avgScore).map((t,i)=>(
-            <div key={t.topic} style={{display:"flex",alignItems:"center",gap:12,
-              padding:"10px 16px",background:i%2===0?AT.bg3:AT.bg4}}>
-              <div style={{width:140,flexShrink:0}}>
-                <span style={asans({fontSize:12,color:AT.ink})}>{t.topic}</span>
-              </div>
-              <MiniBar value={t.avgScore} max={100}
-                color={t.avgScore>=80?AT.green:t.avgScore>=70?AT.amber:AT.red}/>
-              <div style={amono({fontSize:12,
-                color:t.avgScore>=80?AT.green:t.avgScore>=70?AT.amber:AT.red,
-                width:36,textAlign:"right",flexShrink:0})}>
-                {t.avgScore}%
-              </div>
-            </div>
-          ))}
+        <SectionTitle>Exam topic accuracy</SectionTitle>
+        <div style={{padding:"16px 0",textAlign:"center",color:AT.inkMute,fontFamily:AF.mono,fontSize:12}}>
+          Exam topic analytics available once learners attempt the practice exam.
         </div>
-        {EXAM_TOPIC_STATS.filter(t=>t.avgScore<70).length>0&&(
-          <div style={{marginTop:12,padding:"10px 16px",background:AT.redDim,
-            border:`1px solid ${AT.red}20`,borderRadius:6}}>
-            <span style={amono({fontSize:10,color:AT.red})}>⚠ Weak topics (below 70%): </span>
-            <span style={amono({fontSize:10,color:AT.inkSoft})}>
-              {EXAM_TOPIC_STATS.filter(t=>t.avgScore<70).map(t=>t.topic).join(", ")}
-            </span>
-            <span style={amono({fontSize:10,color:AT.inkMute})}> — consider adding more content</span>
-          </div>
-        )}
       </div>
     </div>
   )
@@ -6267,135 +6235,48 @@ function SupportFlags({users,setUsers,onSelectUser}){
 }
 
 /* ── TEAMS ─────────────────────────────────────── */
-function TeamsView(){
-  const [teams,setTeams]=useState([])
-  const [selected,setSelected]=useState(null)
-  const [inviteEmail,setInviteEmail]=useState("")
-  const [inviteSent,setInviteSent]=useState(false)
+function TeamsView({users=[]}){
+  const teamUsers=users.filter(u=>u.plan==="team")
+  const totalSeats=teamUsers.reduce((s,u)=>s+(u.seats||0),0)
+  const totalTeamRev=teamUsers.reduce((s,u)=>s+u.amount,0)
 
-  const totalTeamRev=teams.reduce((s,t)=>s+t.amount,0)
-  const totalSeats=teams.reduce((s,t)=>s+t.seats,0)
-  const usedSeats=teams.reduce((s,t)=>s+t.members.filter(m=>m.status==="active").length,0)
-  const pastDueTeams=teams.filter(t=>t.status==="past_due")
-
-  function sendInvite(teamId){
-    if(!inviteEmail.includes("@"))return
-    const updated=teams.map(t=>{
-      if(t.id!==teamId)return t
-      const empties=t.members.filter(m=>m.status==="empty")
-      if(!empties.length)return t
-      const newMember={id:"ni_"+Date.now(),name:"Invite pending",email:inviteEmail,progress:0,modulesCompleted:0,examBestScore:null,lastActive:null,status:"invited"}
-      return{...t,members:t.members.map((m,i)=>m.id===empties[0].id?newMember:m)}
-    })
-    setTeams(updated)
-    setSelected(updated.find(t=>t.id===teamId)||null)
-    setInviteEmail("");setInviteSent(true);setTimeout(()=>setInviteSent(false),2500)
-  }
-
-  function adjustSeats(teamId,delta){
-    setTeams(prev=>prev.map(t=>{
-      if(t.id!==teamId)return t
-      const min=t.members.filter(m=>m.status!=="empty").length
-      const newSeats=Math.max(min,t.seats+delta)
-      const newAmt=newSeats<=5?newSeats*360:newSeats<=10?newSeats*280:t.amount
-      return{...t,seats:newSeats,amount:newAmt}
-    }))
-    if(selected?.id===teamId)setSelected(prev=>{
-      const min=prev.members.filter(m=>m.status!=="empty").length
-      return{...prev,seats:Math.max(min,prev.seats+delta)}
-    })
-  }
-
-  if(selected){
-    const activeM=selected.members.filter(m=>m.status==="active")
-    const avgP=activeM.length?Math.round(activeM.reduce((s,m)=>s+m.progress,0)/activeM.length):0
-    const topScore=activeM.filter(m=>m.examBestScore).length?Math.max(...activeM.filter(m=>m.examBestScore).map(m=>m.examBestScore)):null
-
-    return(<div>
-      <button onClick={()=>{setSelected(null);setInviteSent(false)}} style={{background:"none",border:"none",color:AT.inkSoft,cursor:"pointer",fontFamily:AF.mono,fontSize:11,marginBottom:18,display:"flex",alignItems:"center",gap:5}}>← Back to teams</button>
-      <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:22,flexWrap:"wrap",gap:14}}>
-        <div>
-          <div style={amono({fontSize:9,letterSpacing:"0.2em",textTransform:"uppercase",color:AT.accent,marginBottom:6})}>Team detail</div>
-          <div style={adisp({fontWeight:700,fontSize:22,color:AT.ink,marginBottom:4})}>{selected.name}</div>
-          <div style={amono({fontSize:11,color:AT.inkMute})}>{selected.adminName} · {selected.company} · {selected.state}</div>
+  return(
+    <div>
+      <div style={adisp({fontWeight:700,fontSize:22,color:AT.ink,marginBottom:22})}>Teams</div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:20}}>
+        <StatCard label="Team accounts" value={teamUsers.length} color={AT.green}/>
+        <StatCard label="Total seats" value={totalSeats}/>
+        <StatCard label="Team revenue" value={fmtMoney(totalTeamRev)} color={AT.purple}/>
+      </div>
+      {teamUsers.length===0?(
+        <div style={{background:AT.bg3,border:`1px solid ${AT.border}`,borderRadius:8,padding:"48px",textAlign:"center"}}>
+          <div style={amono({fontSize:11,color:AT.inkMute,marginBottom:8})}>No team accounts yet</div>
+          <div style={asans({fontSize:13,color:AT.inkSoft})}>Team purchases will appear here once customers buy a team plan.</div>
         </div>
-        <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-          <div style={{background:AT.bg3,border:`1px solid ${AT.border}`,borderRadius:8,padding:"12px 16px",textAlign:"center"}}>
-            <div style={amono({fontSize:9,color:AT.inkMute,marginBottom:6})}>SEATS</div>
-            <div style={{display:"flex",alignItems:"center",gap:8}}>
-              <button onClick={()=>adjustSeats(selected.id,-1)} style={{background:AT.bg4,border:`1px solid ${AT.border}`,borderRadius:4,width:22,height:22,cursor:"pointer",color:AT.inkSoft,fontFamily:AF.mono,fontSize:14,display:"flex",alignItems:"center",justifyContent:"center"}}>−</button>
-              <span style={adisp({fontWeight:700,fontSize:20,color:AT.ink})}>{selected.seats}</span>
-              <button onClick={()=>adjustSeats(selected.id,1)} style={{background:AT.bg4,border:`1px solid ${AT.border}`,borderRadius:4,width:22,height:22,cursor:"pointer",color:AT.inkSoft,fontFamily:AF.mono,fontSize:14,display:"flex",alignItems:"center",justifyContent:"center"}}>+</button>
+      ):(
+        <div style={{background:AT.bg3,border:`1px solid ${AT.border}`,borderRadius:8,overflow:"hidden"}}>
+          <TableHeader cols={[{label:"Admin",w:"2fr"},{label:"Email",w:"2fr"},{label:"Seats",w:"70px"},{label:"Progress",w:"140px"},{label:"Revenue",w:"95px",right:true},{label:"Status",w:"95px"},{label:"Joined",w:"110px"}]}/>
+          {teamUsers.map((u,i)=>(
+            <div key={u.id} style={{display:"grid",gridTemplateColumns:"2fr 2fr 70px 140px 95px 95px 110px",
+              padding:"11px 16px",borderBottom:i<teamUsers.length-1?`1px solid ${AT.border}`:"none"}}>
+              <div style={asans({fontSize:13,color:AT.ink,fontWeight:500})}>{u.firstName} {u.lastName}</div>
+              <div style={amono({fontSize:11,color:AT.inkMute,paddingTop:2})}>{u.email}</div>
+              <div style={amono({fontSize:12,color:AT.inkSoft,paddingTop:2})}>{u.seats||'—'}</div>
+              <div style={{paddingTop:6,paddingRight:14}}>
+                <div style={{display:"flex",alignItems:"center",gap:7}}>
+                  <MiniBar value={u.progress} max={100} color={AT.accent}/>
+                  <span style={amono({fontSize:9,color:AT.inkMute,flexShrink:0,width:28,textAlign:"right"})}>{u.progress}%</span>
+                </div>
+              </div>
+              <div style={amono({fontSize:12,color:AT.purple,textAlign:"right",paddingTop:2})}>{fmtMoney(u.amount)}</div>
+              <div style={{paddingTop:2}}><StatusBadge status={u.status}/></div>
+              <div style={amono({fontSize:11,color:AT.inkMute,paddingTop:2})}>{u.joinDate?fmtDate(u.joinDate):'—'}</div>
             </div>
-            <div style={amono({fontSize:9,color:AT.inkMute,marginTop:3})}>{activeM.length} active</div>
-          </div>
-          <div style={{background:selected.status==="active"?AT.greenDim:AT.amberDim,border:`1px solid ${selected.status==="active"?AT.green:AT.amber}`,borderRadius:8,padding:"12px 16px",textAlign:"center"}}>
-            <div style={amono({fontSize:9,color:AT.inkMute,marginBottom:4})}>REVENUE</div>
-            <div style={adisp({fontWeight:700,fontSize:20,color:selected.status==="active"?AT.green:AT.amber,marginBottom:4})}>{fmtMoney(selected.amount)}</div>
-            <StatusBadge status={selected.status}/>
-          </div>
+          ))}
         </div>
-      </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:18}}>
-        {[["Active members",activeM.length,`of ${selected.seats} seats`],["Avg progress",`${avgP}%`,"across members"],["Top exam score",topScore?`${topScore}%`:"—","best result"],["Access expires","Dec 31",`${new Date().getFullYear()}`]].map(([l,v,s])=>(<div key={l} style={{background:AT.bg3,border:`1px solid ${AT.border}`,borderRadius:8,padding:"13px 15px"}}><div style={amono({fontSize:8,letterSpacing:"0.18em",textTransform:"uppercase",color:AT.inkMute,marginBottom:6})}>{l}</div><div style={adisp({fontWeight:700,fontSize:20,color:AT.ink,marginBottom:2})}>{v}</div><div style={amono({fontSize:10,color:AT.inkMute})}>{s}</div></div>))}
-      </div>
-      <div style={{background:AT.bg3,border:`1px solid ${AT.border}`,borderRadius:8,overflow:"hidden",marginBottom:14}}>
-        <div style={{padding:"13px 16px",borderBottom:`1px solid ${AT.border}`,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-          <div style={adisp({fontWeight:700,fontSize:14,color:AT.ink})}>Members</div>
-          <div style={amono({fontSize:10,color:AT.inkMute})}>{activeM.length} active · {selected.members.filter(m=>m.status==="invited").length} invited · {selected.members.filter(m=>m.status==="empty").length} available</div>
-        </div>
-        <TableHeader cols={[{label:"Member",w:"2fr"},{label:"Status",w:"90px"},{label:"Modules",w:"80px"},{label:"Exam",w:"80px"},{label:"Progress",w:"1fr"},{label:"Last active",w:"100px"},{label:"",w:"80px"}]}/>
-        {selected.members.map((m,i)=>(<div key={m.id} style={{display:"grid",gridTemplateColumns:"2fr 90px 80px 80px 1fr 100px 80px",padding:"10px 16px",borderBottom:i<selected.members.length-1?`1px solid ${AT.border}`:"none",opacity:m.status==="empty"?0.3:1}}>
-          <div style={{display:"flex",alignItems:"center",gap:8}}>
-            <div style={{width:24,height:24,borderRadius:"50%",background:m.status==="active"?AT.accent+"25":AT.border,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:AF.display,fontWeight:700,fontSize:8,color:AT.accent,flexShrink:0}}>{m.name.split(" ").map(w=>w[0]).join("").slice(0,2)}</div>
-            <div><div style={asans({fontSize:12,color:AT.ink,fontWeight:500})}>{m.name}</div>{m.email&&<div style={amono({fontSize:9,color:AT.inkMute})}>{m.email}</div>}</div>
-          </div>
-          <div style={{paddingTop:3}}>{m.status==="active"&&<Badge label="Active" color={AT.green}/>}{m.status==="invited"&&<Badge label="Invited" color={AT.amber}/>}{m.status==="empty"&&<span style={amono({fontSize:10,color:AT.inkMute})}>—</span>}</div>
-          <div style={amono({fontSize:11,color:AT.inkSoft,paddingTop:3})}>{m.status==="active"?`${m.modulesCompleted}/12`:"—"}</div>
-          <div style={amono({fontSize:11,color:m.examBestScore>=85?AT.green:m.examBestScore?AT.amber:AT.inkMute,paddingTop:3})}>{m.examBestScore?`${m.examBestScore}%`:"—"}</div>
-          <div style={{paddingTop:7,paddingRight:14}}>{m.status==="active"?(<div style={{display:"flex",alignItems:"center",gap:6}}><MiniBar value={m.progress} max={100} color={m.progress===100?AT.green:AT.accent}/><span style={amono({fontSize:9,color:AT.inkMute,flexShrink:0,width:28,textAlign:"right"})}>{m.progress}%</span></div>):<span style={amono({fontSize:11,color:AT.inkMute})}>—</span>}</div>
-          <div style={amono({fontSize:10,color:AT.inkMute,paddingTop:3})}>{m.lastActive?`${Math.round((new Date()-new Date(m.lastActive))/(1000*60*60*24))}d ago`:"—"}</div>
-          <div style={{paddingTop:2}}>{m.status==="active"&&<Btn small variant="danger" onClick={()=>alert(`Remove ${m.name}`)}>Remove</Btn>}{m.status==="invited"&&<Btn small onClick={()=>alert(`Resend to ${m.email}`)}>Resend</Btn>}</div>
-        </div>))}
-      </div>
-      {selected.members.some(m=>m.status==="empty")&&(<div style={{background:AT.bg3,border:`1px solid ${AT.border}`,borderRadius:8,padding:"16px"}}>
-        <div style={adisp({fontWeight:600,fontSize:13,color:AT.ink,marginBottom:10})}>Invite a member ({selected.members.filter(m=>m.status==="empty").length} seat{selected.members.filter(m=>m.status==="empty").length!==1?"s":""} available)</div>
-        {inviteSent&&<div style={{background:AT.greenDim,border:`1px solid ${AT.green}`,borderRadius:6,padding:"8px 12px",fontFamily:AF.mono,fontSize:11,color:AT.green,marginBottom:10}}>✓ Invite sent</div>}
-        <div style={{display:"flex",gap:8}}>
-          <input type="email" value={inviteEmail} onChange={e=>setInviteEmail(e.target.value)} placeholder="colleague@firm.com" onKeyDown={e=>e.key==="Enter"&&sendInvite(selected.id)} style={{flex:1,background:AT.bg4,border:`1px solid ${AT.border}`,borderRadius:6,padding:"8px 12px",fontFamily:AF.mono,fontSize:12,color:AT.ink,outline:"none"}} onFocus={e=>e.target.style.borderColor=AT.accent} onBlur={e=>e.target.style.borderColor=AT.border}/>
-          <Btn variant="primary" onClick={()=>sendInvite(selected.id)}>Send invite</Btn>
-        </div>
-      </div>)}
-    </div>)
-  }
-
-  return(<div>
-    <div style={adisp({fontWeight:700,fontSize:22,color:AT.ink,marginBottom:22})}>Teams</div>
-    <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:20}}>
-      <StatCard label="Active teams" value={teams.filter(t=>t.status==="active").length} color={AT.green}/>
-      <StatCard label="Total seats" value={totalSeats} sub={`${usedSeats} in use`}/>
-      <StatCard label="Team revenue" value={fmtMoney(totalTeamRev)} color={AT.purple}/>
-      <StatCard label="Past due" value={pastDueTeams.length} color={pastDueTeams.length>0?AT.amber:AT.green}/>
+      )}
     </div>
-    {pastDueTeams.length>0&&<div style={{background:AT.amberDim,border:`1px solid ${AT.amber}`,borderRadius:8,padding:"11px 14px",marginBottom:16,display:"flex",alignItems:"center",gap:8}}><span style={{color:AT.amber}}>⚠</span><span style={amono({fontSize:11,color:AT.amber})}>{pastDueTeams.length} team{pastDueTeams.length>1?"s":""} with past due payments</span></div>}
-    <div style={{background:AT.bg3,border:`1px solid ${AT.border}`,borderRadius:8,overflow:"hidden"}}>
-      <TableHeader cols={[{label:"Team",w:"2fr"},{label:"Admin",w:"150px"},{label:"Seats",w:"70px"},{label:"Active",w:"70px"},{label:"Avg progress",w:"1fr"},{label:"Revenue",w:"95px",right:true},{label:"Status",w:"95px"},{label:"",w:"40px"}]}/>
-      {teams.map((team,i)=>{
-        const am=team.members.filter(m=>m.status==="active")
-        const ap=am.length?Math.round(am.reduce((s,m)=>s+m.progress,0)/am.length):0
-        return(<div key={team.id} onClick={()=>setSelected(team)} style={{display:"grid",gridTemplateColumns:"2fr 150px 70px 70px 1fr 95px 95px 40px",padding:"11px 16px",borderBottom:i<teams.length-1?`1px solid ${AT.border}`:"none",cursor:"pointer",transition:"background 0.1s"}} onMouseEnter={e=>e.currentTarget.style.background=AT.bg4} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-          <div><div style={asans({fontSize:13,color:AT.ink,fontWeight:500})}>{team.name}</div><div style={amono({fontSize:9,color:AT.inkMute})}>{team.company} · {team.state}</div></div>
-          <div style={amono({fontSize:11,color:AT.inkSoft,paddingTop:3})}>{team.adminName}</div>
-          <div style={amono({fontSize:12,color:AT.inkSoft,paddingTop:3})}>{team.seats}</div>
-          <div style={amono({fontSize:12,color:AT.green,paddingTop:3})}>{am.length}</div>
-          <div style={{paddingTop:7,paddingRight:14}}><div style={{display:"flex",alignItems:"center",gap:7}}><MiniBar value={ap} max={100} color={ap>70?AT.green:AT.accent}/><span style={amono({fontSize:9,color:AT.inkMute,flexShrink:0,width:28,textAlign:"right"})}>{ap}%</span></div></div>
-          <div style={amono({fontSize:12,color:AT.purple,textAlign:"right",paddingTop:3})}>{fmtMoney(team.amount)}</div>
-          <div style={{paddingTop:3}}><StatusBadge status={team.status}/></div>
-          <div style={{paddingTop:3,textAlign:"center",color:AT.inkMute,fontSize:12}}>→</div>
-        </div>)
-      })}
-    </div>
-  </div>)
+  )
 }
 
 /* ── REPORTS ───────────────────────────────────── */
@@ -6406,7 +6287,7 @@ function Reports({users}){
   const byCompany={}
   users.forEach(u=>{byCompany[u.company]=(byCompany[u.company]||0)+1})
   const companyList=Object.entries(byCompany).sort((a,b)=>b[1]-a[1]).slice(0,8)
-  const conversionRate=Math.round(users.filter(u=>u.plan!=="free").length/users.length*100)
+  const conversionRate=users.length>0?Math.round(users.filter(u=>u.plan!=="free").length/users.length*100):0
 
   return(
     <div>
@@ -6642,7 +6523,7 @@ function AdminApp({onBack=()=>{}}){
     totalUsers:0, planCounts:{}, revenue:0,
     activeUsers:0, totalLessonsCompleted:0,
     communityQuestions:0, feedbackCount:0,
-    recentUsers:[],
+    recentUsers:[], revenueMonths:[], moduleStats:[],
   })
 
   const flagCount = users.filter(u=>u.flagged||u.status==="past_due").length
@@ -6653,7 +6534,7 @@ function AdminApp({onBack=()=>{}}){
         .from("subscriptions").select("*",{count:"exact",head:true})
 
       const {data:planData}=await supabase
-        .from("subscriptions").select("plan,email,created_at,user_id,status")
+        .from("subscriptions").select("plan,email,created_at,user_id,status,seats")
 
       const planCounts={free:0,t1:0,t2:0,t3:0,team:0}
       planData?.forEach(r=>{
@@ -6664,21 +6545,52 @@ function AdminApp({onBack=()=>{}}){
       const PLAN_PRICES={t1:250,t2:395,t3:595,team:360}
       const revenue=planData
         ?.filter(r=>r.plan!=="free")
-        .reduce((s,r)=>s+(PLAN_PRICES[r.plan]||0),0)||0
+        .reduce((s,r)=>{
+          const price=r.plan==="team"?(r.seats||1)*360:(PLAN_PRICES[r.plan]||0)
+          return s+price
+        },0)||0
 
       const recentUsers=[...(planData||[])]
         .sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))
         .slice(0,10)
         .map(u=>({...u,email:u.email||u.user_id?.slice(0,8)+"..."}))
 
+      // Monthly revenue grouped by created_at
+      const revMap={}
+      planData?.filter(r=>r.plan!=="free"&&r.created_at).forEach(r=>{
+        const d=new Date(r.created_at)
+        const key=d.toLocaleDateString("en-US",{month:"short",year:"numeric"})
+        if(!revMap[key]) revMap[key]={month:key,mrr:0,t1:0,t2:0,t3:0,team:0,users:0}
+        const price=r.plan==="team"?360*(r.seats||1):(PLAN_PRICES[r.plan]||0)
+        revMap[key].mrr+=price
+        revMap[key][r.plan]=(revMap[key][r.plan]||0)+price
+        revMap[key].users++
+      })
+      const revenueMonths=Object.values(revMap).sort((a,b)=>new Date(a.month)-new Date(b.month))
+
       const thirtyDaysAgo=new Date()
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate()-30)
-      const {count:activeUsers}=await supabase
-        .from("progress").select("user_id",{count:"exact",head:true})
+      const {data:recentProgress}=await supabase
+        .from("progress").select("user_id")
         .gte("completed_at",thirtyDaysAgo.toISOString())
+      const activeUsers=new Set(recentProgress?.map(r=>r.user_id)).size
 
       const {count:totalLessonsCompleted}=await supabase
         .from("progress").select("*",{count:"exact",head:true})
+
+      // Module completion stats
+      const {data:allProgress}=await supabase
+        .from("progress").select("user_id,lesson_ref")
+      const userRefs={}
+      allProgress?.forEach(p=>{
+        if(!userRefs[p.user_id]) userRefs[p.user_id]=new Set()
+        userRefs[p.user_id].add(p.lesson_ref)
+      })
+      const moduleStats=MODULES.map(m=>{
+        const lessonRefs=m.lessons.map(l=>l.ref)
+        const completions=Object.values(userRefs).filter(refs=>lessonRefs.every(r=>refs.has(r))).length
+        return{n:m.n,title:m.title,completions}
+      })
 
       const {count:communityQuestions}=await supabase
         .from("community_questions").select("*",{count:"exact",head:true})
@@ -6695,13 +6607,60 @@ function AdminApp({onBack=()=>{}}){
         communityQuestions:   communityQuestions||0,
         feedbackCount:        feedbackCount||0,
         recentUsers,
+        revenueMonths,
+        moduleStats,
       })
     }catch(e){
       console.error("loadAdminStats:",e)
     }
   }
 
-  useEffect(()=>{ loadAdminStats() },[])
+  async function loadUsers(){
+    try{
+      const {data:subs}=await supabase
+        .from("subscriptions")
+        .select("user_id,plan,status,email,stripe_customer_id,seats,updated_at,created_at")
+      const {data:progRows}=await supabase
+        .from("progress").select("user_id,lesson_ref,completed_at")
+      const progMap={}
+      progRows?.forEach(p=>{
+        if(!progMap[p.user_id]){progMap[p.user_id]={refs:new Set(),lastActive:null}}
+        progMap[p.user_id].refs.add(p.lesson_ref)
+        if(!progMap[p.user_id].lastActive||p.completed_at>progMap[p.user_id].lastActive)
+          progMap[p.user_id].lastActive=p.completed_at
+      })
+      const PP={t1:250,t2:395,t3:595}
+      const cap=w=>w?(w[0].toUpperCase()+w.slice(1)):''
+      setUsers((subs||[]).map(s=>{
+        const prog=progMap[s.user_id]||{refs:new Set(),lastActive:null}
+        const pct=Math.round((prog.refs.size/74)*100)
+        const local=(s.email||'').split('@')[0]
+        const parts=local.replace(/[._+]/g,' ').split(' ').filter(Boolean)
+        const firstName=cap(parts[0])||'—'
+        const lastName=cap(parts[1])||''
+        const domainPart=(s.email||'').split('@')[1]?.split('.')[0]||''
+        const company=cap(domainPart)||'—'
+        const amount=s.plan==='team'?360*(s.seats||1):(PP[s.plan]||0)
+        return{
+          id:s.user_id,
+          email:s.email||s.user_id?.slice(0,8)+'...',
+          firstName,lastName,company,state:'—',
+          plan:s.plan||'free',status:s.status||'free',
+          joinDate:s.created_at||s.updated_at,
+          lastActive:prog.lastActive,
+          stripeId:s.stripe_customer_id||null,
+          amount,progress:pct,
+          modulesCompleted:Math.round(pct/100*12),
+          examAttempts:0,examBestScore:null,
+          flagged:false,notes:'',
+        }
+      }))
+    }catch(e){
+      console.error("loadUsers:",e)
+    }
+  }
+
+  useEffect(()=>{ loadAdminStats(); loadUsers() },[])
 
   function handleSelectUser(user){
     setSelectedUser(user)
@@ -6740,10 +6699,10 @@ function AdminApp({onBack=()=>{}}){
         {route==="users"        && <UsersView users={users} setUsers={setUsers} onSelectUser={handleSelectUser}/>}
         {route==="user-detail"  && selectedUser && <UserDetail user={selectedUser} onBack={()=>navigate("users")} onUpdate={handleUpdateUser}/>}
         {route==="subscriptions"&& <Subscriptions users={users}/>}
-        {route==="revenue"      && <Revenue/>}
-        {route==="content"      && <ContentView/>}
+        {route==="revenue"      && <Revenue revenueMonths={adminStats.revenueMonths||[]}/>}
+        {route==="content"      && <ContentView moduleStats={adminStats.moduleStats||[]}/>}
         {route==="flags"        && <SupportFlags users={users} setUsers={setUsers} onSelectUser={handleSelectUser}/>}
-        {route==="teams"        && <TeamsView/>}
+        {route==="teams"        && <TeamsView users={users}/>}
         {route==="reports"      && <Reports users={users}/>}
         {route==="settings"     && <Settings onSignOut={handleSignOut}/>}
       </main>
