@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { getCurrentSeason, getPriceForTier, getTeamPerSeat, TEAM_TIERS, studentPrice } from '@/lib/pricing'
+import { PLANS, TEAM_TIERS, getTeamPerSeat } from '@/lib/pricing'
 
 const C = {
   ink: '#16120e',
@@ -57,20 +57,17 @@ function FeatureRow({ item, dark }) {
   )
 }
 
-export default function PricingCard({ userId, userEmail, isStudent, onContactUs }) {
-  const season = getCurrentSeason()
-  const [teamSeats, setTeamSeats] = useState(4)
+export default function PricingCard({ userId, userEmail, onContactUs }) {
+  const [teamSeats, setTeamSeats] = useState(5)
   const [loading, setLoading] = useState(null)
-  const [contactModal, setContactModal] = useState(false)
 
-  const t1Price = getPriceForTier('t1')
-  const t2Price = getPriceForTier('t2')
-  const t3Price = getPriceForTier('t3')
-  const teamInfo = getPriceForTier('team', teamSeats) // null for 11+ seats
+  const t1 = PLANS.t1
+  const t2 = PLANS.t2
+  const t3 = PLANS.t3
 
-  const t3IndividualTotal = t3Price.amountCents * teamSeats
-  const teamSavings = teamInfo ? t3IndividualTotal - teamInfo.amountCents : null
   const activeTier = getTeamPerSeat(teamSeats)
+  const teamTotal = activeTier && !activeTier.contact ? activeTier.perSeat * teamSeats : null
+  const teamSavings = teamTotal ? (t3.amount / 100) * teamSeats - teamTotal : null
 
   const handleCheckout = useCallback(async (plan, seats = 1) => {
     if (loading) return
@@ -94,30 +91,8 @@ export default function PricingCard({ userId, userEmail, isStudent, onContactUs 
     }
   }, [loading])
 
-  // T1 badge by season
-  const t1Badge = season.season === 'peak'
-    ? { label: 'October prep', color: C.amber, bg: C.amberDim }
-    : season.season === 'earlyBird'
-    ? { label: 'Early prep', color: C.forest, bg: C.forestDim }
-    : { label: 'Year-round', color: C.inkMute, bg: C.rule }
-
   return (
     <div style={{ fontFamily: FONT.body }}>
-
-      {/* Season banner */}
-      {season.banner && (
-        <div style={{
-          background: C.accentDim, border: `1px solid ${C.ruleStrong}`,
-          borderRadius: 8, padding: '10px 16px', marginBottom: 28,
-          display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
-        }}>
-          <span style={{ width: 7, height: 7, borderRadius: '50%', background: C.accent,
-            flexShrink: 0, display: 'inline-block' }} />
-          <span style={{ fontFamily: FONT.mono, fontSize: 10, letterSpacing: '0.18em',
-            textTransform: 'uppercase', color: C.accent, fontWeight: 700 }}>{season.label}</span>
-          <span style={{ fontFamily: FONT.body, fontSize: 13, color: C.inkSoft }}>{season.banner}</span>
-        </div>
-      )}
 
       {/* 3-column grid */}
       <div style={{
@@ -136,31 +111,18 @@ export default function PricingCard({ userId, userEmail, isStudent, onContactUs 
             marginBottom: 4, gap: 8 }}>
             <span style={{ fontFamily: FONT.mono, fontSize: 9, letterSpacing: '0.22em',
               textTransform: 'uppercase', color: C.inkMute }}>Tier 1</span>
-            <Badge {...t1Badge} />
           </div>
           <div style={{ fontFamily: FONT.display, fontWeight: 700, fontSize: 17,
-            color: C.ink, marginBottom: 14 }}>Test Engine</div>
+            color: C.ink, marginBottom: 14 }}>{t1.name}</div>
           <div style={{ marginBottom: 4 }}>
-            {isStudent && (
-              <span style={{ fontFamily: FONT.mono, fontSize: 12, color: C.inkMute,
-                textDecoration: 'line-through', marginRight: 6 }}>
-                {fmt(t1Price.amountCents)}
-              </span>
-            )}
             <span style={{ fontFamily: FONT.display, fontWeight: 700, fontSize: 36,
-              color: isStudent ? C.forest : C.ink, letterSpacing: '-0.02em', lineHeight: 1 }}>
-              {isStudent ? fmt(studentPrice(t1Price.amountCents)) : fmt(t1Price.amountCents)}
+              color: C.ink, letterSpacing: '-0.02em', lineHeight: 1 }}>
+              {fmt(t1.amount)}
             </span>
             <span style={{ fontFamily: FONT.mono, fontSize: 10, color: C.inkMute, marginLeft: 6 }}>one-time</span>
-            {isStudent && (
-              <span style={{ fontFamily: FONT.mono, fontSize: 8, fontWeight: 700,
-                letterSpacing: '0.14em', textTransform: 'uppercase',
-                padding: '2px 7px', borderRadius: 99, marginLeft: 8,
-                color: C.forest, background: C.forestDim }}>STUDENT —40%</span>
-            )}
           </div>
           <div style={{ fontFamily: FONT.body, fontSize: 11, color: C.inkMute, marginBottom: 14 }}>
-            Access until Dec 31, {new Date().getFullYear()}
+            One-time payment · Access through Dec 31
           </div>
           <p style={{ fontFamily: FONT.body, fontSize: 12, color: C.inkMute,
             margin: '0 0 14px', lineHeight: 1.65, flex: 1 }}>
@@ -182,7 +144,7 @@ export default function PricingCard({ userId, userEmail, isStudent, onContactUs 
             }}
             onMouseEnter={e => { e.currentTarget.style.background = C.accent; e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = C.accent }}
             onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = C.inkSoft; e.currentTarget.style.borderColor = C.ruleStrong }}>
-            {loading === 't1' ? 'Redirecting…' : `Get Test Engine — ${fmt(isStudent ? studentPrice(t1Price.amountCents) : t1Price.amountCents)} →`}
+            {loading === 't1' ? 'Redirecting…' : `Get LC Preparation Test — ${fmt(t1.amount)} →`}
           </button>
         </div>
 
@@ -199,43 +161,16 @@ export default function PricingCard({ userId, userEmail, isStudent, onContactUs 
             <Badge label="Most popular" color="#fff" bg={C.accent} />
           </div>
           <div style={{ fontFamily: FONT.display, fontWeight: 700, fontSize: 17,
-            color: C.ink, marginBottom: 14 }}>Full Course</div>
+            color: C.ink, marginBottom: 14 }}>{t2.name}</div>
           <div style={{ marginBottom: 4 }}>
-            {isStudent ? (
-              <>
-                <span style={{ fontFamily: FONT.mono, fontSize: 12, color: C.inkMute,
-                  textDecoration: 'line-through', marginRight: 6 }}>
-                  {fmt(t2Price.amountCents)}
-                </span>
-                <span style={{ fontFamily: FONT.display, fontWeight: 700, fontSize: 36,
-                  color: C.forest, letterSpacing: '-0.02em', lineHeight: 1 }}>
-                  {fmt(studentPrice(t2Price.amountCents))}
-                </span>
-                <span style={{ fontFamily: FONT.mono, fontSize: 10, color: C.inkMute, marginLeft: 6 }}>one-time</span>
-                <span style={{ fontFamily: FONT.mono, fontSize: 8, fontWeight: 700,
-                  letterSpacing: '0.14em', textTransform: 'uppercase',
-                  padding: '2px 7px', borderRadius: 99, marginLeft: 8,
-                  color: C.forest, background: C.forestDim }}>STUDENT —40%</span>
-              </>
-            ) : (
-              <>
-                {season.season === 'earlyBird' && (
-                  <span style={{ fontFamily: FONT.mono, fontSize: 12,
-                    color: C.inkMute, textDecoration: 'line-through', marginRight: 6 }}>
-                    {fmt(49500)}
-                  </span>
-                )}
-                <span style={{ fontFamily: FONT.display, fontWeight: 700, fontSize: 36,
-                  color: season.season === 'earlyBird' ? C.forest : C.ink,
-                  letterSpacing: '-0.02em', lineHeight: 1 }}>
-                  {fmt(t2Price.amountCents)}
-                </span>
-                <span style={{ fontFamily: FONT.mono, fontSize: 10, color: C.inkMute, marginLeft: 6 }}>one-time</span>
-              </>
-            )}
+            <span style={{ fontFamily: FONT.display, fontWeight: 700, fontSize: 36,
+              color: C.ink, letterSpacing: '-0.02em', lineHeight: 1 }}>
+              {fmt(t2.amount)}
+            </span>
+            <span style={{ fontFamily: FONT.mono, fontSize: 10, color: C.inkMute, marginLeft: 6 }}>one-time</span>
           </div>
           <div style={{ fontFamily: FONT.body, fontSize: 11, color: C.inkMute, marginBottom: 14 }}>
-            Access until Dec 31, {new Date().getFullYear()}
+            One-time payment · Access through Dec 31
           </div>
           <p style={{ fontFamily: FONT.body, fontSize: 12, color: C.inkMute,
             margin: '0 0 14px', lineHeight: 1.65, flex: 1 }}>
@@ -257,7 +192,7 @@ export default function PricingCard({ userId, userEmail, isStudent, onContactUs 
             }}
             onMouseEnter={e => { e.currentTarget.style.background = C.accent; e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = C.accent }}
             onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = C.inkSoft; e.currentTarget.style.borderColor = C.ruleStrong }}>
-            {loading === 't2' ? 'Redirecting…' : `Enroll in Full Course — ${fmt(isStudent ? studentPrice(t2Price.amountCents) : t2Price.amountCents)} →`}
+            {loading === 't2' ? 'Redirecting…' : `Enroll in Full Course — ${fmt(t2.amount)} →`}
           </button>
         </div>
 
@@ -273,43 +208,18 @@ export default function PricingCard({ userId, userEmail, isStudent, onContactUs 
             <Badge label="Best value" color="#fff" bg={C.accent} />
           </div>
           <div style={{ fontFamily: FONT.display, fontWeight: 700, fontSize: 17,
-            color: '#fff', marginBottom: 14 }}>Course + Exam</div>
+            color: '#fff', marginBottom: 14 }}>{t3.name}</div>
           <div style={{ marginBottom: 4 }}>
-            {isStudent ? (
-              <>
-                <span style={{ fontFamily: FONT.mono, fontSize: 12,
-                  color: 'rgba(255,255,255,0.3)', textDecoration: 'line-through', marginRight: 6 }}>
-                  {fmt(t3Price.amountCents)}
-                </span>
-                <span style={{ fontFamily: FONT.display, fontWeight: 700, fontSize: 36,
-                  color: '#7ecb9e', letterSpacing: '-0.02em', lineHeight: 1 }}>
-                  {fmt(studentPrice(t3Price.amountCents))}
-                </span>
-                <span style={{ fontFamily: FONT.mono, fontSize: 10,
-                  color: 'rgba(255,255,255,0.38)', marginLeft: 6 }}>one-time</span>
-                <span style={{ fontFamily: FONT.mono, fontSize: 8, fontWeight: 700,
-                  letterSpacing: '0.14em', textTransform: 'uppercase',
-                  padding: '2px 7px', borderRadius: 99, marginLeft: 8,
-                  color: '#7ecb9e', background: 'rgba(126,203,158,0.12)' }}>STUDENT —40%</span>
-              </>
-            ) : (
-              <>
-                <span style={{ fontFamily: FONT.display, fontWeight: 700, fontSize: 36,
-                  color: '#fff', letterSpacing: '-0.02em', lineHeight: 1 }}>
-                  {fmt(t3Price.amountCents)}
-                </span>
-                <span style={{ fontFamily: FONT.mono, fontSize: 10,
-                  color: 'rgba(255,255,255,0.38)', marginLeft: 6 }}>one-time</span>
-              </>
-            )}
-          </div>
-          <div style={{ fontFamily: FONT.body, fontSize: 11,
-            color: 'rgba(255,255,255,0.38)', marginBottom: 8 }}>
-            Current price · Access through Dec 31
+            <span style={{ fontFamily: FONT.display, fontWeight: 700, fontSize: 36,
+              color: '#fff', letterSpacing: '-0.02em', lineHeight: 1 }}>
+              {fmt(t3.amount)}
+            </span>
+            <span style={{ fontFamily: FONT.mono, fontSize: 10,
+              color: 'rgba(255,255,255,0.38)', marginLeft: 6 }}>one-time</span>
           </div>
           <div style={{ fontFamily: FONT.body, fontSize: 11,
             color: 'rgba(255,255,255,0.38)', marginBottom: 14 }}>
-            Access until Dec 31, {new Date().getFullYear()}
+            One-time payment · Access through Dec 31
           </div>
           <p style={{ fontFamily: FONT.body, fontSize: 12, color: 'rgba(255,255,255,0.55)',
             margin: '0 0 14px', lineHeight: 1.65, flex: 1 }}>
@@ -330,47 +240,45 @@ export default function PricingCard({ userId, userEmail, isStudent, onContactUs 
               cursor: loading === 't3' ? 'wait' : 'pointer',
               transition: 'opacity 0.15s', opacity: loading === 't3' ? 0.55 : 1,
             }}>
-            {loading === 't3' ? 'Redirecting…' : `Enroll + Exam Prep — ${fmt(isStudent ? studentPrice(t3Price.amountCents) : t3Price.amountCents)} →`}
+            {loading === 't3' ? 'Redirecting…' : `Enroll + Exam Prep — ${fmt(t3.amount)} →`}
           </button>
         </div>
       </div>
 
-      {/* Student discount banner — always visible */}
+      {/* Student discount — request flow */}
       <div style={{
-        background: isStudent ? C.forestDim : C.creamWarm,
-        border: `1px solid ${isStudent ? C.forest : C.rule}`,
-        borderRadius: 10, padding: '18px 20px', marginBottom: 24,
+        background: C.forestDim,
+        border: `1px solid rgba(45,74,62,0.25)`,
+        borderRadius: 10, padding: '24px 28px', marginBottom: 24,
       }}>
         <div style={{ fontFamily: FONT.mono, fontSize: 9, letterSpacing: '0.18em',
-          textTransform: 'uppercase', color: C.forest, fontWeight: 700, marginBottom: 6 }}>
+          textTransform: 'uppercase', color: C.forest, fontWeight: 700, marginBottom: 10 }}>
           🎓 Student Discount
         </div>
         <div style={{ fontFamily: FONT.display, fontWeight: 700, fontSize: 15,
-          color: C.ink, marginBottom: 6 }}>
-          Studying lighting in school? Take 40% off.
+          color: C.ink, marginBottom: 8 }}>
+          Are you a lighting student?
         </div>
-        <div style={{ fontFamily: FONT.body, fontSize: 12, color: C.inkMute,
-          lineHeight: 1.6, marginBottom: isStudent ? 8 : 6 }}>
-          Sign up or log in with your .edu email address. We verify the email domain at checkout — the discount applies automatically once your .edu address is confirmed on your account.
-        </div>
-        <div style={{ fontFamily: FONT.mono, fontSize: 9, letterSpacing: '0.12em',
-          color: C.inkMute, marginBottom: isStudent ? 8 : 14,
-          textTransform: 'uppercase' }}>
-          ✓ Verified at checkout · No code needed · Individual plans only
-        </div>
-        {isStudent ? (
-          <div style={{ fontFamily: FONT.body, fontSize: 12, color: C.forest }}>
-            ✓ Student discount active — your .edu address qualifies for 40% off.
-          </div>
-        ) : (
-          <a href="/login" style={{
-            fontFamily: FONT.display, fontWeight: 700, fontSize: 12,
-            color: C.forest, textDecoration: 'none',
-            borderBottom: `1px solid ${C.forest}`, paddingBottom: 1,
+        <p style={{ fontFamily: FONT.body, fontSize: 13, color: C.inkMute,
+          lineHeight: 1.75, margin: '0 0 18px', maxWidth: 520 }}>
+          We offer a 40% student discount for enrolled students in lighting design, architecture,
+          electrical engineering, or related programs. Send us your student ID or enrollment
+          verification and we'll send you a discount code.
+        </p>
+        <a
+          href="mailto:admin@luxartmedia.com?subject=Student%20Discount%20Request&body=Name:%0ASchool:%0AProgram:%0AExpected%20graduation:"
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            fontFamily: FONT.display, fontWeight: 700, fontSize: 13,
+            background: C.forest, color: '#fff', borderRadius: 99,
+            padding: '11px 22px', textDecoration: 'none',
           }}>
-            Create account with your .edu email →
-          </a>
-        )}
+          Request student discount →
+        </a>
+        <div style={{ fontFamily: FONT.mono, fontSize: 9, color: C.inkMute,
+          letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 12 }}>
+          Individual plans only · Verified by enrollment documentation
+        </div>
       </div>
 
       {/* ── Team section ── */}
@@ -382,7 +290,7 @@ export default function PricingCard({ userId, userEmail, isStudent, onContactUs 
           color: C.ink, marginBottom: 4 }}>Team Access</div>
         <p style={{ fontFamily: FONT.body, fontSize: 12, color: C.inkMute,
           margin: '0 0 16px', lineHeight: 1.6 }}>
-          Enroll your studio. Includes all Tier 3 content for each seat.
+          Enroll your studio. Includes all Tier 3 content for each seat. Minimum 5 seats.
         </p>
 
         {/* Tier table */}
@@ -421,13 +329,13 @@ export default function PricingCard({ userId, userEmail, isStudent, onContactUs 
           <div style={{ display: 'flex', alignItems: 'center',
             border: `1px solid ${C.ruleStrong}`, borderRadius: 8, overflow: 'hidden' }}>
             <button
-              onClick={() => setTeamSeats(s => Math.max(2, s - 1))}
+              onClick={() => setTeamSeats(s => Math.max(5, s - 1))}
               style={{ width: 36, height: 36, border: 'none', background: C.cream,
                 cursor: 'pointer', fontFamily: FONT.display, fontSize: 16, color: C.inkSoft }}>
               −
             </button>
-            <input type="number" min={2} max={50} value={teamSeats}
-              onChange={e => setTeamSeats(Math.max(2, Math.round(Number(e.target.value) || 2)))}
+            <input type="number" min={5} max={50} value={teamSeats}
+              onChange={e => setTeamSeats(Math.max(5, Math.round(Number(e.target.value) || 5)))}
               style={{ width: 48, height: 36, border: 'none',
                 borderLeft: `1px solid ${C.rule}`, borderRight: `1px solid ${C.rule}`,
                 textAlign: 'center', fontFamily: FONT.display, fontWeight: 700,
@@ -441,28 +349,33 @@ export default function PricingCard({ userId, userEmail, isStudent, onContactUs 
           </div>
           <span style={{ fontFamily: FONT.mono, fontSize: 10, letterSpacing: '0.12em',
             textTransform: 'uppercase', color: C.inkMute }}>seats</span>
-          {teamInfo && (
+          {teamTotal && (
             <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
               <div style={{ fontFamily: FONT.mono, fontSize: 10, color: C.inkMute, marginBottom: 2 }}>
                 {teamSeats} seats × ${activeTier.perSeat} =
               </div>
               <span style={{ fontFamily: FONT.display, fontWeight: 700, fontSize: 24,
                 color: C.ink, letterSpacing: '-0.02em' }}>
-                ${teamSeats * activeTier.perSeat}
+                ${teamTotal.toLocaleString()}
               </span>
             </div>
           )}
         </div>
 
-        {teamInfo && teamSavings > 0 && (
+        <p style={{ fontFamily: FONT.mono, fontSize: 9, color: C.inkMute,
+          letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 14 }}>
+          Minimum 5 seats · For 11+ seats contact admin@luxartmedia.com for a custom quote
+        </p>
+
+        {teamTotal && teamSavings > 0 && (
           <div style={{ fontFamily: FONT.body, fontSize: 11, color: C.forest,
             marginBottom: 14, background: C.forestDim, borderRadius: 6,
             padding: '5px 10px', display: 'inline-block' }}>
-            Save {fmt(teamSavings)} vs individual T3 pricing for {teamSeats} people
+            Save {fmt(teamSavings * 100)} vs individual T3 pricing for {teamSeats} people
           </div>
         )}
 
-        {!activeTier.contact ? (
+        {activeTier && !activeTier.contact ? (
           <button onClick={() => handleCheckout('team', teamSeats)}
             disabled={loading === 'team'}
             style={{
@@ -479,7 +392,7 @@ export default function PricingCard({ userId, userEmail, isStudent, onContactUs 
         ) : (
           <div>
             <div style={{ fontFamily: FONT.body, fontSize: 13, color: C.inkMute, marginBottom: 10 }}>
-              11+ seats — enterprise rates available.
+              11+ seats — contact us for volume pricing and custom onboarding.
             </div>
             <a href="mailto:admin@luxartmedia.com?subject=Team%20License%20Quote"
               style={{ display: 'inline-block', padding: '11px 28px', borderRadius: 99,
@@ -502,38 +415,6 @@ export default function PricingCard({ userId, userEmail, isStudent, onContactUs 
             </span>
           ))}
       </div>
-
-      {/* Contact modal */}
-      {contactModal && (
-        <div onClick={() => setContactModal(false)}
-          style={{ position: 'fixed', inset: 0, zIndex: 9999,
-            background: 'rgba(22,18,14,0.72)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div onClick={e => e.stopPropagation()}
-            style={{ background: C.cream, borderRadius: 16, padding: '32px 36px',
-              maxWidth: 400, width: '90%', textAlign: 'center',
-              border: `1px solid ${C.rule}` }}>
-            <div style={{ fontFamily: FONT.display, fontWeight: 700, fontSize: 20,
-              color: C.ink, marginBottom: 10 }}>Enterprise pricing</div>
-            <p style={{ fontFamily: FONT.body, fontSize: 13, color: C.inkMute,
-              lineHeight: 1.6, marginBottom: 20 }}>
-              For 10+ seats, contact us for volume pricing and custom onboarding.
-            </p>
-            <a href="mailto:admin@luxartmedia.com"
-              style={{ display: 'inline-block', padding: '11px 28px', borderRadius: 99,
-                background: C.accent, color: '#fff', fontFamily: FONT.display,
-                fontWeight: 700, fontSize: 13, textDecoration: 'none' }}>
-              admin@luxartmedia.com →
-            </a>
-            <button onClick={() => setContactModal(false)}
-              style={{ display: 'block', margin: '14px auto 0',
-                background: 'none', border: 'none', cursor: 'pointer',
-                fontFamily: FONT.body, fontSize: 12, color: C.inkMute }}>
-              Close
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

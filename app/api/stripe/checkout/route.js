@@ -8,7 +8,7 @@
 
 import Stripe from 'stripe'
 import { createClient } from '@/lib/supabase/server'
-import { isStudentEmail, getPriceForTier, studentPrice, getTeamPerSeat } from '@/lib/pricing'
+import { PLANS, getTeamPerSeat } from '@/lib/pricing'
 import { checkOrigin, originError } from '@/lib/csrf'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
@@ -51,28 +51,30 @@ export async function POST(request) {
   let unitAmount, productName, quantity
 
   if (plan === 'team') {
-    const seatCount = Math.floor(Number(seats))
-    if (!Number.isInteger(seatCount) || seatCount < 2 || seatCount > 10) {
+    const seatCount = parseInt(seats) || 0
+    if (seatCount < 5) {
       return new Response(JSON.stringify({
-        error: seatCount > 10
-          ? 'For 11+ seats please contact admin@luxartmedia.com'
-          : 'Minimum 2 seats for team license',
+        error: 'Minimum 5 seats for team license. For individual access see our standard plans.',
+      }), { status: 400 })
+    }
+    if (seatCount >= 11) {
+      return new Response(JSON.stringify({
+        error: 'For 11+ seats please contact admin@luxartmedia.com for a custom quote.',
       }), { status: 400 })
     }
     const tier = getTeamPerSeat(seatCount)
     unitAmount = tier.perSeat * 100
     productName = `Team License (${tier.label})`
     quantity = seatCount
-  } else if (plan === 'exam_addon') {
-    unitAmount = 20000 // $200
-    productName = 'Practice Exam Add-on'
-    quantity = 1
   } else {
-    const priceInfo = getPriceForTier(plan)
-    const isStudent = isStudentEmail(email)
-    unitAmount = isStudent ? studentPrice(priceInfo.amountCents) : priceInfo.amountCents
-    productName = priceInfo.label + (isStudent ? ' — Student 40% off' : '')
+    const planData = PLANS[plan]
+    if (!planData) {
+      return new Response(JSON.stringify({ error: 'Invalid plan' }), { status: 400 })
+    }
+    unitAmount = planData.amount
+    productName = planData.name
     quantity = 1
+    // Student discounts applied manually via Stripe coupon codes sent by email
   }
 
   const appUrl = 'https://lightingmasterlc.com'

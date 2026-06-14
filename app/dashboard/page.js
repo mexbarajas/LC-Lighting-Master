@@ -4,9 +4,9 @@ import PurchaseSuccessBanner from '@/components/PurchaseSuccessBanner'
 
 const PLAN_LABELS = {
   free: 'Free trial',
-  t1: 'Test Engine',
+  t1: 'LC Preparation Test',
   t2: 'Full Course',
-  t3: 'Course + Exam',
+  t3: 'Full Course + Exam',
   team_admin: 'Team Admin',
   team_member: 'Team Member',
 }

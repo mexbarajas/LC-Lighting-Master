@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server'
-import { isStudentEmail } from '@/lib/pricing'
 import PricingPageClient from '@/components/PricingPageClient'
 
 export const metadata = {
@@ -13,11 +12,9 @@ export default async function PricingPage() {
   const { data: { session } } = await supabase.auth.getSession()
   const userEmail = session?.user?.email || ''
   const userId = session?.user?.id || null
-  const isStudent = isStudentEmail(userEmail)
 
   return (
     <PricingPageClient
-      isStudent={isStudent}
       userEmail={userEmail}
       userId={userId}
     />

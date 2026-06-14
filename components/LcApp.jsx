@@ -896,70 +896,40 @@ function ExamSection({onSignUp}){
   )
 }
 
-/* ── SEASONAL PRICING LOGIC ── */
-function useSeason(){
-  const mo = new Date().getMonth() // 0-indexed: Jan=0 … Dec=11
-  if(mo===4||mo===5) return "earlybird"   // May–Jun
-  if(mo>=6&&mo<=8)   return "peak"        // Jul–Sep
-  if(mo===9)         return "lastminute"  // Oct
-  return "standard"                       // Nov–Apr off-season
-}
-const SEASON_META = {
-  earlybird:  {label:"Early Bird",color:"#7E9B86",bg:"#E8F0EC",border:"#7E9B86",ends:"Jun 30",msg:"Early Bird pricing ends June 30 — lock in the lowest rate of the year."},
-  peak:       {label:"Peak Season",color:"#C65A3A",bg:"#F5E8E2",border:"#C65A3A",ends:"Sep 30",msg:"Exam window approaching — most designers enroll now. Prices hold through September."},
-  lastminute: {label:"Last-Minute Prep",color:"#2F4A3F",bg:"#E8D8C8",border:"#C8B8A4",ends:"Oct 31",msg:"Exam window open. The Test Engine gives you the most accurate final mock — one shot to find your gaps."},
-  standard:   {label:"Standard",color:"#7A9688",bg:"#F2E6DA",border:"#DDD0C0",ends:null,msg:"Exam season runs October–November. Enroll early and use the full study window."},
-}
-
 /* ── PRICING ── */
 function Pricing({onSignUp}){
-  const season   = useSeason()
-  const meta     = SEASON_META[season]
-  const tier2Price = season==="earlybird"?395:season==="peak"?495:595
-  const tier3Price = season==="earlybird"?595:season==="peak"?695:695
-  const tier1Visible = season==="lastminute"||season==="standard"
+  const T1_PRICE = 250, T2_PRICE = 395, T3_PRICE = 595, TEAM_PER_SEAT = 360
 
-  // Team slider state
   const [seats, setSeats] = useState(5)
-  const teamPrice = seats<=5 ? seats*360 : seats<=10 ? seats*280 : null
-  const perSeat   = seats<=5 ? 360 : seats<=10 ? 280 : null
-  const savings   = seats<=5 ? Math.round((seats*tier3Price - teamPrice)/seats) : seats<=10 ? Math.round((seats*tier3Price - teamPrice)/seats) : null
+  const teamContactUs = seats >= 11
+  const teamTotal = teamContactUs ? null : seats * TEAM_PER_SEAT
+  const teamSavings = teamContactUs ? null : seats * T3_PRICE - teamTotal
 
-  const [teamTab, setTeamTab] = useState("individual") // "individual" | "team"
+  const [teamTab, setTeamTab] = useState("individual")
 
   const individualPlans = [
-    ...(tier1Visible ? [{
-      id:"t1",label:"Test Engine",tag:"Tier 1",price:250,priceNote:"one-time",
-      badge:season==="lastminute"?"🎯 Last-Minute":null,badgeColor:C.ink,
-      dim:false,dark:false,
+    {
+      id:"t1",label:"LC Preparation Test",tag:"Tier 1",price:T1_PRICE,
+      badge:null,dim:false,dark:false,
       desc:"Already studied? Use our LC practice engine as your final accuracy check before exam day.",
       includes:["129 LC practice questions","13 topic breakdown","25-sec timed exam","Speed bonuses & streaks","Per-topic accuracy report","Unlimited attempts"],
-      cta:"Get Test Engine →",
-    }] : [{
-      id:"t1",label:"Test Engine",tag:"Tier 1",price:250,priceNote:"one-time",
-      badge:null,dim:true,dark:false,
-      desc:"Available in October — final exam prep for last-minute candidates.",
-      includes:["129 LC practice questions","13 topic breakdown","25-sec timed exam","Speed bonuses & streaks","Per-topic accuracy report","Unlimited attempts"],
-      cta:"Available in October",
-    }]),
+      cta:"Get LC Preparation Test →",
+    },
     {
-      id:"t2",label:"Full Course",tag:"Tier 2",
-      price:tier2Price,wasPrice:season==="earlybird"?495:null,priceNote:"one-time",
-      badge:season==="earlybird"?"Early Bird":season==="peak"?"Peak Season":null,
-      badgeColor:season==="earlybird"?C.forest:C.accent,
+      id:"t2",label:"Full Course",tag:"Tier 2",price:T2_PRICE,
+      badge:"Most popular",badgeColor:C.accent,
       dim:false,dark:false,
       desc:"All 12 modules structured around the LC exam blueprint. Certificate + 24 CEU hours.",
       includes:["All 12 modules · 74 lessons","Audio narration every lesson","Bookmarks & notes hub","Certificate of completion","24 CEU credit hours"],
-      addon:"+ Test Engine add-on for $200",
+      addon:"+ LC Preparation Test add-on for $200",
       cta:"Start Full Course →",
     },
     {
-      id:"t3",label:"Course + Exam",tag:"Tier 3",
-      price:tier3Price,wasPrice:season==="earlybird"?695:null,priceNote:"one-time",
+      id:"t3",label:"Full Course + Exam",tag:"Tier 3",price:T3_PRICE,
       badge:"Best value",badgeColor:C.accent,
       dim:false,dark:true,
       desc:"The complete package — full course access plus the LC practice exam. Best path to passing.",
-      includes:["Everything in Full Course","Test engine included","129 LC practice questions","Unlimited exam attempts","Topic accuracy analytics","Priority support"],
+      includes:["Everything in Full Course","LC Preparation Test included","129 LC practice questions","Unlimited exam attempts","Topic accuracy analytics","Priority support"],
       cta:"Start Course + Exam →",
     },
   ]
@@ -992,22 +962,10 @@ function Pricing({onSignUp}){
                 {label}
                 {val==="team"&&<span style={{marginLeft:8,background:C.forest,color:"#fff",
                   fontFamily:F.mono,fontSize:9,fontWeight:700,letterSpacing:"0.08em",
-                  padding:"2px 7px",borderRadius:99}}>Save 40%+</span>}
+                  padding:"2px 7px",borderRadius:99}}>Save 39%+</span>}
               </button>
             ))}
           </div>
-        </div>
-
-        {/* Seasonal banner */}
-        <div style={{maxWidth:1000,margin:"0 auto 28px",background:meta.bg,
-          border:`1px solid ${meta.border}`,borderRadius:10,
-          padding:"13px 20px",display:"flex",alignItems:"center",gap:14,flexWrap:"wrap"}}>
-          <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
-            <div style={{width:8,height:8,borderRadius:"50%",background:meta.color}}/>
-            <span style={{fontFamily:F.mono,fontSize:9,letterSpacing:"0.22em",textTransform:"uppercase",color:meta.color,fontWeight:700}}>{meta.label}</span>
-            {meta.ends&&<span style={{fontFamily:F.body,fontSize:11,color:meta.color,background:"rgba(255,255,255,0.6)",borderRadius:99,padding:"2px 9px",border:`1px solid ${meta.border}`}}>ends {meta.ends}</span>}
-          </div>
-          <p style={{fontFamily:F.body,fontSize:13,color:C.inkSoft,margin:0,lineHeight:1.5,flex:1}}>{meta.msg}</p>
         </div>
 
         {/* ── INDIVIDUAL PLANS ── */}
@@ -1018,8 +976,7 @@ function Pricing({onSignUp}){
               {individualPlans.map((plan,i)=>(
                 <div key={plan.id} style={{background:plan.dark?C.ink:C.paper,
                   padding:"28px 22px",borderRight:i<individualPlans.length-1?`1px solid ${C.rule}`:"none",
-                  position:"relative",display:"flex",flexDirection:"column",
-                  opacity:plan.dim?0.5:1,transition:"opacity 0.2s"}}>
+                  position:"relative",display:"flex",flexDirection:"column"}}>
                   {plan.badge&&<span style={{position:"absolute",top:14,right:14,
                     background:plan.badgeColor||C.accent,color:"#fff",
                     fontFamily:F.mono,fontSize:8,fontWeight:700,letterSpacing:"0.12em",
@@ -1031,11 +988,8 @@ function Pricing({onSignUp}){
                   <div style={{fontFamily:F.display,fontWeight:700,fontSize:15,
                     color:plan.dark?"#fff":C.ink,marginBottom:10,paddingRight:plan.badge?52:0}}>{plan.label}</div>
                   <div style={{marginBottom:4}}>
-                    {plan.wasPrice&&<span style={{fontFamily:F.mono,fontSize:11,
-                      color:plan.dark?"rgba(249,244,237,0.35)":C.inkMute,
-                      textDecoration:"line-through",marginRight:5}}>${plan.wasPrice}</span>}
                     <span style={{fontFamily:F.display,fontWeight:700,fontSize:34,
-                      color:plan.dark?"#fff":plan.wasPrice?C.forest:C.ink,
+                      color:plan.dark?"#fff":C.ink,
                       letterSpacing:"-0.02em",lineHeight:1}}>${plan.price}</span>
                     <span style={{fontFamily:F.mono,fontSize:9,
                       color:plan.dark?"rgba(249,244,237,0.45)":C.inkMute,marginLeft:5}}>one-time</span>
@@ -1051,11 +1005,9 @@ function Pricing({onSignUp}){
                     {plan.includes.map((item,j)=>(
                       <div key={j} style={{display:"flex",alignItems:"flex-start",gap:7,padding:"4px 0",
                         borderBottom:j<plan.includes.length-1?`1px solid ${plan.dark?"rgba(249,244,237,0.07)":C.rule}`:"none"}}>
-                        <span style={{color:plan.dim?C.inkMute:plan.dark?"rgba(249,244,237,0.4)":C.forest,fontSize:11,flexShrink:0}}>
-                          {plan.dim?"·":"✓"}
-                        </span>
+                        <span style={{color:plan.dark?"rgba(249,244,237,0.4)":C.forest,fontSize:11,flexShrink:0}}>✓</span>
                         <span style={{fontFamily:F.display,fontSize:11,
-                          color:plan.dim?C.inkMute:plan.dark?"rgba(249,244,237,0.75)":C.inkSoft,lineHeight:1.5}}>{item}</span>
+                          color:plan.dark?"rgba(249,244,237,0.75)":C.inkSoft,lineHeight:1.5}}>{item}</span>
                       </div>
                     ))}
                     {plan.addon&&<div style={{marginTop:8,fontFamily:F.body,fontSize:10.5,
@@ -1063,30 +1015,22 @@ function Pricing({onSignUp}){
                       {plan.addon}
                     </div>}
                   </div>
-                  {plan.dim?(
-                    <div style={{fontFamily:F.body,fontSize:12,color:C.inkMute,
-                      fontStyle:"italic",textAlign:"center",padding:"8px 0"}}>
-                      {plan.cta}
-                    </div>
-                  ):(
-                    <button onClick={onSignUp}
-                      style={{width:"100%",padding:"11px",borderRadius:99,
-                        border:plan.dark?"none":`1px solid ${C.ruleStrong}`,
-                        background:plan.dark?C.accent:"none",
-                        color:plan.dark?"#fff":C.inkSoft,
-                        fontFamily:F.display,fontWeight:700,fontSize:13,
-                        cursor:"pointer",transition:"all 0.15s",marginTop:"auto"}}
-                      onMouseEnter={e=>{if(!plan.dark){e.currentTarget.style.background=C.accent;e.currentTarget.style.color="#fff";e.currentTarget.style.borderColor=C.accent}}}
-                      onMouseLeave={e=>{if(!plan.dark){e.currentTarget.style.background="none";e.currentTarget.style.color=C.inkSoft;e.currentTarget.style.borderColor=C.ruleStrong}}}>
-                      {plan.cta}
-                    </button>
-                  )}
+                  <button onClick={onSignUp}
+                    style={{width:"100%",padding:"11px",borderRadius:99,
+                      border:plan.dark?"none":`1px solid ${C.ruleStrong}`,
+                      background:plan.dark?C.accent:"none",
+                      color:plan.dark?"#fff":C.inkSoft,
+                      fontFamily:F.display,fontWeight:700,fontSize:13,
+                      cursor:"pointer",transition:"all 0.15s",marginTop:"auto"}}
+                    onMouseEnter={e=>{if(!plan.dark){e.currentTarget.style.background=C.accent;e.currentTarget.style.color="#fff";e.currentTarget.style.borderColor=C.accent}}}
+                    onMouseLeave={e=>{if(!plan.dark){e.currentTarget.style.background="none";e.currentTarget.style.color=C.inkSoft;e.currentTarget.style.borderColor=C.ruleStrong}}}>
+                    {plan.cta}
+                  </button>
                 </div>
               ))}
             </div>
             <p style={{textAlign:"center",fontFamily:F.body,fontSize:13,color:C.inkMute,marginTop:20,lineHeight:1.7}}>
               All plans include a <strong style={{color:C.inkSoft}}>free trial</strong> — Module 01 in full + 10 LC practice questions. No card required.
-              {season==="earlybird"&&<><br/><span style={{color:C.forest,fontWeight:500}}>Early Bird rate locks in at signup — price won't increase mid-course.</span></>}
             </p>
           </div>
         )}
@@ -1107,28 +1051,26 @@ function Pricing({onSignUp}){
                 {/* Seat count display */}
                 <div style={{display:"flex",alignItems:"baseline",gap:8,marginBottom:6}}>
                   <span style={{fontFamily:F.display,fontWeight:700,fontSize:52,
-                    color:"#fff",letterSpacing:"-0.03em",lineHeight:1}}>{seats>=11?"10+":seats}</span>
-                  <span style={{fontFamily:F.mono,fontSize:12,color:"rgba(249,244,237,0.45)"}}>
-                    {seats>=11?"+ seats":"seats"}
-                  </span>
+                    color:"#fff",letterSpacing:"-0.03em",lineHeight:1}}>{seats>=11?"11+":seats}</span>
+                  <span style={{fontFamily:F.mono,fontSize:12,color:"rgba(249,244,237,0.45)"}}>seats</span>
                 </div>
 
                 {/* Price display */}
-                {seats<=10?(
+                {!teamContactUs?(
                   <div style={{marginBottom:20}}>
                     <div style={{display:"flex",alignItems:"baseline",gap:8,marginBottom:4}}>
                       <span style={{fontFamily:F.display,fontWeight:700,fontSize:38,
                         color:C.accent,letterSpacing:"-0.02em",lineHeight:1}}>
-                        ${teamPrice?.toLocaleString()}
+                        ${teamTotal?.toLocaleString()}
                       </span>
                       <span style={{fontFamily:F.mono,fontSize:10,color:"rgba(249,244,237,0.4)"}}>one-time</span>
                     </div>
                     <div style={{display:"flex",gap:16}}>
                       <div style={{fontFamily:F.mono,fontSize:11,color:"rgba(249,244,237,0.5)"}}>
-                        ${perSeat}/seat
+                        ${TEAM_PER_SEAT}/seat
                       </div>
                       <div style={{fontFamily:F.mono,fontSize:11,color:C.forest}}>
-                        Save ${savings}/seat vs individual
+                        Save ${teamSavings?.toLocaleString()} vs individual
                       </div>
                     </div>
                   </div>
@@ -1137,7 +1079,7 @@ function Pricing({onSignUp}){
                     <div style={{fontFamily:F.display,fontWeight:700,fontSize:28,
                       color:C.accent,marginBottom:6}}>Custom pricing</div>
                     <div style={{fontFamily:F.mono,fontSize:11,color:"rgba(249,244,237,0.5)"}}>
-                      Studios of 10+ get dedicated pricing and onboarding
+                      Studios of 11+ get dedicated pricing and onboarding
                     </div>
                   </div>
                 )}
@@ -1154,21 +1096,20 @@ function Pricing({onSignUp}){
                     .seat-slider::-moz-range-thumb{width:20px;height:20px;border-radius:50%;
                       background:#C65A3A;cursor:pointer;border:2px solid rgba(249,244,237,0.3)}
                   `}</style>
-                  <input type="range" min={2} max={11} value={seats===11?11:seats}
+                  <input type="range" min={5} max={11} value={seats}
                     onChange={e=>setSeats(parseInt(e.target.value))}
                     className="seat-slider"/>
                   <div style={{display:"flex",justifyContent:"space-between",marginTop:6}}>
-                    <span style={{fontFamily:F.mono,fontSize:9,color:"rgba(249,244,237,0.3)"}}>2 seats</span>
-                    <span style={{fontFamily:F.mono,fontSize:9,color:"rgba(249,244,237,0.3)"}}>10+ seats</span>
+                    <span style={{fontFamily:F.mono,fontSize:9,color:"rgba(249,244,237,0.3)"}}>5 seats</span>
+                    <span style={{fontFamily:F.mono,fontSize:9,color:"rgba(249,244,237,0.3)"}}>11+ seats</span>
                   </div>
                 </div>
 
                 {/* Pricing tiers legend */}
                 <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:24}}>
                   {[
-                    {range:"2–5 seats",price:"$360/seat",active:seats<=5},
-                    {range:"6–10 seats",price:"$280/seat",active:seats>=6&&seats<=10},
-                    {range:"10+ seats",price:"Custom",active:seats>=11},
+                    {range:"5–10 seats",price:"$360/seat",active:seats<=10},
+                    {range:"11+ seats",price:"Contact us",active:seats>=11},
                   ].map(tier=>(
                     <div key={tier.range} style={{display:"flex",alignItems:"center",
                       justifyContent:"space-between",padding:"6px 10px",borderRadius:6,
@@ -1183,14 +1124,14 @@ function Pricing({onSignUp}){
                   ))}
                 </div>
 
-                {seats<=10?(
+                {!teamContactUs?(
                   <button onClick={onSignUp}
                     style={{width:"100%",padding:"13px",borderRadius:99,border:"none",
                       background:C.accent,color:"#fff",fontFamily:F.display,
                       fontWeight:700,fontSize:14,cursor:"pointer",transition:"opacity 0.15s"}}
                     onMouseEnter={e=>e.currentTarget.style.opacity="0.88"}
                     onMouseLeave={e=>e.currentTarget.style.opacity="1"}>
-                    Start team plan — ${teamPrice?.toLocaleString()} →
+                    Start team plan — ${teamTotal?.toLocaleString()} →
                   </button>
                 ):(
                   <a href="mailto:admin@luxartmedia.com?subject=Team%20Plan%20Inquiry"
@@ -1244,23 +1185,23 @@ function Pricing({onSignUp}){
                 </div>
 
                 {/* Savings callout */}
-                {seats<=10&&(
+                {!teamContactUs&&(
                   <div style={{marginTop:"auto",background:C.forestLight,
                     border:`1px solid ${C.forest}`,borderRadius:10,padding:"14px 16px"}}>
                     <div style={{fontFamily:F.display,fontWeight:700,fontSize:13,
                       color:C.forest,marginBottom:4}}>
-                      vs. {seats} individual Course+Exam plans
+                      vs. {seats} individual Full Course + Exam plans
                     </div>
                     <div style={{display:"flex",alignItems:"baseline",gap:10}}>
                       <span style={{fontFamily:F.mono,fontSize:11,
                         color:C.inkMute,textDecoration:"line-through"}}>
-                        ${(seats*tier3Price).toLocaleString()}
+                        ${(seats*T3_PRICE).toLocaleString()}
                       </span>
                       <span style={{fontFamily:F.display,fontWeight:700,fontSize:18,color:C.forest}}>
-                        ${teamPrice?.toLocaleString()}
+                        ${teamTotal?.toLocaleString()}
                       </span>
                       <span style={{fontFamily:F.mono,fontSize:11,color:C.forest}}>
-                        Save ${((seats*tier3Price)-teamPrice).toLocaleString()}
+                        Save ${teamSavings?.toLocaleString()}
                       </span>
                     </div>
                   </div>
@@ -3622,7 +3563,7 @@ function AccountPage({ user, setUser, setRoute }) {
     }
   }
 
-  const PLAN_LABELS = { free: 'Free', t1: 'Practice Exam', t2: 'Full Course', t3: 'Course + Exam', team_admin: 'Team Plan', team_member: 'Team Plan' }
+  const PLAN_LABELS = { free: 'Free', t1: 'LC Preparation Test', t2: 'Full Course', t3: 'Full Course + Exam', team_admin: 'Team Plan', team_member: 'Team Plan' }
   const planKey = user?.plan || 'free'
   const planName = PLAN_LABELS[planKey] || 'Free'
   const isPaid = planKey !== 'free'
@@ -3875,7 +3816,7 @@ function Sidebar({route, setRoute, user, onSignOut, bookmarks=new Set(), isMobil
 }
 
 /* ── PLAN HELPERS ── */
-const PLAN_LABELS = { free:"Free trial", t1:"Test Engine", t2:"Full Course", t3:"Course + Exam", team_admin:"Team Admin", team_member:"Team Member" }
+const PLAN_LABELS = { free:"Free trial", t1:"LC Preparation Test", t2:"Full Course", t3:"Full Course + Exam", team_admin:"Team Admin", team_member:"Team Member" }
 
 function moduleAccess(plan, modFree){
   if(plan==="t3"||plan==="t2"||plan==="team_admin"||plan==="team_member") return true
@@ -5347,7 +5288,7 @@ const adisp = s => ({fontFamily:AF.display,...(s||{})})
 const STATES=["Florida","California","New York","Texas","Illinois","Washington","Colorado","Georgia","Ohio","Pennsylvania","Arizona","Massachusetts"]
 const COMPANIES=["Gensler","HLB Lighting","AECOM","Arup","WSP","Lumenpulse","Stantec","HDR","Arcadis","Lam Partners","Luxartmedia","Atelier Ten","Self-employed"]
 const PLANS=["free","t1","t2","t3"]
-const A_PLAN_LABELS ={free:"Free",t1:"Test Engine",t2:"Full Course",t3:"Course+Exam"}
+const A_PLAN_LABELS ={free:"Free",t1:"LC Preparation Test",t2:"Full Course",t3:"Full Course+Exam"}
 const PLAN_COLORS={free:AT.inkMute,t1:AT.blue,t2:AT.green,t3:AT.purple}
 const STATUS_COLORS={active:AT.green,past_due:AT.amber,canceled:AT.red,trialing:AT.blue,free:AT.inkMute}
 
@@ -6249,7 +6190,7 @@ function Revenue(){
       {/* Tier breakdown */}
       <div style={{background:AT.bg3,border:`1px solid ${AT.border}`,borderRadius:8,padding:"24px"}}>
         <SectionTitle>Revenue by tier</SectionTitle>
-        <TableHeader cols={[{label:"Month",w:"120px"},{label:"Test Engine",w:"1fr"},
+        <TableHeader cols={[{label:"Month",w:"120px"},{label:"LC Preparation Test",w:"1fr"},
           {label:"Full Course",w:"1fr"},{label:"Course+Exam",w:"1fr"},{label:"Total",w:"100px",right:true},{label:"Users",w:"70px",right:true}]}/>
         {[...REVENUE_MONTHS].reverse().map((mo,i)=>(
           <div key={mo.month} style={{display:"grid",
@@ -6638,7 +6579,7 @@ function Reports({users}){
           {[
             {season:"May–Jun",label:"Early Bird",users:REVENUE_MONTHS.filter(m=>m.month.includes("May")||m.month.includes("Jun")).reduce((s,m)=>s+m.users,0),color:AT.green,note:"Early planners"},
             {season:"Jul–Sep",label:"Peak Season",users:REVENUE_MONTHS.filter(m=>["Jul","Aug","Sep"].some(mo=>m.month.includes(mo))).reduce((s,m)=>s+m.users,0),color:AT.accent,note:"Panic buying"},
-            {season:"Oct",label:"Last-Minute",users:REVENUE_MONTHS.filter(m=>m.month.includes("Oct")).reduce((s,m)=>s+m.users,0),color:AT.amber,note:"Test Engine spike"},
+            {season:"Oct",label:"Last-Minute",users:REVENUE_MONTHS.filter(m=>m.month.includes("Oct")).reduce((s,m)=>s+m.users,0),color:AT.amber,note:"LC Preparation Test spike"},
             {season:"Nov–Apr",label:"Off-season",users:REVENUE_MONTHS.filter(m=>["Nov","Dec","Jan","Feb","Mar","Apr"].some(mo=>m.month.includes(mo))).reduce((s,m)=>s+m.users,0),color:AT.inkMute,note:"Baseline"},
           ].map(s=>(
             <div key={s.season} style={{background:AT.bg4,borderRadius:8,padding:"16px"}}>

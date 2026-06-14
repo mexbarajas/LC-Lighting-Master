@@ -2,7 +2,7 @@
 
 import PricingCard from '@/components/PricingCard'
 
-export default function PricingPageClient({ isStudent, userEmail, userId }) {
+export default function PricingPageClient({ userEmail, userId }) {
   return (
     <div style={{
       fontFamily: "'Inter', sans-serif",
@@ -34,7 +34,7 @@ export default function PricingPageClient({ isStudent, userEmail, userId }) {
           </p>
         </div>
 
-        <PricingCard userId={userId} userEmail={userEmail} isStudent={isStudent} />
+        <PricingCard userId={userId} userEmail={userEmail} />
 
         <div style={{ marginTop: 48, textAlign: 'center' }}>
           <a href="/" style={{
