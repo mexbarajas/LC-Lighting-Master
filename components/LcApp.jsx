@@ -3822,6 +3822,15 @@ function Sidebar({route, setRoute, user, onSignOut, bookmarks=new Set(), isMobil
           onMouseLeave={e=>e.currentTarget.style.color="rgba(255,255,255,0.5)"}>
           Sign out
         </button>
+        <div style={{borderTop:"1px solid rgba(255,255,255,0.06)",marginTop:12,paddingTop:12,display:"flex",flexWrap:"wrap",gap:"4px 12px"}}>
+          {[{label:"Privacy",href:"/legal/privacy"},{label:"Terms",href:"/legal/terms"},{label:"Refund",href:"/legal/refund"},{label:"Cookies",href:"/legal/cookies"}].map(({label,href})=>(
+            <a key={label} href={href} target="_blank"
+              style={{fontFamily:F.mono,fontSize:9,letterSpacing:"0.12em",color:"rgba(242,230,218,0.35)",textDecoration:"none",textTransform:"uppercase"}}
+              onMouseEnter={e=>e.target.style.color="rgba(242,230,218,0.7)"}
+              onMouseLeave={e=>e.target.style.color="rgba(242,230,218,0.35)"}
+            >{label}</a>
+          ))}
+        </div>
       </div>
     </aside>
   )

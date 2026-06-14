@@ -21,7 +21,9 @@ export default function sitemap() {
       changeFrequency: 'monthly',
       priority: 0.85,
     })),
-    { url: base + '/legal/terms',   lastModified: now, changeFrequency: 'yearly',  priority: 0.2 },
-    { url: base + '/legal/privacy', lastModified: now, changeFrequency: 'yearly',  priority: 0.2 },
+    { url: base + '/legal/terms',    lastModified: now, changeFrequency: 'yearly',  priority: 0.2 },
+    { url: base + '/legal/privacy',  lastModified: now, changeFrequency: 'yearly',  priority: 0.2 },
+    { url: base + '/legal/refund',   lastModified: now, changeFrequency: 'yearly',  priority: 0.2 },
+    { url: base + '/legal/cookies',  lastModified: now, changeFrequency: 'yearly',  priority: 0.2 },
   ]
 }

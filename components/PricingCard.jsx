@@ -294,15 +294,8 @@ export default function PricingCard({ userId, userEmail, isStudent, onContactUs 
               </>
             ) : (
               <>
-                {season.season === 'earlyBird' && (
-                  <span style={{ fontFamily: FONT.mono, fontSize: 12,
-                    color: 'rgba(255,255,255,0.3)', textDecoration: 'line-through', marginRight: 6 }}>
-                    {fmt(69500)}
-                  </span>
-                )}
                 <span style={{ fontFamily: FONT.display, fontWeight: 700, fontSize: 36,
-                  color: season.season === 'earlyBird' ? '#7ecb9e' : '#fff',
-                  letterSpacing: '-0.02em', lineHeight: 1 }}>
+                  color: '#fff', letterSpacing: '-0.02em', lineHeight: 1 }}>
                   {fmt(t3Price.amountCents)}
                 </span>
                 <span style={{ fontFamily: FONT.mono, fontSize: 10,
@@ -312,7 +305,7 @@ export default function PricingCard({ userId, userEmail, isStudent, onContactUs 
           </div>
           <div style={{ fontFamily: FONT.body, fontSize: 11,
             color: 'rgba(255,255,255,0.38)', marginBottom: 8 }}>
-            Price: $595–$695 depending on season
+            Current price · Access through Dec 31
           </div>
           <div style={{ fontFamily: FONT.body, fontSize: 11,
             color: 'rgba(255,255,255,0.38)', marginBottom: 14 }}>

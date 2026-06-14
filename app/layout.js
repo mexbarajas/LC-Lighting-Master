@@ -176,6 +176,8 @@ export default function RootLayout({ children }) {
           'Circadian Lighting and Human Health',
           'Commercial Lighting Applications',
         ],
+        datePublished: '2025-01-15',
+        dateModified: new Date().toISOString().split('T')[0],
         hasCourseInstance: {
           '@type': 'CourseInstance',
           courseMode: 'online',
