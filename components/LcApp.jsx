@@ -621,7 +621,7 @@ function Nav({onSignIn,onSignUp}){
             </div>
             <div style={m({fontSize:7,letterSpacing:"0.18em",textTransform:"uppercase",
               color:scrolled?C.inkMute:"rgba(249,244,237,0.45)",transition:"color 280ms"})}>
-              by luxartmedia.com
+              by Luxart LLC
             </div>
           </div>
         </div>
@@ -1562,7 +1562,7 @@ function LegalModal({doc, onClose}) {
           ))}
           <div style={{marginTop:32,paddingTop:20,borderTop:`1px solid ${C.rule}`}}>
             <p style={mono({fontSize:9,color:C.inkMute,lineHeight:1.6})}>
-              © 2025 Luxart LLC · LC · Lighting Master · {data.title} {data.version}
+              © {new Date().getFullYear()} Luxart LLC · LC · Lighting Master · {data.title} {data.version}
               · Questions? admin@luxartmedia.com
             </p>
           </div>
@@ -1630,7 +1630,7 @@ function Footer({onSignIn, onSignUp, onAdminClick=()=>{}, onLegal=()=>{}}){
         <div style={{borderTop:"1px solid rgba(249,244,237,0.07)",paddingTop:20,
           display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
           <span style={m({fontSize:9,color:"rgba(249,244,237,0.22)"})}>
-            © 2025 Luxartmedia LLC · Lighting Master · All rights reserved
+            © {new Date().getFullYear()} Luxart LLC · Lighting Master · All rights reserved
           </span>
           <span style={m({fontSize:9,color:"rgba(249,244,237,0.22)"})}>
             LC exam prep · Not affiliated with or endorsed by NCQLP®
@@ -3806,7 +3806,7 @@ function Sidebar({route, setRoute, user, onSignOut, bookmarks=new Set(), isMobil
           style={{width:38,height:38,flexShrink:0,borderRadius:9,border:"1px solid rgba(242,230,218,0.28)",boxShadow:"0 0 14px rgba(232,160,32,0.35), 0 0 4px rgba(242,230,218,0.15)"}}/>
         <div>
           <div style={{fontFamily:F.display,fontWeight:700,fontSize:13,color:C.cream,lineHeight:1.2}}>Lighting Master</div>
-          <div style={m({fontSize:8,letterSpacing:"0.18em",textTransform:"uppercase",color:"rgba(255,255,255,0.28)",marginTop:1})}>BY LUXARTMEDIA.COM</div>
+          <div style={m({fontSize:8,letterSpacing:"0.18em",textTransform:"uppercase",color:"rgba(255,255,255,0.28)",marginTop:1})}>BY LUXART LLC</div>
         </div>
       </div>
 

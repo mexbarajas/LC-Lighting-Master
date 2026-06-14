@@ -27,6 +27,9 @@ export default function RefundPage() {
           <p style={{ fontSize: 15, lineHeight: 1.8, margin: 0, color: '#3D5C50' }}>{s.body}</p>
         </div>
       ))}
+      <p style={{ fontSize: 11, color: '#8a7a6a', marginTop: 32 }}>
+        © {new Date().getFullYear()} Luxart LLC. All rights reserved.
+      </p>
     </div>
   )
 }

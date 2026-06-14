@@ -350,9 +350,13 @@ export default function PricingCard({ userId, userEmail, isStudent, onContactUs 
           Studying lighting in school? Take 40% off.
         </div>
         <div style={{ fontFamily: FONT.body, fontSize: 12, color: C.inkMute,
-          lineHeight: 1.6, marginBottom: isStudent ? 8 : 14 }}>
-          Sign up with your .edu email address and the discount applies automatically at checkout — no code needed.
-          Valid on all individual plans.
+          lineHeight: 1.6, marginBottom: isStudent ? 8 : 6 }}>
+          Sign up or log in with your .edu email address. We verify the email domain at checkout — the discount applies automatically once your .edu address is confirmed on your account.
+        </div>
+        <div style={{ fontFamily: FONT.mono, fontSize: 9, letterSpacing: '0.12em',
+          color: C.inkMute, marginBottom: isStudent ? 8 : 14,
+          textTransform: 'uppercase' }}>
+          ✓ Verified at checkout · No code needed · Individual plans only
         </div>
         {isStudent ? (
           <div style={{ fontFamily: FONT.body, fontSize: 12, color: C.forest }}>
