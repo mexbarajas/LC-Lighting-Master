@@ -2091,35 +2091,39 @@ function NotesPage({setRoute, user}) {
 
 /* ── CERTIFICATE PAGE ────────────────────────────────────────── */
 function CertPage({completedLessons=new Set(), user}) {
-  const [bestScore, setBestScore] = useState(0)
-  const [examDetail, setExamDetail] = useState("No attempts recorded yet")
+  const [bestExamScore, setBestExamScore] = useState(0)
+  const [examAttempts, setExamAttempts] = useState(0)
 
   useEffect(() => {
     if (!user?.id) return
     supabase
       .from('exam_sessions')
-      .select('percentage, completed_at')
+      .select('correct_count, questions_attempted, created_at')
       .eq('user_id', user.id)
-      .order('percentage', { ascending: false })
-      .limit(1)
       .then(({ data }) => {
-        if (data?.[0]) {
-          const pct = data[0].percentage
-          setBestScore(pct)
-          setExamDetail(`Best score: ${pct}% — ${pct >= 85 ? 'Passed ✓' : 'Need 85% to pass'}`)
+        if (data?.length > 0) {
+          const withPct = data.map(s => ({
+            ...s,
+            pct: s.questions_attempted > 0
+              ? Math.round((s.correct_count / s.questions_attempted) * 100)
+              : 0
+          }))
+          const best = Math.max(...withPct.map(s => s.pct))
+          setBestExamScore(best)
+          setExamAttempts(data.length)
         }
       })
-  }, [user?.id])
+  }, [user])
 
   const totalCompleted = completedLessons.size
   const totalLessons = 74
   const overallPct = Math.round((totalCompleted / totalLessons) * 100)
   const courseComplete = totalCompleted >= totalLessons
-  const canGetCertificate = courseComplete && bestScore >= 85
+  const canGetCertificate = courseComplete && bestExamScore >= 85
   const reqs = [
     {label:"Complete all 74 lessons",detail:`${totalCompleted} of ${totalLessons} lessons done across all 12 modules`,pct:overallPct,done:courseComplete},
     {label:"Earn 24 CEU contact hours",detail:`${((completedLessons.size/74)*24).toFixed(1)} of 24 hours logged`,pct:Math.round((completedLessons.size/74)*100),done:courseComplete},
-    {label:"Pass practice exam (≥ 85%)",detail:examDetail,pct:Math.min(bestScore,100),done:bestScore>=85},
+    {label:"Pass practice exam (≥ 85%)",detail:examAttempts>0?`Best score: ${bestExamScore}% · ${examAttempts} attempt${examAttempts>1?'s':''}`:"No attempts recorded yet",pct:Math.min(bestExamScore,100),done:bestExamScore>=85},
     {label:"Within access window",detail:"97 days remaining in 6-month window",pct:100,done:true},
   ]
   const metCount = reqs.filter(r=>r.done).length
@@ -2270,31 +2274,9 @@ function ExamPage({setRoute, user, userSubscription, isMobile=false}) {
     if (pts>0) {setFloatPts("+"+pts);setTimeout(()=>setFloatPts(null),1200)}
   }
 
-  async function saveExamSession(correct, total, answers) {
-    if (!user?.id) return
-    const pct = Math.round((correct / total) * 100)
-    const { error } = await supabase
-      .from('exam_sessions')
-      .insert({
-        user_id:      user.id,
-        score:        correct,
-        total:        total,
-        percentage:   pct,
-        answers:      JSON.stringify(answers),
-        completed_at: new Date().toISOString(),
-      })
-    if (error) console.error('Exam save error:', error)
-    else console.log('Exam saved:', pct + '%')
-  }
-
   function nextQuestion() {
-    const {questions,idx,answers} = session
-    if (idx+1>=questions.length) {
-      const correct = answers.filter(a=>a.correct).length
-      saveExamSession(correct, questions.length, answers)
-      setScreen("results")
-      return
-    }
+    const {questions,idx} = session
+    if (idx+1>=questions.length) { setScreen("results"); return }
     setSession(s=>({...s,idx:s.idx+1}))
     setAnswered(null)
     setChosen(null)
@@ -2302,6 +2284,31 @@ function ExamPage({setRoute, user, userSubscription, isMobile=false}) {
   }
 
   useEffect(()=>()=>clearInterval(timerRef.current),[])
+
+  useEffect(() => {
+    if (screen !== 'results' || !user?.id) return
+    const { answers, score, questions } = session
+    const correct = answers.filter(a => a.correct).length
+    const topicBreakdown = questions.reduce((acc, q, i) => {
+      if (!acc[q.topic]) acc[q.topic] = { correct: 0, total: 0 }
+      acc[q.topic].total++
+      if (answers[i]?.correct) acc[q.topic].correct++
+      return acc
+    }, {})
+    supabase
+      .from('exam_sessions')
+      .insert({
+        user_id:             user.id,
+        score:               score,
+        questions_attempted: questions.length,
+        correct_count:       correct,
+        topic_breakdown:     topicBreakdown,
+      })
+      .then(({ error }) => {
+        if (error) console.error('Exam save failed:', error)
+        else console.log('✓ Exam saved:', Math.round(correct / questions.length * 100) + '%')
+      })
+  }, [screen])
 
   const timerColor = timeLeft>14?"#7E9B86":timeLeft>7?"#e8a020":C.accent
   const timerPct = (timeLeft/25)*100
