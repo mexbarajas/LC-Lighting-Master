@@ -1662,7 +1662,7 @@ const MODULES = [
     {ref:"11.5",title:"Commissioning",tag:"process"},{ref:"11.6",title:"Post-occupancy evaluation (POE)",tag:"process"},
   ]},
   {n:"12",part:3,label:"Applications",  title:"Residential & Commercial Applications",ceu:2.0, done:false, active:false, pct:0,   count:"6",    total:6, lessons:[
-    {ref:"12.1",title:"Kitchen & bath lighting",tag:"residential"},{ref:"12.2",title:"Living & bedroom lighting",tag:"residential"},
+    {ref:"12.1",title:"Office & workplace lighting",tag:"workplace"},{ref:"12.2",title:"Living & bedroom lighting",tag:"residential"},
     {ref:"12.3",title:"Office & workplace",tag:"commercial"},{ref:"12.4",title:"Retail & hospitality",tag:"commercial"},
     {ref:"12.5",title:"Healthcare & education",tag:"commercial"},{ref:"12.6",title:"Integrated project review",tag:"application"},
   ]},
