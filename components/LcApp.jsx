@@ -2568,15 +2568,9 @@ function ModuleCompleteModal({module, courseComplete, onClose, onNextLesson, nex
     return ()=>window.removeEventListener("keydown",onKey)
   },[onClose])
 
-  const linkedInUrl=`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}&summary=${encodeURIComponent(shareText)}`
   const twitterUrl=`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`
-  const facebookUrl=`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(shareBody)}`
 
-  async function copyLink(){
-    await navigator.clipboard.writeText(shareText)
-    setCopied(true)
-    setTimeout(()=>setCopied(false),2000)
-  }
+  console.log('shareText for module', moduleKey, ':', shareText)
 
   return(
     <div onClick={e=>{if(e.target===e.currentTarget)onClose()}}
@@ -2608,23 +2602,44 @@ function ModuleCompleteModal({module, courseComplete, onClose, onNextLesson, nex
           </p>
         </div>
 
-        <div style={mono({fontSize:9,letterSpacing:"0.22em",textTransform:"uppercase",color:C.inkMute,marginBottom:12})}>
+        <div style={mono({fontSize:9,letterSpacing:"0.22em",textTransform:"uppercase",color:C.inkMute,marginBottom:8})}>
           Share your achievement:
         </div>
+
+        <p style={{fontFamily:F.mono,fontSize:9,letterSpacing:"0.12em",textTransform:"uppercase",color:C.inkMute,textAlign:"center",marginBottom:12}}>
+          LinkedIn &amp; Facebook: message auto-copied — just paste
+        </p>
 
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:22}}>
           <ShareBtn icon="in" label="LinkedIn"
             hoverBg="#0077B5" hoverColor="#fff" defaultColor="#0077B5"
-            onClick={()=>window.open(linkedInUrl,"_blank","width=600,height=600")}/>
+            onClick={()=>{
+              navigator.clipboard.writeText(shareText)
+                .then(()=>{
+                  window.open('https://www.linkedin.com/feed/','_blank')
+                  alert('✓ Message copied! Paste it into your LinkedIn post.')
+                })
+                .catch(()=>window.open('https://www.linkedin.com/feed/','_blank'))
+            }}/>
           <ShareBtn icon="𝕏" label="X / Twitter"
             hoverBg="#000" hoverColor="#fff"
             onClick={()=>window.open(twitterUrl,"_blank","width=600,height=400")}/>
           <ShareBtn icon="f" label="Facebook"
             hoverBg="#1877F2" hoverColor="#fff" defaultColor="#1877F2"
-            onClick={()=>window.open(facebookUrl,"_blank","width=600,height=400")}/>
-          <ShareBtn icon="⎘" label={copied?"Copied! ✓":"Copy link"}
+            onClick={()=>{
+              navigator.clipboard.writeText(shareText)
+                .then(()=>{
+                  window.open('https://www.facebook.com/','_blank')
+                  alert('✓ Message copied! Paste it into your Facebook post.')
+                })
+                .catch(()=>window.open('https://www.facebook.com/','_blank'))
+            }}/>
+          <ShareBtn icon="⧉" label={copied?"✓ Copied!":"Copy message"}
             hoverBg="#2d4a3e" hoverColor="#fff"
-            onClick={copyLink}/>
+            onClick={()=>{
+              navigator.clipboard.writeText(shareText)
+                .then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2500)})
+            }}/>
         </div>
 
         <div style={{ display:'flex', flexDirection:'column', marginTop:8, width:'100%' }}>
