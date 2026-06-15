@@ -3065,6 +3065,8 @@ function LessonPage({lessonRef,setRoute,user,setShowUpgrade,completedLessons=new
   const courseComplete = !next && module.n==="12"
   const crossModuleIdx = ALL_LESSONS.findIndex(l=>l.ref===lessonRef)
   const crossModuleNext = ALL_LESSONS[crossModuleIdx+1] || null
+  const prevLesson = crossModuleIdx > 0 ? ALL_LESSONS[crossModuleIdx - 1] : null
+  const nextLesson = crossModuleNext
   const content = lessonContent
   const visual = lessonContent?.visual
   const isBookmarked = bookmarks.has(lessonRef)
@@ -3100,10 +3102,23 @@ function LessonPage({lessonRef,setRoute,user,setShowUpgrade,completedLessons=new
         )
       })()}
 
-      {/* Top next button */}
-      {next&&(
-        <div style={{display:"flex",justifyContent:"flex-end",marginBottom:14}}>
-          <button onClick={()=>{if(typeof _stopTTS!=='undefined')_stopTTS();markLessonComplete(lessonRef);window.scrollTo({top:0,behavior:'smooth'});setRoute("lesson-"+next.ref)}} style={{fontFamily:F.display,fontWeight:700,fontSize:13,background:C.ink,color:"#fff",border:"none",borderRadius:99,padding:"9px 18px",cursor:"pointer"}}>Next lesson →</button>
+      {/* Top prev/next buttons */}
+      {(prevLesson||nextLesson)&&(
+        <div style={{display:'flex',gap:10,marginTop:16,marginBottom:8}}>
+          {prevLesson&&(
+            <button
+              onClick={()=>{window.scrollTo({top:0,behavior:'instant'});setRoute('lesson-'+prevLesson.ref)}}
+              style={{flex:1,fontFamily:F.display,fontWeight:600,fontSize:13,background:'transparent',color:C.inkMute,border:`1px solid ${C.rule}`,borderRadius:99,padding:'11px 16px',cursor:'pointer',transition:'border-color 150ms, color 150ms',textAlign:'center'}}
+              onMouseEnter={e=>{e.currentTarget.style.borderColor=C.ink;e.currentTarget.style.color=C.ink}}
+              onMouseLeave={e=>{e.currentTarget.style.borderColor=C.rule;e.currentTarget.style.color=C.inkMute}}
+            >← {prevLesson.title}</button>
+          )}
+          {nextLesson&&(
+            <button
+              onClick={()=>{markLessonComplete(lessonRef);window.scrollTo({top:0,behavior:'instant'});setRoute('lesson-'+nextLesson.ref)}}
+              style={{flex:1,fontFamily:F.display,fontWeight:700,fontSize:13,background:C.accent,color:'#fff',border:'none',borderRadius:99,padding:'11px 16px',cursor:'pointer',transition:'background 150ms',textAlign:'center'}}
+            >{nextLesson.title} →</button>
+          )}
         </div>
       )}
 
@@ -3192,15 +3207,25 @@ function LessonPage({lessonRef,setRoute,user,setShowUpgrade,completedLessons=new
 
       <LessonNote lessonRef={lessonRef} user={user}/>
 
-      <div style={{display:"flex",justifyContent:"space-between",gap:12}}>
-        {prev?<button onClick={()=>{if(typeof _stopTTS!=='undefined')_stopTTS();window.scrollTo({top:0,behavior:'smooth'});setRoute("lesson-"+prev.ref)}} style={{fontFamily:F.display,fontWeight:600,fontSize:13,background:"none",color:C.inkSoft,border:`1px solid ${C.rule}`,borderRadius:99,padding:"9px 18px",cursor:"pointer"}}>← {prev.ref} · {prev.title}</button>:<div/>}
-        {next?<button onClick={()=>{if(typeof _stopTTS!=='undefined')_stopTTS();markLessonComplete(lessonRef);window.scrollTo({top:0,behavior:'smooth'});setRoute("lesson-"+next.ref)}} style={{fontFamily:F.display,fontWeight:700,fontSize:13,background:C.ink,color:"#fff",border:"none",borderRadius:99,padding:"9px 18px",cursor:"pointer"}}>{next.ref} · {next.title} →</button>:(
-          <button onClick={()=>{if(typeof _stopTTS!=='undefined')_stopTTS();markLessonComplete(lessonRef);setShowShareModal(true)}}
-            style={{fontFamily:F.display,fontWeight:700,fontSize:13,
-              background:C.accent,color:"#fff",border:"none",
-              borderRadius:99,padding:"9px 18px",cursor:"pointer"}}>
-            Module complete 🎉
-          </button>
+      <div style={{display:'flex',gap:10,marginTop:8}}>
+        {prevLesson&&(
+          <button
+            onClick={()=>{if(typeof _stopTTS!=='undefined')_stopTTS();window.scrollTo({top:0,behavior:'instant'});setRoute('lesson-'+prevLesson.ref)}}
+            style={{flex:1,fontFamily:F.display,fontWeight:600,fontSize:13,background:'transparent',color:C.inkMute,border:`1px solid ${C.rule}`,borderRadius:99,padding:'11px 16px',cursor:'pointer',transition:'border-color 150ms, color 150ms',textAlign:'center'}}
+            onMouseEnter={e=>{e.currentTarget.style.borderColor=C.ink;e.currentTarget.style.color=C.ink}}
+            onMouseLeave={e=>{e.currentTarget.style.borderColor=C.rule;e.currentTarget.style.color=C.inkMute}}
+          >← {prevLesson.title}</button>
+        )}
+        {nextLesson?(
+          <button
+            onClick={()=>{if(typeof _stopTTS!=='undefined')_stopTTS();markLessonComplete(lessonRef);window.scrollTo({top:0,behavior:'instant'});setRoute('lesson-'+nextLesson.ref)}}
+            style={{flex:1,fontFamily:F.display,fontWeight:700,fontSize:13,background:C.accent,color:'#fff',border:'none',borderRadius:99,padding:'11px 16px',cursor:'pointer',transition:'background 150ms',textAlign:'center'}}
+          >{nextLesson.title} →</button>
+        ):(
+          <button
+            onClick={()=>{if(typeof _stopTTS!=='undefined')_stopTTS();markLessonComplete(lessonRef);setShowShareModal(true)}}
+            style={{flex:1,fontFamily:F.display,fontWeight:700,fontSize:13,background:C.accent,color:'#fff',border:'none',borderRadius:99,padding:'11px 16px',cursor:'pointer',textAlign:'center'}}
+          >Module complete 🎉</button>
         )}
       </div>
 
