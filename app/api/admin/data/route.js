@@ -1,9 +1,9 @@
 import { createServiceClient } from '@/lib/supabase/service'
-
-const ADMIN_PW = process.env.ADMIN_PASSWORD || 'Master00@'
+import { verifyAdminToken, parseCookie } from '@/lib/admin-auth'
 
 export async function GET(request) {
-  if (request.headers.get('x-admin-password') !== ADMIN_PW) {
+  const token = parseCookie(request.headers.get('cookie'), 'admin_session')
+  if (!verifyAdminToken(token)) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
   }
 
