@@ -2090,16 +2090,24 @@ function NotesPage({setRoute, user}) {
 
 
 /* ── CERTIFICATE PAGE ────────────────────────────────────────── */
-function CertPage({completedLessons=new Set(), user}) {
-  const [bestExamScore, setBestExamScore] = useState(0)
+function CertPage({ setRoute, user, completedLessons = new Set(), userSubscription }) {
+  const [bestExamScore, setBestExamScore] = useState(null)
   const [examAttempts, setExamAttempts] = useState(0)
+  const [userName, setUserName] = useState('')
+  const [printing, setPrinting] = useState(false)
 
   useEffect(() => {
     if (!user?.id) return
+    const meta = user.user_metadata
+    const name = meta?.full_name || meta?.name ||
+      (user.email ? user.email.split('@')[0].replace(/[._]/g,' ')
+        .replace(/\b\w/g, c => c.toUpperCase()) : 'Learner')
+    setUserName(name)
     supabase
       .from('exam_sessions')
       .select('correct_count, questions_attempted, created_at')
       .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
       .then(({ data }) => {
         if (data?.length > 0) {
           const withPct = data.map(s => ({
@@ -2111,113 +2119,308 @@ function CertPage({completedLessons=new Set(), user}) {
           const best = Math.max(...withPct.map(s => s.pct))
           setBestExamScore(best)
           setExamAttempts(data.length)
+        } else {
+          setBestExamScore(0)
+          setExamAttempts(0)
         }
       })
   }, [user])
 
-  const totalCompleted = completedLessons.size
+  const totalDone = completedLessons.size
   const totalLessons = 74
-  const overallPct = Math.round((totalCompleted / totalLessons) * 100)
-  const courseComplete = totalCompleted >= totalLessons
-  const canGetCertificate = courseComplete && bestExamScore >= 85
+  const ceuEarned = ((totalDone / totalLessons) * 24).toFixed(1)
+  const allLessonsDone = totalDone >= totalLessons
+  const examPassed = bestExamScore !== null && bestExamScore >= 85
+
+  const expiry = userSubscription?.current_period_end
+    ? new Date(userSubscription.current_period_end)
+    : new Date(new Date().getFullYear(), 11, 31)
+  const daysRemaining = Math.max(0, Math.ceil((expiry - new Date()) / (1000 * 60 * 60 * 24)))
+  const withinWindow = daysRemaining > 0
+
   const reqs = [
-    {label:"Complete all 74 lessons",detail:`${totalCompleted} of ${totalLessons} lessons done across all 12 modules`,pct:overallPct,done:courseComplete},
-    {label:"Earn 24 CEU contact hours",detail:`${((completedLessons.size/74)*24).toFixed(1)} of 24 hours logged`,pct:Math.round((completedLessons.size/74)*100),done:courseComplete},
-    {label:"Pass practice exam (≥ 85%)",detail:examAttempts>0?`Best score: ${bestExamScore}% · ${examAttempts} attempt${examAttempts>1?'s':''}`:"No attempts recorded yet",pct:Math.min(bestExamScore,100),done:bestExamScore>=85},
-    {label:"Within access window",detail:"97 days remaining in 6-month window",pct:100,done:true},
+    {
+      label: 'Complete all 74 lessons',
+      detail: `${totalDone} of ${totalLessons} lessons done across all 12 modules`,
+      pct: Math.round((totalDone / totalLessons) * 100),
+      done: allLessonsDone,
+    },
+    {
+      label: 'Earn 24 CEU contact hours',
+      detail: `${ceuEarned} of 24 hours logged`,
+      pct: Math.round((parseFloat(ceuEarned) / 24) * 100),
+      done: parseFloat(ceuEarned) >= 24,
+    },
+    {
+      label: 'Pass practice exam (≥ 85%)',
+      detail: examAttempts > 0
+        ? `Best score: ${bestExamScore}% · ${examAttempts} attempt${examAttempts > 1 ? 's' : ''}`
+        : 'No attempts recorded yet',
+      pct: bestExamScore !== null ? Math.min(bestExamScore, 100) : 0,
+      done: examPassed,
+    },
+    {
+      label: 'Within access window',
+      detail: withinWindow
+        ? `${daysRemaining} days remaining · expires ${expiry.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`
+        : 'Access window expired',
+      pct: withinWindow ? 100 : 0,
+      done: withinWindow,
+    },
   ]
-  const metCount = reqs.filter(r=>r.done).length
-  const readinessPct = Math.round(reqs.reduce((s,r)=>s+r.pct,0)/reqs.length)
-  const partProgress = [
-    {n:"01",title:"Fundamentals",modules:"01–04",moduleNums:["01","02","03","04"]},
-    {n:"02",title:"Systems & applications",modules:"05–08",moduleNums:["05","06","07","08"]},
-    {n:"03",title:"Design practice & sustainability",modules:"09–12",moduleNums:["09","10","11","12"]},
-  ].map(part=>{
-    const partModules=MODULES.filter(m=>part.moduleNums.includes(m.n))
-    const allLessons=partModules.flatMap(m=>m.lessons)
-    const done=allLessons.filter(l=>completedLessons.has(l.ref)).length
-    const total=allLessons.length
-    return{...part,done,total,pct:Math.round((done/total)*100)}
+
+  const metCount = reqs.filter(r => r.done).length
+  const readinessPct = Math.round(reqs.reduce((s, r) => s + r.pct, 0) / reqs.length)
+  const isUnlocked = metCount === 4
+  const issueDate = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+
+  function downloadCertificate() {
+    setPrinting(true)
+    setTimeout(() => { window.print(); setPrinting(false) }, 300)
+  }
+
+  const PART_MODULES = [
+    { n: '01', title: 'Fundamentals', modules: '01–04', moduleNums: ['01','02','03','04'] },
+    { n: '02', title: 'Systems & Applications', modules: '05–08', moduleNums: ['05','06','07','08'] },
+    { n: '03', title: 'Design Practice', modules: '09–12', moduleNums: ['09','10','11','12'] },
+  ]
+  const partProgress = PART_MODULES.map(p => {
+    const refs = MODULES.filter(m => p.moduleNums.includes(m.n))
+    const allLessons = refs.flatMap(m => m.lessons)
+    const done = allLessons.filter(l => completedLessons.has(l.ref)).length
+    const total = allLessons.length
+    return { ...p, done, total, pct: Math.round((done / total) * 100) }
   })
+
   return (
-    <div style={{padding:"0 36px 48px"}}>
-      <PageHead eyebrow="My progress · Course completion" title="Your" em="certificate."/>
-      <section style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:40,margin:"32px 0 0",alignItems:"start"}}>
-        {/* Certificate preview */}
-        <div>
-          <div style={{border:`1px solid ${C.rule}`,borderRadius:4,padding:32,background:C.paper,position:"relative",overflow:"hidden"}}>
-            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
-              <div style={{width:24,height:24,borderRadius:4,background:C.accent,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:F.display,fontWeight:800,fontSize:9,color:"#fff"}}>LC</div>
-              <span style={{fontFamily:F.display,fontWeight:700,fontSize:13,color:C.ink}}>LC · Lighting Master</span>
-            </div>
-            <div style={mono({fontSize:9,letterSpacing:"0.22em",textTransform:"uppercase",color:C.accent,marginBottom:12})}>Certificate of Completion</div>
-            <h2 style={{fontFamily:"'DM Serif Display',serif",fontSize:26,fontWeight:400,color:C.ink,lineHeight:1.15,margin:"0 0 14px"}}>Certified Lighting<br/>Designer · Exam Prep</h2>
-            <div style={{fontFamily:F.display,fontWeight:700,fontSize:18,color:C.inkSoft,marginBottom:10}}>Reema Menon</div>
-            <p style={{fontFamily:F.body,fontSize:12,lineHeight:1.6,color:C.inkMute,marginBottom:20}}>For completing all 74 lessons across 12 modules and passing the NCQLP practice exam, earning 24 CEU contact hours of professional development.</p>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end"}}>
-              <div style={{fontFamily:F.body,fontSize:11,color:C.inkMute}}>Issued · pending completion</div>
-              <div style={{width:52,height:52,borderRadius:"50%",background:C.accent,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:F.display,fontWeight:700,fontSize:11,color:"#fff",textAlign:"center",lineHeight:1.2}}>LC<br/>PREP</div>
-            </div>
-            {/* Lock overlay */}
-            {!canGetCertificate&&(
-              <div style={{position:"absolute",inset:0,background:"rgba(248,243,236,0.92)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:10,backdropFilter:"blur(2px)"}}>
-                <div style={{fontSize:28}}>🔒</div>
-                <div style={{fontFamily:F.display,fontWeight:700,fontSize:16,color:C.ink}}>Not unlocked yet</div>
-                <div style={{fontFamily:F.body,fontSize:13,color:C.inkMute,textAlign:"center",maxWidth:240}}>Finish the four requirements to issue and download your certificate.</div>
+    <>
+      <style>{`
+        @media print {
+          body * { visibility: hidden !important; }
+          #cert-printable, #cert-printable * { visibility: visible !important; }
+          #cert-printable {
+            position: fixed !important;
+            left: 0 !important; top: 0 !important;
+            width: 100vw !important; height: 100vh !important;
+            background: #fff !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 40px !important;
+          }
+        }
+      `}</style>
+
+      <div style={{ padding: '0 36px 48px' }}>
+        <PageHead eyebrow="My progress · Course completion" title="Your" em="certificate." />
+
+        <section style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 40, margin: '32px 0 0', alignItems: 'start' }}>
+
+          {/* Certificate card */}
+          <div>
+            <div id="cert-printable" style={{
+              border: `2px solid ${C.rule}`,
+              borderRadius: 8,
+              padding: 36,
+              background: C.paper,
+              position: 'relative',
+              overflow: 'hidden',
+            }}>
+              {/* Decorative corner accents */}
+              <div style={{ position: 'absolute', top: 0, left: 0, width: 60, height: 60,
+                borderTop: `3px solid ${C.accent}`, borderLeft: `3px solid ${C.accent}`,
+                borderRadius: '8px 0 0 0' }}/>
+              <div style={{ position: 'absolute', top: 0, right: 0, width: 60, height: 60,
+                borderTop: `3px solid ${C.accent}`, borderRight: `3px solid ${C.accent}`,
+                borderRadius: '0 8px 0 0' }}/>
+              <div style={{ position: 'absolute', bottom: 0, left: 0, width: 60, height: 60,
+                borderBottom: `3px solid ${C.accent}`, borderLeft: `3px solid ${C.accent}`,
+                borderRadius: '0 0 0 8px' }}/>
+              <div style={{ position: 'absolute', bottom: 0, right: 0, width: 60, height: 60,
+                borderBottom: `3px solid ${C.accent}`, borderRight: `3px solid ${C.accent}`,
+                borderRadius: '0 0 8px 0' }}/>
+
+              {/* Logo + brand */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
+                <img src="/brand/logo-transparent.png" alt="LC Lighting Master"
+                  style={{ width: 40, height: 40, borderRadius: 8, border: `1px solid ${C.rule}` }} />
+                <div>
+                  <div style={{ fontFamily: F.display, fontWeight: 700, fontSize: 13, color: C.ink, lineHeight: 1.1 }}>LC · Lighting Master</div>
+                  <div style={{ fontFamily: F.mono, fontSize: 8, letterSpacing: '0.14em', textTransform: 'uppercase', color: C.inkMute }}>by Luxart LLC</div>
+                </div>
               </div>
+
+              <div style={{ height: 1, background: `linear-gradient(to right, ${C.accent}, ${C.rule}, transparent)`, marginBottom: 20 }}/>
+
+              <div style={{ fontFamily: F.mono, fontSize: 9, letterSpacing: '0.22em', textTransform: 'uppercase', color: C.accent, marginBottom: 14 }}>
+                Certificate of Completion
+              </div>
+
+              <h2 style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 28, fontWeight: 400, color: C.ink, lineHeight: 1.15, margin: '0 0 6px' }}>
+                Certified Lighting
+              </h2>
+              <h2 style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 28, fontWeight: 400, color: C.ink, lineHeight: 1.15, margin: '0 0 18px' }}>
+                Designer · Exam Prep
+              </h2>
+
+              <div style={{ fontFamily: F.mono, fontSize: 9, letterSpacing: '0.16em', textTransform: 'uppercase', color: C.inkMute, marginBottom: 6 }}>
+                Awarded to
+              </div>
+              <div style={{ fontFamily: F.display, fontWeight: 700, fontSize: 22, color: C.ink, marginBottom: 16, letterSpacing: '-0.01em' }}>
+                {userName || user?.email || 'Lighting Professional'}
+              </div>
+
+              <p style={{ fontFamily: F.body, fontSize: 12, lineHeight: 1.7, color: C.inkMute, marginBottom: 24, maxWidth: 340 }}>
+                For completing all 74 lessons across 12 modules and passing the
+                NCQLP practice exam with a score of {bestExamScore || 0}%,
+                earning 24 CEU contact hours of professional development.
+              </p>
+
+              <div style={{ height: 1, background: C.rule, marginBottom: 16 }}/>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                <div>
+                  <div style={{ fontFamily: F.mono, fontSize: 8, letterSpacing: '0.14em', textTransform: 'uppercase', color: C.inkMute, marginBottom: 4 }}>
+                    {isUnlocked ? 'Date issued' : 'Pending completion'}
+                  </div>
+                  <div style={{ fontFamily: F.display, fontWeight: 600, fontSize: 13, color: C.ink }}>
+                    {isUnlocked ? issueDate : '—'}
+                  </div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontFamily: F.mono, fontSize: 8, letterSpacing: '0.14em', textTransform: 'uppercase', color: C.inkMute, marginBottom: 4 }}>
+                    Issued by
+                  </div>
+                  <div style={{ fontFamily: F.display, fontWeight: 600, fontSize: 11, color: C.ink }}>lightingmasterlc.com</div>
+                </div>
+              </div>
+
+              {/* Lock overlay */}
+              {!isUnlocked && (
+                <div style={{ position: 'absolute', inset: 0,
+                  background: 'rgba(250,245,240,0.92)',
+                  display: 'flex', flexDirection: 'column',
+                  alignItems: 'center', justifyContent: 'center',
+                  gap: 10, backdropFilter: 'blur(3px)', borderRadius: 8 }}>
+                  <div style={{ fontSize: 32 }}>🔒</div>
+                  <div style={{ fontFamily: F.display, fontWeight: 700, fontSize: 16, color: C.ink }}>Not unlocked yet</div>
+                  <div style={{ fontFamily: F.body, fontSize: 13, color: C.inkMute,
+                    textAlign: 'center', maxWidth: 240, lineHeight: 1.6 }}>
+                    Complete all 4 requirements to issue and download your certificate.
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Download button */}
+            {isUnlocked && (
+              <button onClick={downloadCertificate} disabled={printing}
+                style={{
+                  width: '100%', marginTop: 14,
+                  fontFamily: F.display, fontWeight: 700, fontSize: 14,
+                  background: C.accent, color: '#fff', border: 'none',
+                  borderRadius: 99, padding: '13px 24px', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                }}>
+                {printing ? 'Preparing PDF...' : '⬇ Download Certificate PDF'}
+              </button>
             )}
           </div>
-        </div>
 
-        {/* Readiness panel */}
-        <div style={{background:C.ink,borderRadius:6,padding:"28px 32px",color:"#fff"}}>
-          <div style={mono({fontSize:9,letterSpacing:"0.22em",textTransform:"uppercase",color:C.tan,marginBottom:12})}>Certificate readiness</div>
-          <div style={{fontFamily:F.display,fontWeight:700,fontSize:52,letterSpacing:"-0.03em",lineHeight:1,marginBottom:6}}>{readinessPct}<em style={{fontStyle:"normal",fontSize:24,color:C.tan}}>%</em></div>
-          <div style={mono({fontSize:10,letterSpacing:"0.16em",color:"rgba(255,255,255,0.5)",marginBottom:16})}>{metCount} of 4 requirements met</div>
-          <div style={{height:4,background:"rgba(255,255,255,0.12)",borderRadius:99,overflow:"hidden",marginBottom:20}}>
-            <div style={{height:"100%",width:`${readinessPct}%`,background:C.accent,borderRadius:99,transition:"width 700ms cubic-bezier(.4,0,.2,1)"}}/>
+          {/* Readiness panel */}
+          <div style={{ background: C.ink, borderRadius: 8, padding: '28px 32px', color: '#fff' }}>
+            <div style={mono({ fontSize: 9, letterSpacing: '0.22em', textTransform: 'uppercase', color: C.tan, marginBottom: 12 })}>
+              Certificate readiness
+            </div>
+            <div style={{ fontFamily: F.display, fontWeight: 700, fontSize: 52,
+              letterSpacing: '-0.03em', lineHeight: 1, marginBottom: 6 }}>
+              {readinessPct}
+              <em style={{ fontStyle: 'normal', fontSize: 24, color: C.tan }}>%</em>
+            </div>
+            <div style={mono({ fontSize: 10, letterSpacing: '0.16em', color: 'rgba(255,255,255,0.5)', marginBottom: 16 })}>
+              {metCount} of 4 requirements met
+            </div>
+            <div style={{ height: 4, background: 'rgba(255,255,255,0.12)',
+              borderRadius: 99, overflow: 'hidden', marginBottom: 24 }}>
+              <div style={{ height: '100%', width: `${readinessPct}%`,
+                background: C.accent, borderRadius: 99, transition: 'width 700ms ease' }}/>
+            </div>
+            {reqs.map((r, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12,
+                padding: '12px 0', borderBottom: i < 3 ? '1px solid rgba(255,255,255,0.08)' : 'none' }}>
+                <span style={{
+                  width: 20, height: 20, borderRadius: '50%', flexShrink: 0, marginTop: 1,
+                  background: r.done ? C.forest : 'transparent',
+                  border: `1.5px solid ${r.done ? C.forest : 'rgba(255,255,255,0.3)'}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 10, color: '#fff',
+                }}>
+                  {r.done ? '✓' : ''}
+                </span>
+                <div>
+                  <div style={{ fontFamily: F.display, fontWeight: 600, fontSize: 13,
+                    color: r.done ? '#fff' : 'rgba(255,255,255,0.65)', marginBottom: 3 }}>
+                    {r.label}
+                  </div>
+                  <div style={mono({ fontSize: 9, letterSpacing: '0.1em', color: 'rgba(255,255,255,0.38)' })}>
+                    {r.detail}
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
-          {reqs.map((r,i)=>(
-            <div key={i} style={{display:"flex",alignItems:"flex-start",gap:12,padding:"10px 0",borderBottom:i<3?`1px solid rgba(255,255,255,0.08)`:"none"}}>
-              <span style={{width:18,height:18,borderRadius:"50%",border:`1px solid ${r.done?"transparent":"rgba(255,255,255,0.3)"}`,background:r.done?C.forest:"transparent",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,color:"#fff",flexShrink:0,marginTop:2}}>{r.done?"✓":""}</span>
-              <div>
-                <div style={{fontFamily:F.display,fontWeight:600,fontSize:13,color:r.done?"#fff":"rgba(255,255,255,0.7)",marginBottom:3}}>{r.label}</div>
-                <div style={mono({fontSize:9,letterSpacing:"0.1em",color:"rgba(255,255,255,0.38)"})}>{r.detail}</div>
+        </section>
+
+        {/* Metrics strip */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 0,
+          border: `1px solid ${C.rule}`, borderRadius: 6, overflow: 'hidden', margin: '32px 0 0' }}>
+          {[
+            { n: 'Lessons', val: totalDone.toString(), sub: `/${totalLessons}` },
+            { n: 'CEU hours', val: ceuEarned, sub: '/24' },
+            { n: 'Practice exam',
+              val: bestExamScore !== null && examAttempts > 0 ? `${bestExamScore}%` : '—',
+              sub: examAttempts > 0 ? ` · ${examAttempts} attempt${examAttempts > 1 ? 's' : ''}` : '' },
+            { n: 'Access expires',
+              val: expiry.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+              sub: ` ${expiry.getFullYear()}` },
+          ].map((m, i) => (
+            <div key={m.n} style={{ padding: '22px 24px',
+              borderRight: i < 3 ? `1px solid ${C.rule}` : 'none', background: C.paper }}>
+              <div style={mono({ fontSize: 9, letterSpacing: '0.18em', textTransform: 'uppercase', color: C.inkMute, marginBottom: 8 })}>
+                {m.n}
+              </div>
+              <div style={{ fontFamily: F.display, fontWeight: 700, fontSize: 24,
+                letterSpacing: '-0.02em', color: C.ink, lineHeight: 1 }}>
+                {m.val}
+                <em style={{ fontStyle: 'normal', color: C.accent, fontSize: 14 }}>{m.sub}</em>
               </div>
             </div>
           ))}
         </div>
-      </section>
 
-      {/* Metrics strip */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:0,border:`1px solid ${C.rule}`,borderRadius:4,overflow:"hidden",margin:"32px 0 0"}}>
-        {[{n:"Lessons",val:"23",sub:"/74"},{n:"CEU hours",val:"7.5",sub:"/24"},{n:"Practice exam",val:"—",sub:""},{n:"Window",val:"97",sub:"d"}].map((m,i)=>(
-          <div key={m.n} style={{padding:"22px 24px",borderRight:i<3?`1px solid ${C.rule}`:"none",background:C.paper}}>
-            <div style={mono({fontSize:9,letterSpacing:"0.18em",textTransform:"uppercase",color:C.inkMute,marginBottom:8})}>{m.n}</div>
-            <div style={{fontFamily:F.display,fontWeight:700,fontSize:28,letterSpacing:"-0.02em",color:C.ink,lineHeight:1}}>
-              {m.val}<em style={{fontStyle:"normal",color:C.accent,fontSize:16}}>{m.sub}</em>
-            </div>
+        {/* Part progress */}
+        <div style={{ margin: '32px 0 0', background: C.paper,
+          border: `1px solid ${C.rule}`, borderRadius: 6, padding: '24px 28px' }}>
+          <div style={mono({ fontSize: 9, letterSpacing: '0.22em', textTransform: 'uppercase', color: C.inkMute, marginBottom: 18 })}>
+            Progress by part
           </div>
-        ))}
-      </div>
-
-      {/* Part progress */}
-      <div style={{margin:"32px 0 0",background:C.paper,border:`1px solid ${C.rule}`,borderRadius:4,padding:"24px 28px"}}>
-        <div style={mono({fontSize:9,letterSpacing:"0.22em",textTransform:"uppercase",color:C.inkMute,marginBottom:18})}>Progress by part</div>
-        {partProgress.map(p=>(
-          <div key={p.n} style={{marginBottom:18}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:8}}>
-              <div>
-                <span style={{fontFamily:F.display,fontWeight:700,fontSize:13,color:C.ink}}>Part {p.n} · {p.title}</span>
-                <span style={mono({fontSize:9,letterSpacing:"0.14em",color:C.inkMute,marginLeft:10})}>Modules {p.modules}</span>
+          {partProgress.map(p => (
+            <div key={p.n} style={{ marginBottom: 18 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
+                <div>
+                  <span style={{ fontFamily: F.display, fontWeight: 700, fontSize: 13, color: C.ink }}>Part {p.n} · {p.title}</span>
+                  <span style={mono({ fontSize: 9, letterSpacing: '0.14em', color: C.inkMute, marginLeft: 10 })}>Modules {p.modules}</span>
+                </div>
+                <span style={mono({ fontSize: 9, letterSpacing: '0.14em', color: p.pct > 0 ? C.accent : C.inkMute })}>
+                  {p.done}/{p.total} lessons
+                </span>
               </div>
-              <span style={mono({fontSize:9,letterSpacing:"0.14em",color:p.pct>0?C.accent:C.inkMute})}>{p.pct>0?`${p.done}/${p.total} lessons`:"Not started"}</span>
+              <FilamentBar pct={p.pct} color={p.pct === 100 ? C.forest : C.accent} glow={p.pct > 0 && p.pct < 100}/>
             </div>
-            <FilamentBar pct={p.pct} color={p.pct===100?C.forest:C.accent} glow={p.pct>0&&p.pct<100}/>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
-    </div>
+    </>
   )
 }
 
@@ -4676,7 +4879,7 @@ function AppShell({user, setUser, onSignOut, completedLessons=new Set(), markLes
         {route==="notes"     && <NotesPage setRoute={setRoute} user={user}/>}
         {route==="continue"  && <ContinuePage setRoute={setRoute} completedLessons={completedLessons}/>}
         {route==="exam"      && <ExamPage setRoute={setRoute} user={user} userSubscription={user?.plan ? {plan:user.plan,exam_addon:user.examAddon||false} : null} isMobile={isMobile}/>}
-        {route==="cert"      && <CertPage completedLessons={completedLessons} user={user}/>}
+        {route==="cert"      && <CertPage setRoute={setRoute} user={user} completedLessons={completedLessons} userSubscription={user?.plan ? {plan:user.plan,current_period_end:null} : null}/>}
         {route==="account"   && <AccountPage user={user} setUser={setUser} setRoute={setRoute}/>}
         {route==="community" && <CommunityPage setRoute={setRoute} user={user}/>}
         {route==="trends"    && <TrendsPage setRoute={setRoute}/>}
