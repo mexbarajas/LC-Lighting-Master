@@ -2821,7 +2821,7 @@ const LC_AUDIO = {
   "7.4": "https://res.cloudinary.com/dreuglb2j/video/upload/v1781454016/Lesson_704_wtq0cq.mp4",
   "7.5": "https://res.cloudinary.com/dreuglb2j/video/upload/v1781457085/Lesson_705_apofiu.mp4",
   "7.6": "https://res.cloudinary.com/dreuglb2j/video/upload/v1781454014/Lesson_706_gbbzyt.mp4",
-  "8.1": "https://res.cloudinary.com/dreuglb2j/video/upload/v1781454094/Lesson_801_bfxvw6.mp4",
+  "8.1": "https://res.cloudinary.com/dreuglb2j/video/upload/v1781549864/Lesson_801_ijwf0a.mp4",
   "8.2": "https://res.cloudinary.com/dreuglb2j/video/upload/v1781457088/Lesson_802_bzqkx7.mp4",
   "8.3": "https://res.cloudinary.com/dreuglb2j/video/upload/v1781454073/Lesson_803_cdftax.mp4",
   "8.4": "https://res.cloudinary.com/dreuglb2j/video/upload/v1781454034/Lesson_804_xibsou.mp4",
