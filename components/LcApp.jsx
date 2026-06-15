@@ -2745,7 +2745,7 @@ const LC_MEDIA = {
   "7.5":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780602960/705_pbwfnh.png",
   "7.6":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780602994/706_y0qsir.png",
   "8.1":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1781549316/801_tboquu.png",
-  "8.2":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780604072/802_tghiz2.png",
+  "8.2":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1781549688/802_bgis5f.png",
   "8.3":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780604441/803_jnbwty.png",
   "8.4":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780604441/804_cbagw6.png",
   "8.5":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780604561/805_vk5nxv.png",
