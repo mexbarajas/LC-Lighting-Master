@@ -2729,7 +2729,10 @@ const LC_MEDIA = {
   "6.1":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1781021781/601_f1xsh2.png",
   "6.2":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1781029257/602_jelq8f.png",
   "6.3":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780602461/603_l1u5wi.png",
-  "6.4":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780602462/604_eczkfc.png",
+  "6.4":  [
+    "https://res.cloudinary.com/dreuglb2j/image/upload/v1781543236/6044_i8ztop.png",
+    "https://res.cloudinary.com/dreuglb2j/image/upload/v1780602462/604_eczkfc.png",
+  ],
   "6.5":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780602461/605_m4ytj1.png",
   "6.6":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780602461/606_tqrbgk.png",
   "7.1": [
