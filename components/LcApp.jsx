@@ -2863,6 +2863,15 @@ function PodcastPlayer({url,lessonRef}){
   const [currentTime,setCurrentTime]=useState(0)
   const [speed,setSpeed]=useState(1)
 
+  useEffect(()=>{
+    if(audioRef.current){audioRef.current.pause();audioRef.current.currentTime=0}
+    setPlaying(false);setProgress(0);setCurrentTime(0);setDuration(0)
+  },[url])
+
+  useEffect(()=>{
+    return()=>{if(audioRef.current)audioRef.current.pause()}
+  },[])
+
   function togglePlay(){
     if(!audioRef.current)return
     if(playing){audioRef.current.pause()}else{audioRef.current.play()}
@@ -2898,7 +2907,7 @@ function PodcastPlayer({url,lessonRef}){
 
   return(
     <div style={{background:`linear-gradient(135deg,${C.ink} 0%,#1A2E28 100%)`,borderRadius:12,padding:'20px 24px',border:`1px solid rgba(198,90,58,0.3)`,boxShadow:'0 4px 24px rgba(47,74,63,0.15)'}}>
-      <audio ref={audioRef} src={url} onTimeUpdate={handleTimeUpdate} onLoadedMetadata={handleLoadedMetadata} onEnded={handleEnded} preload="metadata"/>
+      <audio key={url} ref={audioRef} src={url} onTimeUpdate={handleTimeUpdate} onLoadedMetadata={handleLoadedMetadata} onEnded={handleEnded} preload="metadata"/>
       <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:16}}>
         <div style={{background:C.accent,borderRadius:99,padding:'3px 10px',display:'flex',alignItems:'center',gap:5}}>
           <span style={{fontSize:9}}>🎙</span>
