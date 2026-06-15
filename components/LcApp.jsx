@@ -2753,7 +2753,7 @@ const LC_MEDIA = {
   "9.1":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780604856/901_oprict.png",
   "9.2":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780604929/902_bqpwpj.png",
   "9.3":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1781553101/903_v3sogl.png",
-  "9.4":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780605314/904_aq6hlw.png",
+  "9.4":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1781553679/904_ixhiva.png",
   "9.5":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780605535/905_grvn5d.png",
   "9.6":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780605588/906_gdeqdm.png",
   "10.1": "https://res.cloudinary.com/dreuglb2j/image/upload/v1780606383/1001_m5d6ga.png",
