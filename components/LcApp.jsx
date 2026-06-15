@@ -2766,6 +2766,7 @@ const LC_AUDIO = {
   "3.4": "https://res.cloudinary.com/dreuglb2j/video/upload/v1781454319/Lesson_304_zoerm5.mp4",
   "3.5": "https://res.cloudinary.com/dreuglb2j/video/upload/v1781031998/Lesson_305_uzsu4r.mp4",
   "3.6": "https://res.cloudinary.com/dreuglb2j/video/upload/v1780938848/Lesson_306_phymdl.mp4",
+  "3.7": "https://res.cloudinary.com/dreuglb2j/video/upload/v1781535245/Lesson_307_lazmvu.mp4",
   "4.1": "https://res.cloudinary.com/dreuglb2j/video/upload/v1780938865/Lesson_401_dloyip.mp4",
   "4.2": "https://res.cloudinary.com/dreuglb2j/video/upload/v1780938812/Lesson_402_bouves.mp4",
   "4.3": "https://res.cloudinary.com/dreuglb2j/video/upload/v1781454336/Lesson_403_ur6w49.mp4",
