@@ -2497,29 +2497,54 @@ function ExamPage({setRoute, user, userSubscription, isMobile=false}) {
 /* ── MODULE LESSON VIEW ── */
 /* ── PER-MODULE SHARE COPY ── */
 const MODULE_SHARE_COPY = {
-  "01": `Module 01 complete — Light & the Visual Environment. Electromagnetic spectrum, photopic vs scotopic vision, the inverse square law, footcandles vs lux, luminous efficacy, and the fundamentals that underpin every lighting calculation. 💡 The LC exam starts here. So did I → lightingmasterlc.com`,
-
-  "02": `Module 02 complete — Light Sources & Lamps. Incandescent, fluorescent, HID, and LED compared. Lamp life, lumen depreciation, CCT, CRI, TM-30 Rf and Rg, and how to select the right source for any application. 🔆 Know your sources. Pass your exam → lightingmasterlc.com`,
-
-  "03": `Module 03 complete — LED Technology Deep Dive. COB, SMD, filament, tape, high-power, UV, IR, and OLED packages. Thermal management, L70/L80/L90 ratings, LEED EQ credits, and WELL melanopic lux targets. ⚡ This is the technology powering the future of light. Study it right → lightingmasterlc.com`,
-
-  "04": `Module 04 complete — Lighting Controls & Systems. DALI, 0-10V dimming, occupancy sensors, BACnet, Title 24 mandatory controls, and ASHRAE 90.1 compliance. 🎛️ Smart buildings need smart lighting professionals. Become one → lightingmasterlc.com`,
-
-  "05": `Module 05 complete — Photometry & Luminaire Performance. IES files, candela distribution curves, coefficient of utilization, zonal cavity method, luminance ratios, UGR and VCP glare metrics. 📐 The math behind great lighting. Master it → lightingmasterlc.com`,
-
-  "06": `Module 06 complete — Interior Lighting Design. Illuminance targets, layered lighting, accent ratios, color rendering in retail and healthcare, museum conservation limits, and hospitality atmosphere design. 🏛️ Great spaces don't happen by accident. Neither does passing the LC exam → lightingmasterlc.com`,
-
-  "07": `Module 07 complete — Exterior, Emergency & Codes. BUG ratings, light trespass, IESNA RP-8 roadway standards, IES distribution Types I–V, NFPA 101 emergency lighting (1fc, 90 min, 10 sec), and Title 24 outdoor LPD. 🌃 From streets to exit signs — if it's lit, it's on the exam → lightingmasterlc.com`,
-
-  "08": `Module 08 complete — Energy Codes & Standards. ASHRAE 90.1 LPD tables, building area vs space-by-space methods, Title 24, IECC compliance paths, and power allowance calculations. ⚙️ Energy codes aren't going away. Neither are lighting professionals who know them → lightingmasterlc.com`,
-
-  "09": `Module 09 complete — Daylighting & Human-Centric Lighting. sDA, ASE, daylight autonomy, melanopic lux, circadian entrainment, tunable white, WELL L01–L09, and daylight harvesting controls. 🌅 Light affects how people feel, sleep, and perform. This module shows you why → lightingmasterlc.com`,
-
-  "10": `Module 10 complete — Lighting Economics & Project Management. Life-cycle cost analysis, simple payback vs ROI, utility rebates, lighting audits, retrofit scoping, and group relamping strategies. 💼 The best lighting designers speak the language of money too → lightingmasterlc.com`,
-
-  "11": `Module 11 complete — Sustainability & Green Building. LEED v4.1 lighting credits, WELL Building Standard, DLC QPL, EnergyStar, LCA for luminaires, and third-party certification documentation. 🌿 Sustainable design is not a trend. It's the standard. Stay ahead of it → lightingmasterlc.com`,
-
-  "12": `Module 12 complete — Lighting Design Practice & Documentation. Design process, photometric reports, lighting schedules, point-by-point calculations, commissioning checklists, submittals, and post-occupancy evaluation. 🏆 12 modules down. One exam between you and LC. You've got this → lightingmasterlc.com`,
+  "01": {
+    personal: `I just finished Module 01 of my LC exam prep — and honestly, the fundamentals hit different when you actually understand them. Light, vision, the inverse square law, footcandles vs lux, luminous efficacy. This is the foundation everything else is built on. Working my way toward the Lighting Certified credential one module at a time 💡 → lightingmasterlc.com`,
+    broadcast: `Module 01 complete — Light & the Visual Environment. Electromagnetic spectrum, photopic vs scotopic vision, the inverse square law, footcandles vs lux, luminous efficacy, and the fundamentals that underpin every lighting calculation. 💡 The LC exam starts here. So did I → lightingmasterlc.com`,
+  },
+  "02": {
+    personal: `Module 02 done. Light sources — from incandescent to LED, lamp life, lumen depreciation, CCT, CRI, TM-30 Rf and Rg. If you work in lighting and haven't studied this stuff formally, you're missing so much context. Prepping for my LC exam and it's leveling me up fast 🔆 → lightingmasterlc.com`,
+    broadcast: `Module 02 complete — Light Sources & Lamps. Incandescent, fluorescent, HID, and LED compared. Lamp life, lumen depreciation, CCT, CRI, TM-30 Rf and Rg, and how to select the right source for any application. 🔆 Know your sources. Pass your exam → lightingmasterlc.com`,
+  },
+  "03": {
+    personal: `Just wrapped Module 03 on LED technology and my brain is full. COB, SMD, UV, IR, OLED, MicroLED, filament, tape — I knew some of this but not at this depth. Thermal management and lumen maintenance ratings are way more important than I realized. LC exam prep in progress ⚡ → lightingmasterlc.com`,
+    broadcast: `Module 03 complete — LED Technology Deep Dive. COB, SMD, filament, tape, high-power, UV, IR, and OLED packages. Thermal management, L70/L80/L90 ratings, LEED EQ credits, and WELL melanopic lux targets. ⚡ This is the technology powering the future of light. Study it right → lightingmasterlc.com`,
+  },
+  "04": {
+    personal: `Module 04 finished! Lighting controls are where the real energy savings live — DALI, 0-10V dimming, occupancy sensors, daylight harvesting, BACnet, Title 24 mandatory controls, ASHRAE 90.1. Smart buildings need lighting professionals who actually know this. LC exam prep continues 🎛️ → lightingmasterlc.com`,
+    broadcast: `Module 04 complete — Lighting Controls & Systems. DALI, 0-10V dimming, occupancy sensors, BACnet, Title 24 mandatory controls, and ASHRAE 90.1 compliance. 🎛️ Smart buildings need smart lighting professionals. Become one → lightingmasterlc.com`,
+  },
+  "05": {
+    personal: `Module 05 complete. Photometry is one of those topics where the deeper you go, the more you realize how much there is to know. IES files, candela distribution curves, coefficient of utilization, zonal cavity method, UGR glare metrics — this is the math behind great lighting design. LC exam prep 📐 → lightingmasterlc.com`,
+    broadcast: `Module 05 complete — Photometry & Luminaire Performance. IES files, candela distribution curves, coefficient of utilization, zonal cavity method, luminance ratios, UGR and VCP glare metrics. 📐 The math behind great lighting. Master it → lightingmasterlc.com`,
+  },
+  "06": {
+    personal: `Module 06 done — interior lighting design. Illuminance targets, layered lighting, accent ratios, color rendering across retail, healthcare, museums, hospitality. Every space has different requirements and I can now articulate exactly why. This LC prep is changing how I see every room I walk into 🏛️ → lightingmasterlc.com`,
+    broadcast: `Module 06 complete — Interior Lighting Design. Illuminance targets, layered lighting, accent ratios, color rendering in retail and healthcare, museum conservation limits, and hospitality atmosphere design. 🏛️ Great spaces don't happen by accident. Neither does passing the LC exam → lightingmasterlc.com`,
+  },
+  "07": {
+    personal: `Module 07 wrapped up. Exterior lighting, emergency systems, and codes — BUG ratings, IES distribution Types I-V, NFPA 101 emergency requirements (1fc, 90 min, 10 sec), egress path standards, Title 24 outdoor LPD. From streets to exit signs, if it's lit it's on the exam. LC exam prep 🌃 → lightingmasterlc.com`,
+    broadcast: `Module 07 complete — Exterior, Emergency & Codes. BUG ratings, light trespass, IESNA RP-8 roadway standards, IES distribution Types I–V, NFPA 101 emergency lighting (1fc, 90 min, 10 sec), egress path requirements, and Title 24 outdoor LPD. 🌃 From streets to exit signs — if it's lit, it's on the exam → lightingmasterlc.com`,
+  },
+  "08": {
+    personal: `Module 08 complete. Energy codes are not optional knowledge for a lighting professional — ASHRAE 90.1 LPD tables, building area vs space-by-space methods, Title 24, IECC compliance paths. Knowing the code means designing better and defending your decisions. LC exam prep ⚙️ → lightingmasterlc.com`,
+    broadcast: `Module 08 complete — Energy Codes & Standards. ASHRAE 90.1 LPD tables, building area vs space-by-space methods, Title 24, IECC compliance paths, and power allowance calculations. ⚙️ Energy codes aren't going away. Neither are lighting professionals who know them → lightingmasterlc.com`,
+  },
+  "09": {
+    personal: `Module 09 done and this one genuinely changed how I think about lighting. Daylighting, circadian rhythms, melanopic lux, WELL Building Standard, sDA and ASE metrics, tunable white. Light affects how people feel and sleep — designing it well is a health decision. LC exam prep 🌅 → lightingmasterlc.com`,
+    broadcast: `Module 09 complete — Daylighting & Human-Centric Lighting. sDA, ASE, daylight autonomy, melanopic lux, circadian entrainment, tunable white, WELL L01–L09, and daylight harvesting controls. 🌅 Light affects how people feel, sleep, and perform. This module shows you why → lightingmasterlc.com`,
+  },
+  "10": {
+    personal: `Module 10 finished. Life-cycle cost analysis, simple payback vs ROI, utility rebates, lighting audits, retrofit scoping, group relamping strategies. The best lighting designers understand the business case for their work. LC exam prep — and a better designer for it 💼 → lightingmasterlc.com`,
+    broadcast: `Module 10 complete — Lighting Economics & Project Management. Life-cycle cost analysis, simple payback vs ROI, utility rebates, lighting audits, retrofit scoping, and group relamping strategies. 💼 The best lighting designers speak the language of money too → lightingmasterlc.com`,
+  },
+  "11": {
+    personal: `Module 11 wrapped. Sustainability in lighting isn't a trend — it's the standard. LEED v4.1 lighting credits, WELL Building Standard, DLC QPL qualification, EnergyStar, LCA for luminaires. Knowing how to document compliance is as important as knowing the requirements. LC exam prep 🌿 → lightingmasterlc.com`,
+    broadcast: `Module 11 complete — Sustainability & Green Building. LEED v4.1 lighting credits, WELL Building Standard, DLC QPL, EnergyStar, LCA for luminaires, and third-party certification documentation. 🌿 Sustainable design is not a trend. It's the standard. Stay ahead of it → lightingmasterlc.com`,
+  },
+  "12": {
+    personal: `Module 12 complete — and that means ALL 12 modules done. Design process, photometric reports, lighting schedules, point-by-point calculations, commissioning checklists, submittals, post-occupancy evaluation. I've gone through the full NCQLP blueprint. The exam is next 🏆 → lightingmasterlc.com`,
+    broadcast: `Module 12 complete — Lighting Design Practice & Documentation. Design process, photometric reports, lighting schedules, point-by-point calculations, commissioning checklists, submittals, and post-occupancy evaluation. 🏆 12 modules down. One exam between you and LC. You've got this → lightingmasterlc.com`,
+  },
 }
 
 const MODULE_HASHTAGS = {
@@ -2555,12 +2580,15 @@ function ShareBtn({icon, label, hoverBg, hoverColor, defaultColor, onClick}){
 
 /* ── MODULE COMPLETE SHARE MODAL ── */
 function ModuleCompleteModal({module, courseComplete, onClose, onNextLesson, nextLesson, setRoute}){
+  const [activeTab,setActiveTab]=useState('personal')
   const [copied,setCopied]=useState(false)
+  const [copiedBroadcast,setCopiedBroadcast]=useState(false)
   const moduleKey=String(module.n).padStart(2,"0")
-  const shareBody=MODULE_SHARE_COPY[moduleKey]||`I just completed Module ${module.n}: ${module.title} in LC · Lighting Master. ${module.ceu} CEU credit hours earned. 💡`
+  const copy=MODULE_SHARE_COPY[moduleKey]
+  const personalText=copy?.personal||`I just completed Module ${module.n}: ${module.title} in LC · Lighting Master. 💡 → lightingmasterlc.com`
+  const broadcastText=copy?.broadcast||`Module ${module.n} complete — ${module.title}. ${module.ceu} CEU credit hours earned. → lightingmasterlc.com`
   const hashtags=MODULE_HASHTAGS[moduleKey]||"#NCQLP #LightingDesign #IES #LightingCertified #LC"
-  const shareText=shareBody+"\n\n"+hashtags
-  const shareUrl="https://lightingmasterlc.com"
+  const shareText=(activeTab==='personal'?personalText:broadcastText)+'\n\n'+hashtags
 
   useEffect(()=>{
     function onKey(e){ if(e.key==="Escape") onClose() }
@@ -2570,14 +2598,12 @@ function ModuleCompleteModal({module, courseComplete, onClose, onNextLesson, nex
 
   const twitterUrl=`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`
 
-  console.log('shareText for module', moduleKey, ':', shareText)
-
   return(
     <div onClick={e=>{if(e.target===e.currentTarget)onClose()}}
       style={{position:"fixed",inset:0,zIndex:3000,background:"rgba(47,74,63,0.82)",
         display:"flex",alignItems:"center",justifyContent:"center",padding:"20px",overflowY:"auto"}}>
       <div style={{background:C.paper,borderRadius:18,padding:"40px 36px",
-        width:"100%",maxWidth:440,position:"relative",
+        width:"100%",maxWidth:460,position:"relative",
         border:`1px solid ${C.rule}`,margin:"auto",textAlign:"center"}}>
 
         <button onClick={onClose} style={{position:"absolute",top:14,right:16,
@@ -2589,18 +2615,51 @@ function ModuleCompleteModal({module, courseComplete, onClose, onNextLesson, nex
           letterSpacing:"-0.02em",color:C.ink,marginBottom:4}}>
           {courseComplete?"Course Complete!":"Module "+module.n+" Complete"}
         </div>
-        <div style={{fontFamily:F.display,fontSize:14,color:C.inkMute,marginBottom:22}}>
+        <div style={{fontFamily:F.display,fontSize:14,color:C.inkMute,marginBottom:20}}>
           {courseComplete?"All 12 modules · 74 lessons · 24 CEU hours":module.label}
         </div>
 
-        <div style={{background:C.creamWarm,borderRadius:10,padding:"14px 16px",marginBottom:22,textAlign:"left"}}>
-          <p style={{fontFamily:F.body,fontSize:12.5,color:C.inkSoft,lineHeight:1.65,margin:"0 0 10px",fontStyle:"italic"}}>
-            "{shareBody}"
+        {/* Tab switcher */}
+        <div style={{display:"flex",gap:0,marginBottom:12,borderRadius:8,overflow:"hidden",border:`1px solid ${C.rule}`}}>
+          {[{key:'personal',label:'🙋 My update'},{key:'broadcast',label:'📣 Achievement'}].map(tab=>(
+            <button key={tab.key} onClick={()=>setActiveTab(tab.key)}
+              style={{flex:1,fontFamily:F.display,fontWeight:600,fontSize:12,
+                padding:'9px 0',cursor:'pointer',border:'none',
+                background:activeTab===tab.key?C.ink:C.paper,
+                color:activeTab===tab.key?C.cream:C.inkMute,
+                transition:'background 150ms'}}>
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Message display */}
+        <div style={{background:C.creamWarm,border:`1px solid ${C.rule}`,borderRadius:8,
+          padding:"14px 16px",marginBottom:12,textAlign:"left"}}>
+          <p style={{fontFamily:F.body,fontSize:13,color:C.ink,lineHeight:1.7,
+            margin:"0 0 10px",fontStyle:"italic"}}>
+            "{activeTab==='personal'?personalText:broadcastText}"
           </p>
-          <p style={{fontFamily:F.mono,fontSize:9.5,color:C.inkMute,lineHeight:1.7,margin:0,letterSpacing:"0.01em"}}>
+          <p style={{fontFamily:F.mono,fontSize:9,color:C.inkMute,lineHeight:1.8,
+            margin:0,letterSpacing:"0.04em"}}>
             {hashtags}
           </p>
         </div>
+
+        {/* Copy this message */}
+        <button
+          onClick={()=>{
+            navigator.clipboard.writeText(shareText).then(()=>{
+              if(activeTab==='personal'){setCopied(true);setTimeout(()=>setCopied(false),2500)}
+              else{setCopiedBroadcast(true);setTimeout(()=>setCopiedBroadcast(false),2500)}
+            })
+          }}
+          style={{width:'100%',fontFamily:F.display,fontWeight:600,fontSize:12,
+            background:'transparent',color:C.forest,border:`1px solid ${C.forest}`,
+            borderRadius:99,padding:'9px 0',cursor:'pointer',marginBottom:16,
+            transition:'background 150ms'}}>
+          {(activeTab==='personal'?copied:copiedBroadcast)?'✓ Copied — ready to paste!':'⧉ Copy this message'}
+        </button>
 
         <div style={mono({fontSize:9,letterSpacing:"0.22em",textTransform:"uppercase",color:C.inkMute,marginBottom:8})}>
           Share your achievement:
@@ -2634,11 +2693,14 @@ function ModuleCompleteModal({module, courseComplete, onClose, onNextLesson, nex
                 })
                 .catch(()=>window.open('https://www.facebook.com/','_blank'))
             }}/>
-          <ShareBtn icon="⧉" label={copied?"✓ Copied!":"Copy message"}
+          <ShareBtn icon="⧉" label="Copy message"
             hoverBg="#2d4a3e" hoverColor="#fff"
             onClick={()=>{
               navigator.clipboard.writeText(shareText)
-                .then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2500)})
+                .then(()=>{
+                  if(activeTab==='personal'){setCopied(true);setTimeout(()=>setCopied(false),2500)}
+                  else{setCopiedBroadcast(true);setTimeout(()=>setCopiedBroadcast(false),2500)}
+                })
             }}/>
         </div>
 
