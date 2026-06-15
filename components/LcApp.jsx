@@ -3025,6 +3025,8 @@ function LessonPage({lessonRef,setRoute,user,setShowUpgrade,completedLessons=new
   const prev = module.lessons[idx-1]
   const next = module.lessons[idx+1]
   const courseComplete = !next && module.n==="12"
+  const crossModuleIdx = ALL_LESSONS.findIndex(l=>l.ref===lessonRef)
+  const crossModuleNext = ALL_LESSONS[crossModuleIdx+1] || null
   const content = lessonContent
   const visual = lessonContent?.visual
   const isBookmarked = bookmarks.has(lessonRef)
@@ -3181,11 +3183,11 @@ function LessonPage({lessonRef,setRoute,user,setShowUpgrade,completedLessons=new
         <ModuleCompleteModal
           module={module}
           courseComplete={courseComplete}
-          nextLesson={next}
+          nextLesson={crossModuleNext}
           onNextLesson={() => {
             setShowShareModal(false)
             window.scrollTo({ top: 0, behavior: 'instant' })
-            setRoute('lesson-' + next?.ref)
+            setRoute('lesson-' + crossModuleNext?.ref)
           }}
           onClose={() => {
             setShowShareModal(false)
