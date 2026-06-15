@@ -2580,15 +2580,12 @@ function ShareBtn({icon, label, hoverBg, hoverColor, defaultColor, onClick}){
 
 /* ── MODULE COMPLETE SHARE MODAL ── */
 function ModuleCompleteModal({module, courseComplete, onClose, onNextLesson, nextLesson, setRoute}){
-  const [activeTab,setActiveTab]=useState('personal')
   const [copied,setCopied]=useState(false)
-  const [copiedBroadcast,setCopiedBroadcast]=useState(false)
   const moduleKey=String(module.n).padStart(2,"0")
-  const copy=MODULE_SHARE_COPY[moduleKey]
-  const personalText=copy?.personal||`I just completed Module ${module.n}: ${module.title} in LC · Lighting Master. 💡 → lightingmasterlc.com`
-  const broadcastText=copy?.broadcast||`Module ${module.n} complete — ${module.title}. ${module.ceu} CEU credit hours earned. → lightingmasterlc.com`
+  const shareCopy=MODULE_SHARE_COPY[moduleKey]
+  const shareBody=(typeof shareCopy==='object'?shareCopy.broadcast:shareCopy)||`Module ${module.n} complete — ${module.title}. → lightingmasterlc.com`
   const hashtags=MODULE_HASHTAGS[moduleKey]||"#NCQLP #LightingDesign #IES #LightingCertified #LC"
-  const shareText=(activeTab==='personal'?personalText:broadcastText)+'\n\n'+hashtags
+  const shareText=shareBody+'\n\n'+hashtags
 
   useEffect(()=>{
     function onKey(e){ if(e.key==="Escape") onClose() }
@@ -2603,7 +2600,7 @@ function ModuleCompleteModal({module, courseComplete, onClose, onNextLesson, nex
       style={{position:"fixed",inset:0,zIndex:3000,background:"rgba(47,74,63,0.82)",
         display:"flex",alignItems:"center",justifyContent:"center",padding:"20px",overflowY:"auto"}}>
       <div style={{background:C.paper,borderRadius:18,padding:"40px 36px",
-        width:"100%",maxWidth:460,position:"relative",
+        width:"100%",maxWidth:440,position:"relative",
         border:`1px solid ${C.rule}`,margin:"auto",textAlign:"center"}}>
 
         <button onClick={onClose} style={{position:"absolute",top:14,right:16,
@@ -2615,92 +2612,44 @@ function ModuleCompleteModal({module, courseComplete, onClose, onNextLesson, nex
           letterSpacing:"-0.02em",color:C.ink,marginBottom:4}}>
           {courseComplete?"Course Complete!":"Module "+module.n+" Complete"}
         </div>
-        <div style={{fontFamily:F.display,fontSize:14,color:C.inkMute,marginBottom:20}}>
+        <div style={{fontFamily:F.display,fontSize:14,color:C.inkMute,marginBottom:22}}>
           {courseComplete?"All 12 modules · 74 lessons · 24 CEU hours":module.label}
         </div>
 
-        {/* Tab switcher */}
-        <div style={{display:"flex",gap:0,marginBottom:12,borderRadius:8,overflow:"hidden",border:`1px solid ${C.rule}`}}>
-          {[{key:'personal',label:'🙋 My update'},{key:'broadcast',label:'📣 Achievement'}].map(tab=>(
-            <button key={tab.key} onClick={()=>setActiveTab(tab.key)}
-              style={{flex:1,fontFamily:F.display,fontWeight:600,fontSize:12,
-                padding:'9px 0',cursor:'pointer',border:'none',
-                background:activeTab===tab.key?C.ink:C.paper,
-                color:activeTab===tab.key?C.cream:C.inkMute,
-                transition:'background 150ms'}}>
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Message display */}
-        <div style={{background:C.creamWarm,border:`1px solid ${C.rule}`,borderRadius:8,
-          padding:"14px 16px",marginBottom:12,textAlign:"left"}}>
-          <p style={{fontFamily:F.body,fontSize:13,color:C.ink,lineHeight:1.7,
-            margin:"0 0 10px",fontStyle:"italic"}}>
-            "{activeTab==='personal'?personalText:broadcastText}"
+        <div style={{background:C.creamWarm,borderRadius:10,padding:"14px 16px",marginBottom:22,textAlign:"left"}}>
+          <p style={{fontFamily:F.body,fontSize:12.5,color:C.inkSoft,lineHeight:1.65,margin:"0 0 10px",fontStyle:"italic"}}>
+            "{shareBody}"
           </p>
-          <p style={{fontFamily:F.mono,fontSize:9,color:C.inkMute,lineHeight:1.8,
-            margin:0,letterSpacing:"0.04em"}}>
+          <p style={{fontFamily:F.mono,fontSize:9.5,color:C.inkMute,lineHeight:1.7,margin:0,letterSpacing:"0.01em"}}>
             {hashtags}
           </p>
         </div>
 
-        {/* Copy this message */}
-        <button
-          onClick={()=>{
-            navigator.clipboard.writeText(shareText).then(()=>{
-              if(activeTab==='personal'){setCopied(true);setTimeout(()=>setCopied(false),2500)}
-              else{setCopiedBroadcast(true);setTimeout(()=>setCopiedBroadcast(false),2500)}
-            })
-          }}
-          style={{width:'100%',fontFamily:F.display,fontWeight:600,fontSize:12,
-            background:'transparent',color:C.forest,border:`1px solid ${C.forest}`,
-            borderRadius:99,padding:'9px 0',cursor:'pointer',marginBottom:16,
-            transition:'background 150ms'}}>
-          {(activeTab==='personal'?copied:copiedBroadcast)?'✓ Copied — ready to paste!':'⧉ Copy this message'}
-        </button>
-
-        <div style={mono({fontSize:9,letterSpacing:"0.22em",textTransform:"uppercase",color:C.inkMute,marginBottom:8})}>
+        <div style={mono({fontSize:9,letterSpacing:"0.22em",textTransform:"uppercase",color:C.inkMute,marginBottom:12})}>
           Share your achievement:
         </div>
-
-        <p style={{fontFamily:F.mono,fontSize:9,letterSpacing:"0.12em",textTransform:"uppercase",color:C.inkMute,textAlign:"center",marginBottom:12}}>
-          LinkedIn &amp; Facebook: message auto-copied — just paste
-        </p>
 
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:22}}>
           <ShareBtn icon="in" label="LinkedIn"
             hoverBg="#0077B5" hoverColor="#fff" defaultColor="#0077B5"
-            onClick={()=>{
-              navigator.clipboard.writeText(shareText)
-                .then(()=>{
-                  window.open('https://www.linkedin.com/feed/','_blank')
-                  alert('✓ Message copied! Paste it into your LinkedIn post.')
-                })
-                .catch(()=>window.open('https://www.linkedin.com/feed/','_blank'))
-            }}/>
+            onClick={()=>window.open(
+              `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent('https://lightingmasterlc.com')}`,
+              '_blank'
+            )}/>
           <ShareBtn icon="𝕏" label="X / Twitter"
             hoverBg="#000" hoverColor="#fff"
             onClick={()=>window.open(twitterUrl,"_blank","width=600,height=400")}/>
           <ShareBtn icon="f" label="Facebook"
             hoverBg="#1877F2" hoverColor="#fff" defaultColor="#1877F2"
-            onClick={()=>{
-              navigator.clipboard.writeText(shareText)
-                .then(()=>{
-                  window.open('https://www.facebook.com/','_blank')
-                  alert('✓ Message copied! Paste it into your Facebook post.')
-                })
-                .catch(()=>window.open('https://www.facebook.com/','_blank'))
-            }}/>
-          <ShareBtn icon="⧉" label="Copy message"
+            onClick={()=>window.open(
+              `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent('https://lightingmasterlc.com')}`,
+              '_blank'
+            )}/>
+          <ShareBtn icon="⧉" label={copied?"✓ Copied!":"Copy message"}
             hoverBg="#2d4a3e" hoverColor="#fff"
             onClick={()=>{
               navigator.clipboard.writeText(shareText)
-                .then(()=>{
-                  if(activeTab==='personal'){setCopied(true);setTimeout(()=>setCopied(false),2500)}
-                  else{setCopiedBroadcast(true);setTimeout(()=>setCopiedBroadcast(false),2500)}
-                })
+                .then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2500)})
             }}/>
         </div>
 
