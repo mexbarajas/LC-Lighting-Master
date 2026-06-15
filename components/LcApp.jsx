@@ -2090,14 +2090,36 @@ function NotesPage({setRoute, user}) {
 
 
 /* ── CERTIFICATE PAGE ────────────────────────────────────────── */
-function CertPage({completedLessons=new Set()}) {
+function CertPage({completedLessons=new Set(), user}) {
+  const [bestScore, setBestScore] = useState(0)
+  const [examDetail, setExamDetail] = useState("No attempts recorded yet")
+
+  useEffect(() => {
+    if (!user?.id) return
+    supabase
+      .from('exam_sessions')
+      .select('percentage, completed_at')
+      .eq('user_id', user.id)
+      .order('percentage', { ascending: false })
+      .limit(1)
+      .then(({ data }) => {
+        if (data?.[0]) {
+          const pct = data[0].percentage
+          setBestScore(pct)
+          setExamDetail(`Best score: ${pct}% — ${pct >= 85 ? 'Passed ✓' : 'Need 85% to pass'}`)
+        }
+      })
+  }, [user?.id])
+
   const totalCompleted = completedLessons.size
   const totalLessons = 74
   const overallPct = Math.round((totalCompleted / totalLessons) * 100)
+  const courseComplete = totalCompleted >= totalLessons
+  const canGetCertificate = courseComplete && bestScore >= 85
   const reqs = [
-    {label:"Complete all 74 lessons",detail:`${totalCompleted} of ${totalLessons} lessons done across all 12 modules`,pct:overallPct,done:totalCompleted===totalLessons},
-    {label:"Earn 24 CEU contact hours",detail:`${((completedLessons.size/74)*24).toFixed(1)} of 24 hours logged`,pct:Math.round((completedLessons.size/74)*100),done:false},
-    {label:"Pass practice exam (≥ 85%)",detail:"No attempts recorded yet",pct:0,done:false},
+    {label:"Complete all 74 lessons",detail:`${totalCompleted} of ${totalLessons} lessons done across all 12 modules`,pct:overallPct,done:courseComplete},
+    {label:"Earn 24 CEU contact hours",detail:`${((completedLessons.size/74)*24).toFixed(1)} of 24 hours logged`,pct:Math.round((completedLessons.size/74)*100),done:courseComplete},
+    {label:"Pass practice exam (≥ 85%)",detail:examDetail,pct:Math.min(bestScore,100),done:bestScore>=85},
     {label:"Within access window",detail:"97 days remaining in 6-month window",pct:100,done:true},
   ]
   const metCount = reqs.filter(r=>r.done).length
@@ -2133,11 +2155,13 @@ function CertPage({completedLessons=new Set()}) {
               <div style={{width:52,height:52,borderRadius:"50%",background:C.accent,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:F.display,fontWeight:700,fontSize:11,color:"#fff",textAlign:"center",lineHeight:1.2}}>LC<br/>PREP</div>
             </div>
             {/* Lock overlay */}
-            <div style={{position:"absolute",inset:0,background:"rgba(248,243,236,0.92)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:10,backdropFilter:"blur(2px)"}}>
-              <div style={{fontSize:28}}>🔒</div>
-              <div style={{fontFamily:F.display,fontWeight:700,fontSize:16,color:C.ink}}>Not unlocked yet</div>
-              <div style={{fontFamily:F.body,fontSize:13,color:C.inkMute,textAlign:"center",maxWidth:240}}>Finish the four requirements to issue and download your certificate.</div>
-            </div>
+            {!canGetCertificate&&(
+              <div style={{position:"absolute",inset:0,background:"rgba(248,243,236,0.92)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:10,backdropFilter:"blur(2px)"}}>
+                <div style={{fontSize:28}}>🔒</div>
+                <div style={{fontFamily:F.display,fontWeight:700,fontSize:16,color:C.ink}}>Not unlocked yet</div>
+                <div style={{fontFamily:F.body,fontSize:13,color:C.inkMute,textAlign:"center",maxWidth:240}}>Finish the four requirements to issue and download your certificate.</div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -2246,9 +2270,31 @@ function ExamPage({setRoute, user, userSubscription, isMobile=false}) {
     if (pts>0) {setFloatPts("+"+pts);setTimeout(()=>setFloatPts(null),1200)}
   }
 
+  async function saveExamSession(correct, total, answers) {
+    if (!user?.id) return
+    const pct = Math.round((correct / total) * 100)
+    const { error } = await supabase
+      .from('exam_sessions')
+      .insert({
+        user_id:      user.id,
+        score:        correct,
+        total:        total,
+        percentage:   pct,
+        answers:      JSON.stringify(answers),
+        completed_at: new Date().toISOString(),
+      })
+    if (error) console.error('Exam save error:', error)
+    else console.log('Exam saved:', pct + '%')
+  }
+
   function nextQuestion() {
-    const {questions,idx} = session
-    if (idx+1>=questions.length) { setScreen("results"); return }
+    const {questions,idx,answers} = session
+    if (idx+1>=questions.length) {
+      const correct = answers.filter(a=>a.correct).length
+      saveExamSession(correct, questions.length, answers)
+      setScreen("results")
+      return
+    }
     setSession(s=>({...s,idx:s.idx+1}))
     setAnswered(null)
     setChosen(null)
@@ -4623,7 +4669,7 @@ function AppShell({user, setUser, onSignOut, completedLessons=new Set(), markLes
         {route==="notes"     && <NotesPage setRoute={setRoute} user={user}/>}
         {route==="continue"  && <ContinuePage setRoute={setRoute} completedLessons={completedLessons}/>}
         {route==="exam"      && <ExamPage setRoute={setRoute} user={user} userSubscription={user?.plan ? {plan:user.plan,exam_addon:user.examAddon||false} : null} isMobile={isMobile}/>}
-        {route==="cert"      && <CertPage completedLessons={completedLessons}/>}
+        {route==="cert"      && <CertPage completedLessons={completedLessons} user={user}/>}
         {route==="account"   && <AccountPage user={user} setUser={setUser} setRoute={setRoute}/>}
         {route==="community" && <CommunityPage setRoute={setRoute} user={user}/>}
         {route==="trends"    && <TrendsPage setRoute={setRoute}/>}
