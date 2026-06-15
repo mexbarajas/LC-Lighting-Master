@@ -3756,7 +3756,7 @@ function ModuleRow({mod,oddCol,setRoute,completedLessons=new Set()}){
 
 
 
-function Sidebar({route, setRoute, user, onSignOut, bookmarks=new Set(), isMobile=false, sidebarOpen=false, setSidebarOpen=()=>{}}){
+function Sidebar({route, setRoute, user, onSignOut, bookmarks=new Set(), isMobile=false, sidebarOpen=false, setSidebarOpen=()=>{}, openQuestionCount=0}){
   const nav = [
     {section:"Library", items:[
       {glyph:"▤",label:"Course home",route:"home"},
@@ -3771,6 +3771,7 @@ function Sidebar({route, setRoute, user, onSignOut, bookmarks=new Set(), isMobil
     ]},
     {section:"Community", items:[
       {glyph:"◈",label:"Knowledge hub",route:"community",pill:"NEW",newPill:true},
+      {glyph:"?",label:"Open questions",route:"open-questions",pill:openQuestionCount>0?String(openQuestionCount):null},
       {glyph:"⬡",label:"Trending topics",route:"trends"},
     ]},
     {section:"Account", items:[
@@ -3824,6 +3825,9 @@ function Sidebar({route, setRoute, user, onSignOut, bookmarks=new Set(), isMobil
                 )}
                 {item.newPill&&(
                   <span style={{fontFamily:F.mono,fontSize:8,background:C.forest,color:"#fff",borderRadius:99,padding:"1px 6px",lineHeight:1.6,letterSpacing:"0.08em"}}>{item.pill}</span>
+                )}
+                {!item.newPill&&item.pill&&(
+                  <span style={{fontFamily:F.mono,fontSize:8,background:C.accent,color:"#fff",borderRadius:99,padding:"1px 6px",lineHeight:1.6,letterSpacing:"0.08em"}}>{item.pill}</span>
                 )}
               </span>
             </button>
@@ -4394,10 +4398,9 @@ function getNextLesson(completedLessons) {
 }
 
 /* ── COMMUNITY KNOWLEDGE HUB ─────────────────────────────── */
-function CommunityPage({ setRoute, user }) {
+function CommunityPage({ setRoute, user, userSubscription, initialFilter = 'All' }) {
   const supabase = createClient()
-  const isActiveStatus = ['active'].includes(user?.status)
-  const isPaid = isActiveStatus && ['t1','t2','t3'].includes(user?.plan)
+  const isPaid = ['t1','t2','t3'].includes(userSubscription?.plan || user?.plan)
 
   const [view, setView] = useState('list')
   const [questions, setQuestions] = useState([])
@@ -4408,7 +4411,8 @@ function CommunityPage({ setRoute, user }) {
   const [searchQ, setSearchQ] = useState('')
   const [filterMarket, setFilterMarket] = useState('All')
   const [filterFixture, setFilterFixture] = useState('All')
-  const [filterStatus, setFilterStatus] = useState('All')
+  const [filterStatus, setFilterStatus] = useState(initialFilter === 'open' ? 'Open' : 'All')
+  const [openQuestionCount, setOpenQuestionCount] = useState(0)
 
   const [askTitle, setAskTitle] = useState('')
   const [askBody, setAskBody] = useState('')
@@ -4421,6 +4425,14 @@ function CommunityPage({ setRoute, user }) {
   const [answerBody, setAnswerBody] = useState('')
   const [answerAnon, setAnswerAnon] = useState(false)
   const [answerLoading, setAnswerLoading] = useState(false)
+
+  useEffect(() => {
+    supabase
+      .from('community_questions')
+      .select('id', { count: 'exact', head: true })
+      .eq('is_answered', false)
+      .then(({ count }) => setOpenQuestionCount(count || 0))
+  }, [])
 
   async function loadQuestions() {
     setLoading(true)
@@ -4440,15 +4452,20 @@ function CommunityPage({ setRoute, user }) {
 
   useEffect(() => { loadQuestions() }, [filterMarket, filterFixture, filterStatus])
 
+  function sortAnswers(list) {
+    return [...list].sort((a, b) => {
+      if (a.is_accepted && !b.is_accepted) return -1
+      if (!a.is_accepted && b.is_accepted) return 1
+      return b.vote_count - a.vote_count
+    })
+  }
+
   async function loadAnswers(questionId) {
     const { data } = await supabase
       .from('community_answers')
       .select('*')
       .eq('question_id', questionId)
-      .order('is_accepted', { ascending: false })
-      .order('vote_count', { ascending: false })
-      .order('created_at', { ascending: true })
-    setAnswers(data || [])
+    setAnswers(sortAnswers(data || []))
   }
 
   async function loadUserVotes() {
@@ -4500,11 +4517,19 @@ function CommunityPage({ setRoute, user }) {
     if (hasVoted) {
       await supabase.from('community_votes').delete().eq('user_id', user.id).eq('target_id', targetId)
       setUserVotes(prev => { const n = new Set(prev); n.delete(targetId); return n })
-      setAnswers(prev => prev.map(a => a.id === targetId ? { ...a, vote_count: a.vote_count - 1 } : a))
+      if (targetType === 'answer') {
+        setAnswers(prev => sortAnswers(prev.map(a => a.id === targetId ? { ...a, vote_count: Math.max(0, a.vote_count - 1) } : a)))
+      } else {
+        setActiveQuestion(prev => ({ ...prev, vote_count: Math.max(0, (prev.vote_count || 0) - 1) }))
+      }
     } else {
       await supabase.from('community_votes').insert({ user_id: user.id, target_id: targetId, target_type: targetType })
       setUserVotes(prev => new Set([...prev, targetId]))
-      setAnswers(prev => prev.map(a => a.id === targetId ? { ...a, vote_count: a.vote_count + 1 } : a))
+      if (targetType === 'answer') {
+        setAnswers(prev => sortAnswers(prev.map(a => a.id === targetId ? { ...a, vote_count: a.vote_count + 1 } : a)))
+      } else {
+        setActiveQuestion(prev => ({ ...prev, vote_count: (prev.vote_count || 0) + 1 }))
+      }
     }
   }
 
@@ -4630,11 +4655,42 @@ function CommunityPage({ setRoute, user }) {
         <h2 style={{ fontFamily: F.display, fontWeight: 700, fontSize: 22, letterSpacing: '-0.015em', color: C.ink, margin: '0 0 12px', lineHeight: 1.3 }}>{activeQuestion.title}</h2>
         {activeQuestion.body && <p style={{ fontFamily: F.body, fontSize: 14, color: C.inkMute, lineHeight: 1.7, margin: '0 0 16px' }}>{activeQuestion.body}</p>}
         <div style={mono({ fontSize: 9, color: C.inkMute })}>Asked by {displayName(activeQuestion)} · {timeAgo(activeQuestion.created_at)} · {activeQuestion.view_count} views · {activeQuestion.answer_count} answers</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12 }}>
+          <button
+            onClick={() => toggleVote(activeQuestion.id, 'question')}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 5,
+              fontFamily: F.mono, fontSize: 11, fontWeight: 600,
+              background: userVotes.has(activeQuestion.id) ? `${C.forest}18` : 'transparent',
+              border: `1px solid ${userVotes.has(activeQuestion.id) ? C.forest : C.rule}`,
+              color: userVotes.has(activeQuestion.id) ? C.forest : C.inkMute,
+              borderRadius: 99, padding: '5px 12px', cursor: 'pointer',
+            }}
+          >
+            ▲ {activeQuestion.vote_count || 0} helpful
+          </button>
+          <span style={mono({ fontSize: 9, color: C.inkMute })}>
+            {activeQuestion.is_answered ? '✓ This question has an accepted answer' : 'Be the first to answer'}
+          </span>
+        </div>
       </div>
       <div style={mono({ fontSize: 9, letterSpacing: '0.18em', textTransform: 'uppercase', color: C.inkMute, marginBottom: 14 })}>{answers.length} {answers.length === 1 ? 'answer' : 'answers'}</div>
       {answers.map(ans => (
-        <div key={ans.id} style={{ background: ans.is_accepted ? `${C.forest}08` : C.paper, border: `1px solid ${ans.is_accepted ? C.forest : C.rule}`, borderRadius: 8, padding: '20px 24px', marginBottom: 12, borderLeft: ans.is_accepted ? `4px solid ${C.forest}` : `1px solid ${C.rule}` }}>
-          {ans.is_accepted && <div style={mono({ fontSize: 9, color: C.forest, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 10 })}>✓ Accepted answer</div>}
+        <div key={ans.id} style={{
+          background: ans.is_accepted ? `${C.forest}0a` : C.paper,
+          border: ans.is_accepted ? `2px solid ${C.forest}` : `1px solid ${C.rule}`,
+          borderRadius: 8, padding: '20px 24px', marginBottom: 12,
+        }}>
+          {ans.is_accepted && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              fontFamily: F.mono, fontSize: 9, letterSpacing: '0.14em',
+              textTransform: 'uppercase', color: C.forest, marginBottom: 10,
+            }}>
+              <span style={{ fontSize: 14 }}>📌</span>
+              Accepted answer — pinned by question author
+            </div>
+          )}
           <p style={{ fontFamily: F.body, fontSize: 14, color: C.ink, lineHeight: 1.75, margin: '0 0 16px' }}>{ans.body}</p>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
             <button onClick={() => toggleVote(ans.id, 'answer')} style={S.voteBtn(userVotes.has(ans.id))}>▲ {ans.vote_count} {ans.vote_count === 1 ? 'vote' : 'votes'}</button>
@@ -4678,8 +4734,32 @@ function CommunityPage({ setRoute, user }) {
     <div style={S.page}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 28, flexWrap: 'wrap', gap: 16 }}>
         <PageHead eyebrow="LC · Community" title="Knowledge" em="hub." />
-        {isPaid && <button onClick={() => setView('ask')} style={S.btn(true)}>+ Ask a question</button>}
+        <div>
+          {isPaid && (
+            <button onClick={() => setView('ask')} style={{ fontFamily: F.display, fontWeight: 700, fontSize: 13, background: C.accent, color: '#fff', border: 'none', borderRadius: 99, padding: '11px 22px', cursor: 'pointer' }}>
+              + Ask a question
+            </button>
+          )}
+          {!isPaid && (
+            <button onClick={() => setRoute('billing')} style={{ fontFamily: F.display, fontWeight: 600, fontSize: 13, background: 'transparent', color: C.inkMute, border: `1px solid ${C.rule}`, borderRadius: 99, padding: '11px 22px', cursor: 'pointer' }}>
+              Upgrade to ask →
+            </button>
+          )}
+        </div>
       </div>
+      {initialFilter === 'open' && (
+        <div style={{ background: `${C.accent}10`, border: `1px solid ${C.accent}30`, borderRadius: 8, padding: '14px 20px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontSize: 20 }}>❓</span>
+          <div>
+            <div style={{ fontFamily: F.display, fontWeight: 700, fontSize: 14, color: C.ink }}>
+              {openQuestionCount || '...'} open questions need answers
+            </div>
+            <div style={{ fontFamily: F.body, fontSize: 12, color: C.inkMute }}>
+              Share your expertise — pick a question and post your answer.
+            </div>
+          </div>
+        </div>
+      )}
       <div style={{ background:`${C.forest}0f`, border:`1px solid ${C.forest}30`, borderRadius:10, padding:'20px 24px', marginBottom:24, display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:20 }}>
         <div>
           <div style={mono({ fontSize:9, letterSpacing:'0.18em', textTransform:'uppercase', color:C.forest, marginBottom:8 })}>What this is</div>
@@ -4838,6 +4918,16 @@ function AppShell({user, setUser, onSignOut, completedLessons=new Set(), markLes
   const [showUpgrade, setShowUpgrade] = useState(false)
   const isMobile = useIsMobile()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [openQuestionCount, setOpenQuestionCount] = useState(0)
+
+  useEffect(() => {
+    if (!user) return
+    supabase
+      .from('community_questions')
+      .select('id', { count: 'exact', head: true })
+      .eq('is_answered', false)
+      .then(({ count }) => setOpenQuestionCount(count || 0))
+  }, [user])
   useEffect(()=>{
     if(route==='continue'){
       const next = getNextLesson(completedLessons)
@@ -4849,7 +4939,7 @@ function AppShell({user, setUser, onSignOut, completedLessons=new Set(), markLes
       fontFamily:F.body,background:C.cream}}>
       <style>{`@import url('${FONT_URL}');*{box-sizing:border-box}code{font-family:${F.mono};font-size:0.9em;background:rgba(0,0,0,0.06);padding:1px 5px;border-radius:3px}@keyframes bulbPulse{0%,100%{opacity:1;box-shadow:0 0 0 3px rgba(198,90,58,0.2),0 0 10px 2px rgba(198,90,58,0.4)}50%{opacity:0.7;box-shadow:0 0 0 5px rgba(198,90,58,0.1),0 0 16px 4px rgba(198,90,58,0.25)}}@keyframes wave{from{transform:scaleY(0.4)}to{transform:scaleY(1.2)}}`}</style>
       {showUpgrade && <UpgradeModal user={user} onClose={()=>setShowUpgrade(false)}/>}
-      <Sidebar route={route} setRoute={setRoute} user={user} onSignOut={onSignOut} bookmarks={bookmarks} isMobile={isMobile} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen}/>
+      <Sidebar route={route} setRoute={setRoute} user={user} onSignOut={onSignOut} bookmarks={bookmarks} isMobile={isMobile} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} openQuestionCount={openQuestionCount}/>
       {isMobile && sidebarOpen && (
         <div onClick={()=>setSidebarOpen(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",zIndex:999,backdropFilter:"blur(2px)"}}/>
       )}
@@ -4881,7 +4971,8 @@ function AppShell({user, setUser, onSignOut, completedLessons=new Set(), markLes
         {route==="exam"      && <ExamPage setRoute={setRoute} user={user} userSubscription={user?.plan ? {plan:user.plan,exam_addon:user.examAddon||false} : null} isMobile={isMobile}/>}
         {route==="cert"      && <CertPage setRoute={setRoute} user={user} completedLessons={completedLessons} userSubscription={user?.plan ? {plan:user.plan,current_period_end:null} : null}/>}
         {route==="account"   && <AccountPage user={user} setUser={setUser} setRoute={setRoute}/>}
-        {route==="community" && <CommunityPage setRoute={setRoute} user={user}/>}
+        {route==="community"       && <CommunityPage setRoute={setRoute} user={user} userSubscription={user?.plan?{plan:user.plan}:null}/>}
+        {route==="open-questions"  && <CommunityPage setRoute={setRoute} user={user} userSubscription={user?.plan?{plan:user.plan}:null} initialFilter="open"/>}
         {route==="trends"    && <TrendsPage setRoute={setRoute}/>}
         {route==="feedback"  && <FeedbackPage user={user} userSubscription={user?.plan ? {plan:user.plan} : null}/>}
         {route.startsWith("lesson-") && <LessonPage lessonRef={route.replace("lesson-","")} setRoute={setRoute} user={user} setShowUpgrade={setShowUpgrade} completedLessons={completedLessons} markLessonComplete={markLessonComplete} bookmarks={bookmarks} toggleBookmark={toggleBookmark} isMobile={isMobile}/>}
