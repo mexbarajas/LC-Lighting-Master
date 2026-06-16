@@ -50,8 +50,6 @@ export async function POST(req) {
     const { data: allQs, error: qErr } = await SERVICE
       .rpc('get_question_ids')
 
-    console.log('[start] allQs count:', allQs?.length, 'error:', qErr?.message)
-
     if (qErr) {
       return NextResponse.json({ error: 'DB error: ' + qErr.message }, { status: 500 })
     }
