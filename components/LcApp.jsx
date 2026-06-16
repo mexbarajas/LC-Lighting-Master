@@ -658,7 +658,7 @@ function Nav({onSignIn,onSignUp}){
 
 /* ── HERO ── */
 function Hero({onSignUp}){
-  const stats=[["74","lessons across 12 modules"],["24","CEU credit hours"],["129","LC exam practice questions"],["3","pricing tiers · start free"]]
+  const stats=[["74","lessons across 12 modules"],["24","CEU credit hours"],[String(TOTAL_QUESTIONS),"LC exam practice questions"],["3","pricing tiers · start free"]]
   return(
     <section style={{background:C.ink,minHeight:"100vh",display:"flex",flexDirection:"column",
       alignItems:"center",justifyContent:"center",padding:"100px 32px 80px",position:"relative",overflow:"hidden"}}>
@@ -679,7 +679,7 @@ function Hero({onSignUp}){
         <p style={{fontFamily:F.body,fontSize:"clamp(15px,1.8vw,18px)",lineHeight:1.75,
           color:"rgba(249,244,237,0.65)",margin:"0 auto 40px",maxWidth:580}}>
           The only structured online program built specifically to prepare North American
-          lighting designers for the LC exam — 74 lessons, 129 practice questions, 24 CEU hours.
+          lighting designers for the LC exam — 74 lessons, 50 practice questions, 24 CEU hours.
           <strong style={{color:"rgba(249,244,237,0.88)",fontWeight:500}}> Module 01 free, forever — no card required.</strong>
         </p>
         <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:12,flexWrap:"wrap",marginBottom:56}}>
@@ -726,7 +726,7 @@ function Features(){
   const features=[
     {icon:"📐",title:"Structured 12-module curriculum",body:"Progress from photometry fundamentals through design process, codes, sustainability, and exam strategy — structured around the LC exam blueprint."},
     {icon:"🎧",title:"Audio narration for every lesson",body:"Each lesson has a built-in TTS audio player. Study on your commute, on site, or at your desk — learning doesn't stop when you close your laptop."},
-    {icon:"⚡",title:"Timed LC practice exam",body:"129 questions across 13 topics with a 25-second clock, speed bonuses, and streak multipliers. See exactly which topics need work before exam day."},
+    {icon:"⚡",title:"Timed LC practice exam",body:"50 questions across 13 topics with a 25-second clock, speed bonuses, and streak multipliers. See exactly which topics need work before exam day."},
     {icon:"📌",title:"Bookmarks & notes hub",body:"Flag lessons for review, write field notes as you study, and search across all 74 lessons from one screen. Your study history follows you session to session."},
     {icon:"🏆",title:"Certificate of completion",body:"Earn a verifiable certificate when you complete all 12 modules and pass the practice exam at 85%+ accuracy. 24 CEU credit hours included."},
     {icon:"👥",title:"Team & studio plans",body:"Training a whole studio? Team plans include a shared admin dashboard, per-seat progress tracking, consolidated billing, and full Course + Exam access for every member."},
@@ -861,14 +861,14 @@ function ExamSection({onSignUp}){
         <div>
           <Kicker light>Practice exam</Kicker>
           <Heading size={48} light style={{marginBottom:20}}>
-            129 questions.<br/><em style={{fontStyle:"normal",color:C.accent}}>25 seconds each.</em>
+            {TOTAL_QUESTIONS} questions.<br/><em style={{fontStyle:"normal",color:C.accent}}>25 seconds each.</em>
           </Heading>
           <p style={{fontFamily:F.body,fontSize:15,color:"rgba(249,244,237,0.65)",lineHeight:1.75,margin:"0 0 28px"}}>
             Our LC exam practice engine simulates real test pressure — a timed ring, speed bonuses, and streak multipliers.
             After each session, see your accuracy broken down by topic.
           </p>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:32}}>
-            {[["129","questions across 13 topics"],["25 sec","per question — timed"],["85%","accuracy needed to pass"],["Unlimited","attempts included"]].map(([v,l])=>(
+            {[[String(TOTAL_QUESTIONS),"questions across 13 topics"],["25 sec","per question — timed"],["85%","accuracy needed to pass"],["Unlimited","attempts included"]].map(([v,l])=>(
               <div key={l} style={{background:"rgba(249,244,237,0.06)",border:"1px solid rgba(249,244,237,0.08)",borderRadius:4,padding:"16px 18px"}}>
                 <div style={d({fontWeight:700,fontSize:22,color:"#fff",marginBottom:3})}>{v}</div>
                 <div style={m({fontSize:8,letterSpacing:"0.14em",textTransform:"uppercase",color:"rgba(249,244,237,0.38)"})}>{l}</div>
@@ -913,7 +913,7 @@ function Pricing({onSignUp}){
       id:"t1",label:"LC Preparation Test",tag:"Tier 1",price:T1_PRICE,
       badge:null,dim:false,dark:false,
       desc:"Already studied? Use our LC practice engine as your final accuracy check before exam day.",
-      includes:["129 LC practice questions","13 topic breakdown","25-sec timed exam","Speed bonuses & streaks","Per-topic accuracy report","Unlimited attempts"],
+      includes:["50 LC practice questions","13 topic breakdown","25-sec timed exam","Speed bonuses & streaks","Per-topic accuracy report","Unlimited attempts"],
       cta:"Get LC Preparation Test →",
     },
     {
@@ -930,7 +930,7 @@ function Pricing({onSignUp}){
       badge:"Best value",badgeColor:C.accent,
       dim:false,dark:true,
       desc:"The complete package — full course access plus the LC practice exam. Best path to passing.",
-      includes:["Everything in Full Course","LC Preparation Test included","129 LC practice questions","Unlimited exam attempts","Topic accuracy analytics","Priority support"],
+      includes:["Everything in Full Course","LC Preparation Test included","50 LC practice questions","Unlimited exam attempts","Topic accuracy analytics","Priority support"],
       cta:"Start Course + Exam →",
     },
   ]
@@ -1161,7 +1161,7 @@ function Pricing({onSignUp}){
                     color:C.inkMute,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:10}}>
                     Per member
                   </div>
-                  {["All 12 modules · 74 lessons","Audio narration every lesson","LC practice exam · 129 questions","Unlimited exam attempts","Bookmarks, notes & progress tracking","Certificate of completion","24 CEU credit hours"].map((item,i,arr)=>(
+                  {["All 12 modules · 74 lessons","Audio narration every lesson","LC practice exam · 50 questions","Unlimited exam attempts","Bookmarks, notes & progress tracking","Certificate of completion","24 CEU credit hours"].map((item,i,arr)=>(
                     <div key={i} style={{display:"flex",alignItems:"flex-start",gap:8,padding:"5px 0",
                       borderBottom:i<arr.length-1?`1px solid ${C.rule}`:"none"}}>
                       <span style={{color:C.forest,fontSize:12,flexShrink:0}}>✓</span>
@@ -1272,7 +1272,7 @@ function FAQ(){
     ["Who is this for?","LC · Lighting Master is built for North American lighting designers preparing for the Lighting Certified (LC) exam — whether sitting it for the first time or retaking it."],
     ["How long do I have access?","Free accounts get unlimited access to Module 01 and 10 LC practice questions — no time limit, no card required. Paid plans unlock everything: Full Course gives you 6 months from purchase, Course + Exam gives you 12 months."],
     ["Does this replace the official LC exam?","No — LC · Lighting Master is an independent preparation and practice tool. The official Lighting Certified (LC) exam is administered separately. We are not affiliated with or endorsed by the credentialing organization."],
-    ["What's included in the practice exam?","129 timed multiple-choice questions across 13 topics, aligned with the LC exam topic blueprint. A 25-second timer, speed bonuses, streak multipliers, and per-topic accuracy analytics after each session."],
+    ["What's included in the practice exam?","50 timed multiple-choice questions across 13 topics, aligned with the LC exam topic blueprint. A 25-second timer, speed bonuses, streak multipliers, and per-topic accuracy analytics after each session."],
     ["Is there a team or studio plan?","Yes — Team plans give every member full Course + Exam access, plus a shared team dashboard showing each designer's module progress and exam scores. The team admin manages seats, invites members by email, and handles billing from one place. Pricing starts at $1,800 for 3–5 seats (~$360/seat) and $2,800 for 6–10 seats (~$280/seat). Studios of 10+ can contact us for custom pricing."],
     ["What CEU hours does this cover?","24 CEU credit hours across all 12 modules. The certificate of completion documents your hours."],
     ["Can I try before I buy?","Yes — your free account unlocks Module 01 (Theory, Light, Sight & Color) in full, plus 10 LC practice questions from the test engine. No credit card, no time limit. Upgrade when you're ready to unlock the remaining 11 modules and full exam."],
@@ -1688,7 +1688,7 @@ const TOPIC_COUNTS = {
   "Emergency Lighting":2,"Design Process":1,"Design Standards":1,"Product Labelling":1,
   "Lamp Life":1,
 }
-const TOTAL_QUESTIONS = 50
+const TOTAL_QUESTIONS = 180
 
 /* ══════════════════════════════════════════
    APP SHELL — sidebar + dashboard
@@ -2388,148 +2388,204 @@ function CertPage({ setRoute, user, completedLessons = new Set(), userSubscripti
 /* ── EXAM PAGE ───────────────────────────────────────────────── */
 
 function ExamPage({setRoute, user, userSubscription, isMobile=false}) {
-  const [examLoading, setExamLoading] = useState(false)
-  const [screen,setScreen] = useState("landing") // landing | start | play | results
-  const [session,setSession] = useState({sessionToken:null,currentQuestion:null,total:0,answered:0,answers:[],score:0,streak:0,bestStreak:0})
-  const [timeLeft,setTimeLeft] = useState(25)
-  const [answered,setAnswered] = useState(null)
-  const [chosen,setChosen] = useState(null)
-  const [floatPts,setFloatPts] = useState(null)
-  const [isSubmitting,setIsSubmitting] = useState(false)
-  const timerRef = useRef(null)
-  const deadlineRef = useRef(null)
-  const submittingRef = useRef(false)
+  // Session
+  const [screen, setScreen]           = useState('start')
+  const [mode, setMode]               = useState('full')
+  const [sessionId, setSessionId]     = useState(null)
+  const [totalCount, setTotalCount]   = useState(180)
+  const [attemptsUsed, setAttemptsUsed] = useState(0)
+
+  // Question
+  const [question, setQuestion]             = useState(null)
+  const [idx, setIdx]                       = useState(0)
+  const [timeLeft, setTimeLeft]             = useState(30)
+  const [timerActive, setTimerActive]       = useState(false)
+  const [questionStartMs, setQuestionStartMs] = useState(null)
+
+  // Answer
+  const [selected, setSelected]           = useState(null)
+  const [feedback, setFeedback]           = useState(null)
+  const [correctCount, setCorrectCount]   = useState(0)
+  const [topicBreakdown, setTopicBreakdown] = useState({})
+  const [floatPts, setFloatPts]           = useState(null)
+
+  // Results
+  const [finalScore, setFinalScore] = useState(null)
+
+  // Retake request
+  const [retakeReason, setRetakeReason]       = useState('')
+  const [retakeSubmitted, setRetakeSubmitted] = useState(false)
+
+  // UI
+  const [loading, setLoading] = useState(false)
+  const [error, setError]     = useState(null)
 
   const TOPIC_COLORS = {"Light Sources & Lamps":"#A06A38","Photometry & Calculations":"#2F4A3F","Color & Vision":"#C67A38","Energy & Controls":"#B84030","Luminaire Design & Optics":"#2D7A8A","Codes, Standards & Sustainability":"#6B4E8A","Daylighting":"#2D7A8A","Interior Lighting Design":"#4A7A52","Emergency & Exit Lighting":"#C65A3A","Exterior & Outdoor Lighting":"#3A7A5A","Lighting Design Process":"#7E9B86","Human Factors & Health":"#4A6A2F","Technology & Innovation":"#7A4A9A","Commissioning & Maintenance":"#8A4A2F","Electrical & Installation":"#5A5A8A","Sports & Special Applications":"#8A6A3A"}
 
-  async function startSession(count) {
-    setIsSubmitting(true)
-    try {
-      const res = await fetch('/api/exam/start', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({count})
+  // Access check — server enforces it; this is just for UI
+  const plan        = userSubscription?.plan || user?.plan || 'free'
+  const examAddon   = userSubscription?.exam_addon || user?.examAddon || false
+  const canAccess   = examAccess(plan, examAddon)
+
+  // Load completed attempt count from server on mount
+  useEffect(() => {
+    if (!user?.id) return
+    supabase
+      .from('exam_sessions')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('status', 'completed')
+      .then(({ count }) => setAttemptsUsed(count || 0))
+  }, [user])
+
+  // 30-second countdown
+  const timerRef = useRef(null)
+  useEffect(() => {
+    if (!timerActive) { clearInterval(timerRef.current); return }
+    setTimeLeft(30)
+    timerRef.current = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          clearInterval(timerRef.current)
+          return 0
+        }
+        return prev - 1
       })
-      const data = await res.json()
-      if (data.error) { alert('Failed to start exam: '+data.error); return }
-      submittingRef.current = false
-      setSession({sessionToken:data.sessionToken,currentQuestion:data.question,total:data.total,answered:0,answers:[],score:0,streak:0,bestStreak:0})
-      setScreen("play")
-      setAnswered(null)
-      setChosen(null)
-      startTimer()
-    } catch { alert('Network error. Please try again.') }
-    finally { setIsSubmitting(false) }
-  }
+    }, 1000)
+    return () => clearInterval(timerRef.current)
+  }, [timerActive, idx])
 
-  function startTimer() {
-    clearInterval(timerRef.current)
-    deadlineRef.current = Date.now()+25000
-    setTimeLeft(25)
-    timerRef.current = setInterval(()=>{
-      const left = Math.max(0,Math.ceil((deadlineRef.current-Date.now())/1000))
-      setTimeLeft(left)
-      if (left===0) { clearInterval(timerRef.current); handleAnswer(null) }
-    },100)
-  }
+  // Auto-timeout when timer hits 0
+  const feedbackRef = useRef(null)
+  feedbackRef.current = feedback
+  useEffect(() => {
+    if (timeLeft === 0 && !feedbackRef.current && timerActive === false) {
+      handleAnswer(null, true)
+    }
+  }, [timeLeft])
 
-  async function handleAnswer(choice) {
-    clearInterval(timerRef.current)
-    if (submittingRef.current) return
-    submittingRef.current = true
-    setIsSubmitting(true)
-    const sLeft = Math.max(0,Math.ceil((deadlineRef.current-Date.now())/1000))
-    setChosen(choice)
+  async function startSession() {
+    if (!canAccess) return
+    setLoading(true)
+    setError(null)
     try {
-      // Build topic breakdown from answers so far + this question (sent on last Q so server can save it)
-      const thisTopic = session.currentQuestion.topic
-      const topicBreakdown = [...session.answers,{topic:thisTopic,correct:false}].reduce((acc,a)=>{
-        if (!acc[a.topic]) acc[a.topic]={correct:0,total:0}
-        acc[a.topic].total++
-        if (a.correct) acc[a.topic].correct++
-        return acc
-      },{})
-      const isLastQ = session.answered+1 >= session.total
-      const res = await fetch('/api/exam/answer', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({
-          sessionToken:session.sessionToken,
-          questionId:session.currentQuestion.id,
-          answer:choice,
-          score: isLastQ ? session.score : undefined,
-          topicBreakdown: isLastQ ? topicBreakdown : undefined,
-        })
-      })
-      const data = await res.json()
-      const correct = data.correct
-      const newStreak = correct ? session.streak+1 : 0
-      const mult = newStreak>=2 ? 1+newStreak*0.1 : 1
-      const pts = correct ? Math.round((100+Math.max(0,sLeft)*10)*mult) : 0
-      const newScore = session.score+pts
-      const newBest = Math.max(session.bestStreak,newStreak)
-      setAnswered({correct,correctAnswer:data.correctAnswer,explanation:data.explanation,choice,pts,sLeft,nextQuestion:data.nextQuestion,sessionToken:data.sessionToken})
-      setSession(s=>({...s,sessionToken:data.sessionToken,score:newScore,streak:newStreak,bestStreak:newBest,answered:s.answered+1,answers:[...s.answers,{correct,pts,time:25-sLeft,topic:s.currentQuestion.topic}]}))
-      if (pts>0) {setFloatPts("+"+pts);setTimeout(()=>setFloatPts(null),1200)}
-      if (!data.nextQuestion) setScreen("results")
-    } catch { console.error('Answer submission failed') }
-    finally { submittingRef.current=false; setIsSubmitting(false) }
-  }
-
-  function nextQuestion() {
-    if (!answered?.nextQuestion) { setScreen("results"); return }
-    setSession(s=>({...s,currentQuestion:answered.nextQuestion,sessionToken:answered.sessionToken||s.sessionToken}))
-    setAnswered(null)
-    setChosen(null)
-    startTimer()
-  }
-
-  useEffect(()=>()=>clearInterval(timerRef.current),[])
-
-  const timerColor = timeLeft>14?"#7E9B86":timeLeft>7?"#e8a020":C.accent
-  const timerPct = (timeLeft/25)*100
-  const circumference = 2*Math.PI*22
-  const dashOffset = circumference*(1-timerPct/100)
-
-  const plan = userSubscription?.plan || user?.plan || 'free'
-  const examAddon = userSubscription?.exam_addon || user?.examAddon || false
-  const hasExamAccess = examAccess(plan, examAddon)
-
-  async function handleExamCheckout() {
-    if (!user) { setRoute('auth'); return }
-    setExamLoading(true)
-    try {
-      const res = await fetch('/api/stripe/checkout', {
-        method: 'POST',
+      const res  = await fetch('/api/exam/start', {
+        method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: 'exam_addon' }),
+        body:    JSON.stringify({ mode }),
       })
       const data = await res.json()
-      if (data.url) { window.location.href = data.url }
-      else { alert(data.error || 'Checkout failed. Please try again.') }
-    } catch { alert('Network error. Please try again.') }
-    finally { setExamLoading(false) }
+      if (!res.ok) {
+        if (data.error === 'MAX_ATTEMPTS') { setScreen('max_attempts'); return }
+        throw new Error(data.error || 'Failed to start')
+      }
+      setSessionId(data.sessionId)
+      setTotalCount(data.totalCount)
+      setAttemptsUsed(data.attemptsUsed || 0)
+      setQuestion(data.question)
+      setIdx(0)
+      setCorrectCount(0)
+      setSelected(null)
+      setFeedback(null)
+      setTopicBreakdown({})
+      setFinalScore(null)
+      setScreen('question')
+      setTimerActive(true)
+      setQuestionStartMs(Date.now())
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setLoading(false)
+    }
   }
 
-  if (!hasExamAccess) {
+  async function handleAnswer(choice, timedOut = false) {
+    if (!sessionId || feedback) return
+    clearInterval(timerRef.current)
+    setTimerActive(false)
+    const timeMs = timedOut ? 30000 : Math.min(30000, Date.now() - (questionStartMs || Date.now()))
+    const answer = timedOut ? '' : choice
+    setSelected(answer)
+    setLoading(true)
+    try {
+      const res  = await fetch('/api/exam/answer', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ sessionId, qid: question.qid, answer, timeMs }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Answer failed')
+
+      const fb = {
+        correct:       data.correct,
+        correctAnswer: data.correctAnswer,
+        explanation:   data.explanation,
+        speedBonus:    data.speedBonus || 0,
+      }
+      setFeedback(fb)
+      if (data.correct) setCorrectCount(prev => prev + 1)
+      if (fb.speedBonus > 0) {
+        setFloatPts('+' + fb.speedBonus)
+        setTimeout(() => setFloatPts(null), 1200)
+      }
+
+      if (data.isLast) {
+        setFinalScore(data.finalScore)
+        setTopicBreakdown(data.topicBreakdown || {})
+        setAttemptsUsed(prev => prev + 1)
+        setTimeout(() => setScreen('results'), 1800)
+      } else {
+        setTimeout(() => {
+          setQuestion(data.nextQuestion)
+          setIdx(data.nextIdx)
+          setSelected(null)
+          setFeedback(null)
+          setTimerActive(true)
+          setQuestionStartMs(Date.now())
+        }, 1800)
+      }
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function submitRetake() {
+    try {
+      const res = await fetch('/api/exam/retake', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ reason: retakeReason }),
+      })
+      if (res.ok) setRetakeSubmitted(true)
+    } catch (e) {
+      console.error('Retake request failed:', e)
+    }
+  }
+
+  // ── PAYWALL ────────────────────────────────────────────────────
+  if (!canAccess) {
     return (
-      <div style={{padding:"60px 36px",maxWidth:560}}>
-        <div style={mono({fontSize:9,letterSpacing:"0.18em",textTransform:"uppercase",color:C.accent,marginBottom:12})}>Practice Exam</div>
-        <h2 style={{fontFamily:F.display,fontWeight:700,fontSize:28,color:C.ink,margin:"0 0 16px",letterSpacing:"-0.015em"}}>Unlock the Practice Exam</h2>
-        <p style={{fontFamily:F.body,fontSize:15,color:C.inkMute,lineHeight:1.75,margin:"0 0 28px"}}>
-          129 timed questions across 13 NCQLP topics, scored for accuracy and speed.
+      <div style={{padding:'60px 36px',maxWidth:560}}>
+        <div style={mono({fontSize:9,letterSpacing:'0.18em',textTransform:'uppercase',color:C.accent,marginBottom:12})}>Practice Exam</div>
+        <h2 style={{fontFamily:F.display,fontWeight:700,fontSize:28,color:C.ink,margin:'0 0 16px',letterSpacing:'-0.015em'}}>Unlock the Practice Exam</h2>
+        <p style={{fontFamily:F.body,fontSize:15,color:C.inkMute,lineHeight:1.75,margin:'0 0 28px'}}>
+          Questions served one at a time from our secure bank — answers never touch your browser until you submit.
           Available as a standalone add-on or included in the Course + Exam plan.
         </p>
-        <div style={{display:"flex",flexDirection:"column",gap:12,maxWidth:380}}>
+        <div style={{display:'flex',flexDirection:'column',gap:12,maxWidth:380}}>
           <button
-            onClick={handleExamCheckout}
-            disabled={examLoading}
-            style={{fontFamily:F.display,fontWeight:700,fontSize:14,background:C.accent,color:"#fff",border:"none",borderRadius:99,padding:"13px 28px",cursor:examLoading?"not-allowed":"pointer",opacity:examLoading?0.7:1}}
-          >
-            {examLoading ? 'Loading...' : 'Add Practice Exam — $200 →'}
+            onClick={async()=>{
+              const res  = await fetch('/api/stripe/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({plan:'exam_addon'})})
+              const d    = await res.json()
+              if (d.url) window.location.href = d.url
+              else alert(d.error||'Checkout failed.')
+            }}
+            style={{fontFamily:F.display,fontWeight:700,fontSize:14,background:C.accent,color:'#fff',border:'none',borderRadius:99,padding:'13px 28px',cursor:'pointer'}}>
+            Add Practice Exam — $200 →
           </button>
-          <button
-            onClick={()=>setRoute('account')}
-            style={{fontFamily:F.display,fontWeight:600,fontSize:13,background:"transparent",color:C.inkMute,border:`1px solid ${C.rule}`,borderRadius:99,padding:"11px 24px",cursor:"pointer"}}
-          >
+          <button onClick={()=>setRoute('account')} style={{fontFamily:F.display,fontWeight:600,fontSize:13,background:'transparent',color:C.inkMute,border:`1px solid ${C.rule}`,borderRadius:99,padding:'11px 24px',cursor:'pointer'}}>
             View all plans →
           </button>
         </div>
@@ -2537,190 +2593,227 @@ function ExamPage({setRoute, user, userSubscription, isMobile=false}) {
     )
   }
 
-  if (screen==="play") {
-    const q = session.currentQuestion
-    const qNum = session.answered+1
-    const total = session.total
+  // ── MAX ATTEMPTS ───────────────────────────────────────────────
+  if (screen === 'max_attempts') return (
+    <div style={{padding:'60px 36px',maxWidth:520}}>
+      <div style={mono({fontSize:9,letterSpacing:'0.18em',textTransform:'uppercase',color:C.accent,marginBottom:12})}>Practice Exam</div>
+      <h2 style={{fontFamily:F.display,fontWeight:700,fontSize:26,color:C.ink,margin:'0 0 12px'}}>5 attempts used</h2>
+      <p style={{fontFamily:F.body,fontSize:14,color:C.inkMute,lineHeight:1.75,margin:'0 0 24px'}}>
+        You have used all 5 exam attempts. Request additional attempts below — our team reviews requests within 1 business day.
+      </p>
+      {retakeSubmitted ? (
+        <div style={{background:`${C.forest}15`,border:`1px solid ${C.forest}`,borderRadius:8,padding:'20px 24px'}}>
+          <div style={{fontFamily:F.display,fontWeight:700,fontSize:15,color:C.forest,marginBottom:6}}>✓ Request submitted</div>
+          <div style={{fontFamily:F.body,fontSize:13,color:C.inkMute}}>We will review your request and email you at {user?.email}.</div>
+        </div>
+      ) : (
+        <div style={{display:'flex',flexDirection:'column',gap:12}}>
+          <textarea value={retakeReason} onChange={e=>setRetakeReason(e.target.value)}
+            placeholder="Optional: briefly explain why you need additional attempts" rows={4}
+            style={{fontFamily:F.body,fontSize:13,color:C.ink,background:C.paper,border:`1px solid ${C.rule}`,borderRadius:6,padding:'12px 14px',resize:'vertical',outline:'none'}}/>
+          <button onClick={submitRetake} style={{fontFamily:F.display,fontWeight:700,fontSize:14,background:C.accent,color:'#fff',border:'none',borderRadius:99,padding:'12px 24px',cursor:'pointer'}}>
+            Request more attempts →
+          </button>
+        </div>
+      )}
+    </div>
+  )
+
+  // ── START SCREEN ───────────────────────────────────────────────
+  if (screen === 'start') {
+    const modeOpts = [
+      {id:'quick',label:'Quick',  count:20,  desc:'20 random questions'},
+      {id:'mid',  label:'Mid',    count:50,  desc:'50 questions'},
+      {id:'full', label:'Full',   count:180, desc:'All 180 questions'},
+    ]
     return (
-      <div style={{padding:"28px 36px 48px"}}>
+      <div style={{padding:'28px 36px 48px',maxWidth:640}}>
+        <PageHead eyebrow={`Practice exam · ${attemptsUsed}/5 attempts used`} title="NCQLP Practice" em="Exam."/>
+        <div style={{margin:'28px 0 0'}}>
+          <div style={mono({fontSize:9,letterSpacing:'0.22em',textTransform:'uppercase',color:C.inkMute,marginBottom:14})}>Exam length</div>
+          <div style={{display:'flex',gap:12,flexWrap:'wrap',marginBottom:28}}>
+            {modeOpts.map(m=>(
+              <button key={m.id} onClick={()=>setMode(m.id)}
+                style={{fontFamily:F.display,fontWeight:mode===m.id?700:600,fontSize:14,
+                  background:mode===m.id?C.ink:C.paper,
+                  color:mode===m.id?C.cream:C.inkMute,
+                  border:`1px solid ${mode===m.id?C.ink:C.rule}`,
+                  borderRadius:4,padding:'14px 22px',cursor:'pointer',transition:'all 140ms',textAlign:'left'}}>
+                <div style={{marginBottom:3}}>{m.label}</div>
+                <div style={mono({fontSize:9,letterSpacing:'0.1em',color:mode===m.id?'rgba(242,230,218,0.6)':C.inkMute})}>{m.desc}</div>
+              </button>
+            ))}
+          </div>
+          {error && <div style={{color:C.accent,fontFamily:F.mono,fontSize:11,marginBottom:14}}>⚠ {error}</div>}
+          <button onClick={startSession} disabled={loading}
+            style={{fontFamily:F.display,fontWeight:700,fontSize:15,background:C.accent,color:'#fff',border:'none',borderRadius:99,padding:'14px 32px',cursor:loading?'not-allowed':'pointer',opacity:loading?0.7:1}}>
+            {loading ? 'Starting…' : `Begin ${mode==='quick'?'20':mode==='mid'?'50':'180'}-question exam →`}
+          </button>
+        </div>
+        <div style={{marginTop:32,background:C.paper,border:`1px solid ${C.rule}`,borderRadius:4,padding:'22px 26px'}}>
+          <div style={mono({fontSize:9,letterSpacing:'0.22em',textTransform:'uppercase',color:C.inkMute,marginBottom:12})}>At a glance</div>
+          {[['Questions','180'],['Timer','30 sec / question'],['Speed bonus','up to +250 pts'],['Pass threshold','85% accuracy'],['Max attempts','5 total']].map(([k,v])=>(
+            <div key={k} style={{display:'flex',justifyContent:'space-between',fontFamily:F.body,fontSize:13,color:C.inkMute,padding:'5px 0',borderBottom:`1px dashed ${C.rule}`}}>
+              <span>{k}</span><span style={{fontFamily:F.display,fontWeight:600,color:C.ink}}>{v}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  // ── QUESTION SCREEN ────────────────────────────────────────────
+  if (screen === 'question' && question) {
+    const pct         = Math.round((idx / totalCount) * 100)
+    const accuracy    = idx > 0 ? Math.round((correctCount / idx) * 100) : null
+    const timerColor  = timeLeft > 14 ? C.forest : timeLeft > 7 ? C.amber : C.accent
+    const circumference = 2 * Math.PI * 22
+    const dashOffset  = circumference * (1 - (timeLeft / 30))
+
+    return (
+      <div style={{padding:'28px 36px 48px'}}>
         <style>{`@keyframes floatUp{0%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-40px)}}`}</style>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24}}>
-          <div style={mono({fontSize:9,letterSpacing:"0.22em",textTransform:"uppercase",color:C.accent})}>Question {qNum}/{total}</div>
-          <div style={{display:"flex",alignItems:"center",gap:20}}>
-            <div style={{fontFamily:F.display,fontWeight:700,fontSize:22,color:C.ink}}>{session.score.toLocaleString()}</div>
-            <div style={{position:"relative",width:52,height:52,flexShrink:0}}>
-              <svg width="52" height="52" viewBox="0 0 52 52" style={{transform:"rotate(-90deg)"}}>
+        {/* Header */}
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
+          <div style={mono({fontSize:9,letterSpacing:'0.22em',textTransform:'uppercase',color:C.accent})}>
+            Q{idx+1}/{totalCount} · {question.topic}
+          </div>
+          <div style={{display:'flex',alignItems:'center',gap:16}}>
+            {accuracy !== null && (
+              <div style={mono({fontSize:10,color:C.inkMute})}>{accuracy}% acc</div>
+            )}
+            {/* Timer ring */}
+            <div style={{position:'relative',width:52,height:52,flexShrink:0}}>
+              <svg width="52" height="52" viewBox="0 0 52 52" style={{transform:'rotate(-90deg)'}}>
                 <circle cx="26" cy="26" r="22" fill="none" stroke={C.rule} strokeWidth="4"/>
-                <circle cx="26" cy="26" r="22" fill="none" stroke={timerColor} strokeWidth="4" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={dashOffset} style={{transition:"stroke-dashoffset 0.1s,stroke 0.3s"}}/>
+                <circle cx="26" cy="26" r="22" fill="none" stroke={timerColor} strokeWidth="4" strokeLinecap="round"
+                  strokeDasharray={circumference} strokeDashoffset={dashOffset}
+                  style={{transition:'stroke-dashoffset 0.1s,stroke 0.3s'}}/>
               </svg>
-              <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:F.display,fontWeight:700,fontSize:16,color:timerColor}}>{timeLeft}</div>
-              {floatPts&&<div style={{position:"absolute",top:-8,right:-8,fontFamily:F.display,fontWeight:700,fontSize:14,color:C.forest,animation:"floatUp 1.2s ease-out forwards",pointerEvents:"none",whiteSpace:"nowrap"}}>{floatPts}</div>}
+              <div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',fontFamily:F.display,fontWeight:700,fontSize:16,color:timerColor}}>{timeLeft}</div>
+              {floatPts && <div style={{position:'absolute',top:-8,right:-8,fontFamily:F.display,fontWeight:700,fontSize:14,color:C.forest,animation:'floatUp 1.2s ease-out forwards',pointerEvents:'none',whiteSpace:'nowrap'}}>{floatPts}</div>}
             </div>
           </div>
         </div>
 
         {/* Progress rail */}
-        <div style={{display:"flex",gap:2,marginBottom:28}}>
-          {Array.from({length:session.total},(_,i)=>{
-            const ans = session.answers[i]
-            return <span key={i} style={{flex:1,height:3,borderRadius:2,background:i<session.answers.length?(ans?.correct?C.forest:C.accent):i===session.answered?C.inkMute:C.rule}}/>
-          })}
+        <div style={{height:3,background:C.rule,borderRadius:99,overflow:'hidden',marginBottom:24}}>
+          <div style={{height:'100%',width:`${pct}%`,background:C.accent,transition:'width 400ms ease'}}/>
         </div>
 
-        {/* Question */}
-        <div style={{background:C.paper,border:`1px solid ${C.rule}`,borderRadius:6,padding:"28px 32px",marginBottom:20}}>
-          <div style={mono({fontSize:9,letterSpacing:"0.16em",textTransform:"uppercase",color:TOPIC_COLORS[q.topic]||C.inkMute,marginBottom:14})}>{q.topic}</div>
-          <p style={{fontFamily:F.display,fontWeight:700,fontSize:20,lineHeight:1.3,color:C.ink,margin:0}}>{q.prompt}</p>
+        {/* Question card */}
+        <div style={{background:C.paper,border:`1px solid ${C.rule}`,borderRadius:6,padding:'28px 32px',marginBottom:20}}>
+          <div style={mono({fontSize:9,letterSpacing:'0.16em',textTransform:'uppercase',color:TOPIC_COLORS[question.topic]||C.inkMute,marginBottom:14})}>{question.topic}</div>
+          <p style={{fontFamily:F.display,fontWeight:700,fontSize:20,lineHeight:1.3,color:C.ink,margin:0}}>{question.prompt}</p>
         </div>
 
         {/* Choices */}
-        <div style={{display:"grid",gap:10}}>
-          {q.choices.map((c,i)=>{
-            const ca = answered?.correctAnswer
-            let bg=C.paper,border=`1px solid ${C.rule}`,color=C.ink
-            if (answered) {
-              if (c===ca) {bg=C.forestLight;border=`1px solid ${C.forest}`;color=C.forest}
-              else if (c===chosen&&c!==ca) {bg="rgba(198,90,58,0.1)";border=`1px solid ${C.accent}`;color=C.accent}
-            } else if (c===chosen) {bg=C.accentLight;border=`1px solid ${C.accent}`}
+        <div style={{display:'grid',gap:10}}>
+          {(question.choices||[]).map((c,i)=>{
+            const label = 'ABCDE'[i]
+            const ca    = feedback?.correctAnswer
+            let bg=C.paper, border=`1px solid ${C.rule}`, color=C.ink
+            if (feedback) {
+              if (c===ca)              { bg=C.forestLight; border=`1px solid ${C.forest}`; color=C.forest }
+              else if (c===selected)   { bg='rgba(198,90,58,0.08)'; border=`1px solid ${C.accent}`; color=C.accent }
+            }
             return (
-              <button key={i} onClick={()=>!answered&&!isSubmitting&&handleAnswer(c)} disabled={!!answered||isSubmitting}
-                style={{display:"flex",alignItems:"center",gap:14,padding:"14px 18px",background:answered&&c===ca?C.forestLight:answered&&c===chosen&&c!==ca?"rgba(198,90,58,0.08)":bg,border:answered&&c===ca?`1px solid ${C.forest}`:answered&&c===chosen&&c!==ca?`1px solid ${C.accent}`:border,borderRadius:4,cursor:answered||isSubmitting?"default":"pointer",fontFamily:F.display,fontWeight:600,fontSize:14,color:answered&&c===ca?C.forest:answered&&c===chosen&&c!==ca?C.accent:color,textAlign:"left",transition:"all 140ms",width:"100%"}}>
-                <span style={mono({fontSize:11,color:C.inkMute,flexShrink:0})}>{["A","B","C","D"][i]}</span>
-                {c}
-                {answered&&c===ca&&<span style={{marginLeft:"auto",color:C.forest}}>✓</span>}
-                {answered&&c===chosen&&c!==ca&&<span style={{marginLeft:"auto",color:C.accent}}>✗</span>}
+              <button key={i} onClick={()=>!feedback&&!loading&&handleAnswer(c)} disabled={!!feedback||loading}
+                style={{display:'flex',alignItems:'center',gap:14,padding:'14px 18px',background:bg,border,borderRadius:4,cursor:feedback||loading?'default':'pointer',fontFamily:F.display,fontWeight:600,fontSize:14,color,textAlign:'left',transition:'all 140ms',width:'100%'}}>
+                <span style={mono({fontSize:11,color:'inherit',flexShrink:0})}>{label}</span>
+                <span style={{lineHeight:1.55,flex:1}}>{c}</span>
+                {feedback&&c===ca&&<span style={{marginLeft:'auto',color:C.forest,flexShrink:0}}>✓</span>}
+                {feedback&&c===selected&&c!==ca&&<span style={{marginLeft:'auto',color:C.accent,flexShrink:0}}>✗</span>}
               </button>
             )
           })}
         </div>
 
         {/* Feedback */}
-        {isSubmitting&&!answered&&(
-          <div style={{marginTop:16,padding:"14px 20px",background:C.paper,border:`1px solid ${C.rule}`,borderRadius:4,fontFamily:F.body,fontSize:13,color:C.inkMute}}>Checking answer…</div>
+        {loading && !feedback && (
+          <div style={{marginTop:14,fontFamily:F.body,fontSize:13,color:C.inkMute}}>Checking…</div>
         )}
-        {answered&&(
-          <div style={{marginTop:16,background:answered.correct?C.forestLight:"rgba(198,90,58,0.08)",border:`1px solid ${answered.correct?C.forest:C.accent}`,borderRadius:4,padding:"16px 20px"}}>
-            <div style={{fontFamily:F.display,fontWeight:700,fontSize:16,color:answered.correct?C.forest:C.accent,marginBottom:6}}>
-              {answered.choice===null?"Time's up ⏱":answered.correct?"Correct ✓":"Not quite ✗"}
-              {answered.pts>0&&<span style={mono({fontSize:10,letterSpacing:"0.1em",marginLeft:12,color:C.forest})}>+{answered.pts} pts</span>}
+        {feedback && (
+          <div style={{marginTop:16,background:feedback.correct?C.forestLight:'rgba(198,90,58,0.08)',border:`1px solid ${feedback.correct?C.forest:C.accent}`,borderRadius:4,padding:'16px 20px'}}>
+            <div style={{fontFamily:F.display,fontWeight:700,fontSize:16,color:feedback.correct?C.forest:C.accent,marginBottom:6}}>
+              {selected===''?'Time\'s up ⏱':feedback.correct?'Correct ✓':'Not quite ✗'}
+              {feedback.speedBonus>0&&<span style={mono({fontSize:10,letterSpacing:'0.1em',marginLeft:12,color:C.forest})}>+{feedback.speedBonus} pts</span>}
             </div>
-            <p style={{fontFamily:F.body,fontSize:13,lineHeight:1.6,color:C.inkSoft,margin:0}}>{answered.explanation}</p>
-            <button onClick={nextQuestion} style={{marginTop:12,fontFamily:F.display,fontWeight:700,fontSize:13,background:C.ink,color:"#fff",border:"none",borderRadius:99,padding:"9px 20px",cursor:"pointer"}}>
-              {answered.nextQuestion?"Next question →":"See results →"}
-            </button>
+            <p style={{fontFamily:F.body,fontSize:13,lineHeight:1.6,color:C.inkSoft,margin:0}}>{feedback.explanation}</p>
           </div>
         )}
       </div>
     )
   }
 
-  if (screen==="results") {
-    const {answers,score,bestStreak} = session
-    const correct = answers.filter(a=>a.correct).length
-    const accuracy = Math.round(correct/answers.length*100)
-    const grade = accuracy>=85?"Exam ready 🎉":accuracy>=70?"On track ✓":accuracy>=50?"Keep studying":"Review fundamentals"
-    const gradeColor = accuracy>=85?C.forest:accuracy>=70?C.amber:C.accent
-    const topicResults = answers.reduce((acc,a)=>{
-      if (!acc[a.topic]) acc[a.topic]={correct:0,total:0}
-      acc[a.topic].total++
-      if (a.correct) acc[a.topic].correct++
-      return acc
-    },{})
+  // ── RESULTS SCREEN ─────────────────────────────────────────────
+  if (screen === 'results') {
+    const passed   = (finalScore||0) >= 85
+    const grade    = passed?'Exam ready 🎉':finalScore>=70?'On track ✓':finalScore>=50?'Keep studying':'Review fundamentals'
+    const gradeClr = passed?C.forest:finalScore>=70?C.amber:C.accent
+    const topics   = Object.entries(topicBreakdown)
+      .map(([t,v])=>({topic:t,pct:Math.round(v.correct/v.total*100),...v}))
+      .sort((a,b)=>a.pct-b.pct)
+
     return (
-      <div style={{padding:"28px 36px 48px"}}>
-        <div style={mono({fontSize:9,letterSpacing:"0.22em",textTransform:"uppercase",color:C.accent,marginBottom:12})}>Exam results</div>
-        <h1 style={{fontFamily:F.display,fontWeight:700,fontSize:"clamp(36px,5vw,56px)",letterSpacing:"-0.025em",lineHeight:1,color:C.ink,margin:"0 0 8px"}}>{score.toLocaleString()}<em style={{fontStyle:"normal",color:C.accent,fontSize:"0.4em"}}> pts</em></h1>
-        <div style={{fontFamily:F.display,fontWeight:700,fontSize:20,color:gradeColor,marginBottom:24}}>{grade}</div>
-        <div style={{display:"grid",gridTemplateColumns:isMobile?"repeat(2,1fr)":"repeat(4,1fr)",gap:0,border:`1px solid ${C.rule}`,borderRadius:4,overflow:"hidden",marginBottom:32}}>
-          {[{n:"Accuracy",v:accuracy+"%"},{n:"Correct",v:`${correct}/${answers.length}`},{n:"Best streak",v:bestStreak+"x"},{n:"Avg time",v:Math.round(answers.reduce((s,a)=>s+a.time,0)/answers.length)+"s"}].map((m,i)=>(
-            <div key={m.n} style={{padding:"18px 22px",borderRight:i<3?`1px solid ${C.rule}`:"none",background:C.paper}}>
-              <div style={mono({fontSize:9,letterSpacing:"0.18em",textTransform:"uppercase",color:C.inkMute,marginBottom:6})}>{m.n}</div>
-              <div style={{fontFamily:F.display,fontWeight:700,fontSize:24,letterSpacing:"-0.02em",color:C.ink}}>{m.v}</div>
+      <div style={{padding:'28px 36px 48px'}}>
+        <div style={mono({fontSize:9,letterSpacing:'0.22em',textTransform:'uppercase',color:C.accent,marginBottom:12})}>Exam results</div>
+        <h1 style={{fontFamily:F.display,fontWeight:700,fontSize:'clamp(36px,5vw,56px)',letterSpacing:'-0.025em',lineHeight:1,color:C.ink,margin:'0 0 6px'}}>{finalScore}<em style={{fontStyle:'normal',color:C.accent,fontSize:'0.4em'}}> %</em></h1>
+        <div style={{fontFamily:F.display,fontWeight:700,fontSize:20,color:gradeClr,marginBottom:24}}>{grade}</div>
+
+        <div style={{display:'grid',gridTemplateColumns:isMobile?'repeat(2,1fr)':'repeat(3,1fr)',gap:0,border:`1px solid ${C.rule}`,borderRadius:4,overflow:'hidden',marginBottom:32}}>
+          {[['Score',`${finalScore}%`],['Correct',`${correctCount}/${totalCount}`],['Attempts',`${attemptsUsed}/5`]].map(([k,v],i,arr)=>(
+            <div key={k} style={{padding:'18px 22px',borderRight:i<arr.length-1?`1px solid ${C.rule}`:'none',background:C.paper}}>
+              <div style={mono({fontSize:9,letterSpacing:'0.18em',textTransform:'uppercase',color:C.inkMute,marginBottom:6})}>{k}</div>
+              <div style={{fontFamily:F.display,fontWeight:700,fontSize:24,letterSpacing:'-0.02em',color:C.ink}}>{v}</div>
             </div>
           ))}
         </div>
-        <div style={mono({fontSize:9,letterSpacing:"0.22em",textTransform:"uppercase",color:C.inkMute,marginBottom:14})}>Per-topic accuracy</div>
-        <div style={{display:"grid",gap:10,marginBottom:28}}>
-          {Object.entries(topicResults).map(([topic,{correct:c,total:t}])=>(
-            <div key={topic} style={{display:"grid",gridTemplateColumns:"1fr 80px 60px",gap:12,alignItems:"center"}}>
-              <div style={{display:"flex",alignItems:"center",gap:8}}>
-                <span style={{width:8,height:8,borderRadius:"50%",background:TOPIC_COLORS[topic]||C.inkMute,flexShrink:0}}/>
-                <span style={{fontFamily:F.body,fontSize:13,color:C.ink}}>{topic}</span>
-              </div>
-              <div style={{height:4,background:C.rule,borderRadius:99,overflow:"hidden"}}>
-                <div style={{height:"100%",width:`${Math.round(c/t*100)}%`,background:TOPIC_COLORS[topic]||C.inkMute,borderRadius:99}}/>
-              </div>
-              <span style={mono({fontSize:10,color:C.inkMute,textAlign:"right"})}>{c}/{t}</span>
-            </div>
-          ))}
-        </div>
-        <div style={{display:"flex",gap:12}}>
-          <button onClick={()=>{setScreen("start")}} style={{fontFamily:F.display,fontWeight:700,fontSize:14,background:C.accent,color:"#fff",border:"none",borderRadius:99,padding:"12px 24px",cursor:"pointer"}}>Try again →</button>
-          <button onClick={()=>setScreen("landing")} style={{fontFamily:F.display,fontWeight:600,fontSize:14,background:"none",color:C.inkSoft,border:`1px solid ${C.rule}`,borderRadius:99,padding:"12px 24px",cursor:"pointer"}}>← Exam home</button>
-        </div>
-      </div>
-    )
-  }
 
-  if (screen==="start") {
-    return (
-      <div style={{padding:"28px 36px 48px",maxWidth:640}}>
-        <PageHead eyebrow="Practice exam · Configure session" title="Configure your" em="session."/>
-        <div style={{margin:"28px 0"}}>
-          <div style={mono({fontSize:9,letterSpacing:"0.22em",textTransform:"uppercase",color:C.inkMute,marginBottom:14})}>Session length</div>
-          <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
-            {[[10,"Quick · 10 questions"],[20,"Standard · 20 questions"],[TOTAL_QUESTIONS,"Full exam · all "+TOTAL_QUESTIONS]].map(([n,label])=>(
-              <button key={n} onClick={()=>!isSubmitting&&startSession(n)} disabled={isSubmitting} style={{fontFamily:F.display,fontWeight:600,fontSize:14,background:isSubmitting?C.rule:C.ink,color:"#fff",border:"none",borderRadius:4,padding:"14px 24px",cursor:isSubmitting?"not-allowed":"pointer",transition:"background 140ms"}}
-                onMouseEnter={e=>{if(!isSubmitting)e.currentTarget.style.background=C.accent}}
-                onMouseLeave={e=>{if(!isSubmitting)e.currentTarget.style.background=C.ink}}>
-                {isSubmitting?"Loading…":label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // Landing
-  return (
-    <div style={{padding:"0 36px 48px"}}>
-      <PageHead eyebrow="My progress · Certification capstone" title="NCQLP Practice" em="Exam."/>
-      {/* Access hero */}
-      <div style={{background:C.ink,borderRadius:6,display:"grid",gridTemplateColumns:"1.5fr 1fr",gap:40,padding:"32px 36px",margin:"32px 0 0"}}>
-        <div>
+        {topics.length > 0 && (
           <>
-            <div style={mono({fontSize:9,letterSpacing:"0.22em",textTransform:"uppercase",color:C.tan,marginBottom:12})}>{plan==="t3"?"Included with Course + Exam plan":"Add-on active · unlocked"}</div>
-            <h2 style={{fontFamily:F.display,fontWeight:700,fontSize:26,letterSpacing:"-0.02em",lineHeight:1.1,margin:"0 0 12px",color:"#fff"}}>Your practice exam is <em style={{fontStyle:"normal",color:C.accent}}>ready.</em></h2>
-            <p style={{fontFamily:F.body,fontSize:14,lineHeight:1.55,color:"rgba(249,244,237,0.75)",margin:"0 0 16px",maxWidth:420}}>129 questions · 13 topics · 25 seconds each. Unlimited attempts, fresh order every run.</p>
-            <button onClick={()=>setScreen("start")} style={{fontFamily:F.display,fontWeight:700,fontSize:14,background:C.accent,color:"#fff",border:"none",borderRadius:99,padding:"12px 24px",cursor:"pointer"}}>Launch exam →</button>
+            <div style={mono({fontSize:9,letterSpacing:'0.22em',textTransform:'uppercase',color:C.inkMute,marginBottom:14})}>Per-topic accuracy</div>
+            <div style={{display:'grid',gap:10,marginBottom:28}}>
+              {topics.map(t=>(
+                <div key={t.topic} style={{display:'grid',gridTemplateColumns:'1fr 80px 52px',gap:12,alignItems:'center'}}>
+                  <div style={{display:'flex',alignItems:'center',gap:8}}>
+                    <span style={{width:8,height:8,borderRadius:'50%',background:TOPIC_COLORS[t.topic]||C.inkMute,flexShrink:0}}/>
+                    <span style={{fontFamily:F.body,fontSize:13,color:C.ink}}>{t.topic}</span>
+                  </div>
+                  <div style={{height:4,background:C.rule,borderRadius:99,overflow:'hidden'}}>
+                    <div style={{height:'100%',width:`${t.pct}%`,background:t.pct>=85?C.forest:C.accent,borderRadius:99}}/>
+                  </div>
+                  <span style={mono({fontSize:10,color:C.inkMute,textAlign:'right'})}>{t.correct}/{t.total}</span>
+                </div>
+              ))}
+            </div>
           </>
-        </div>
-        <div style={{background:"rgba(248,243,236,0.06)",border:`1px solid rgba(248,243,236,0.12)`,borderRadius:4,padding:22}}>
-          <div style={mono({fontSize:9,letterSpacing:"0.22em",textTransform:"uppercase",color:C.tan,marginBottom:12})}>At a glance</div>
-          {[["Questions","129"],["Topics","13"],["Per question","25 sec"],["Speed bonus","up to +250"],["Streak multiplier","×1.1 per answer"],["Pass threshold","85% accuracy"]].map(([k,v])=>(
-            <div key={k} style={{display:"flex",justifyContent:"space-between",fontFamily:F.body,fontSize:13,color:"rgba(249,244,237,0.75)",padding:"6px 0",borderBottom:`1px dashed rgba(249,244,237,0.10)`}}>
-              <span>{k}</span><span style={{fontFamily:F.display,fontWeight:600,color:"#fff"}}>{v}</span>
-            </div>
-          ))}
-        </div>
-      </div>
+        )}
 
-      {/* Topics */}
-      <div style={{margin:"32px 0 0",background:C.paper,border:`1px solid ${C.rule}`,borderRadius:4,padding:"24px 28px"}}>
-        <div style={mono({fontSize:9,letterSpacing:"0.22em",textTransform:"uppercase",color:C.inkMute,marginBottom:16})}>Topics covered ({Object.keys(TOPIC_COUNTS).length} topics · {TOTAL_QUESTIONS} questions)</div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8}}>
-          {Object.entries(TOPIC_COUNTS).map(([topic,count])=>(
-            <div key={topic} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",background:C.cream,borderRadius:4}}>
-              <span style={{width:8,height:8,borderRadius:"50%",background:TOPIC_COLORS[topic]||C.inkMute,flexShrink:0}}/>
-              <span style={{fontFamily:F.body,fontSize:13,color:C.ink,flex:1}}>{topic}</span>
-              <span style={mono({fontSize:9,color:C.inkMute})}>{count}</span>
-            </div>
-          ))}
+        <div style={{display:'flex',gap:12,flexWrap:'wrap'}}>
+          {attemptsUsed < 5 ? (
+            <button onClick={()=>{
+              setScreen('start'); setFinalScore(null); setQuestion(null);
+              setSessionId(null); setFeedback(null); setSelected(null);
+              setCorrectCount(0); setTopicBreakdown({});
+            }} style={{fontFamily:F.display,fontWeight:700,fontSize:14,background:C.accent,color:'#fff',border:'none',borderRadius:99,padding:'12px 24px',cursor:'pointer'}}>
+              Retake exam →
+            </button>
+          ) : (
+            <button onClick={()=>setScreen('max_attempts')}
+              style={{fontFamily:F.display,fontWeight:600,fontSize:13,background:'transparent',color:C.inkMute,border:`1px solid ${C.rule}`,borderRadius:99,padding:'11px 22px',cursor:'pointer'}}>
+              Request more attempts
+            </button>
+          )}
+          <button onClick={()=>setRoute('cert')} style={{fontFamily:F.display,fontWeight:600,fontSize:13,background:'transparent',color:C.inkMute,border:`1px solid ${C.rule}`,borderRadius:99,padding:'11px 22px',cursor:'pointer'}}>
+            View certificate →
+          </button>
         </div>
       </div>
-    </div>
-  )
+    )
+  }
+
+  return null
 }
 
 /* ── LESSON CONTENT DATA ───────────────────────────────────────── */
@@ -4318,7 +4411,7 @@ function Dashboard({ setRoute, completedLessons = new Set(), user, userSubscript
               Put it all to the test — <em style={{ fontStyle: 'normal', color: C.accent }}>NCQLP Practice Exam.</em>
             </h2>
             <p style={{ fontFamily: F.body, fontSize: 14, lineHeight: 1.6, color: 'rgba(248,243,236,0.72)', margin: '0 0 20px', maxWidth: 400 }}>
-              129 timed questions across 13 topics, scored for accuracy and speed.
+              50 timed questions across 13 topics, scored for accuracy and speed.
             </p>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10, fontFamily: F.display, fontWeight: 700, fontSize: 14, color: C.cream, background: C.accent, borderRadius: 99, padding: '11px 20px' }}>
               Go to the exam →
@@ -4326,7 +4419,7 @@ function Dashboard({ setRoute, completedLessons = new Set(), user, userSubscript
           </div>
           <div style={{ background: 'rgba(248,243,236,0.06)', border: '1px solid rgba(248,243,236,0.12)', borderRadius: 4, padding: 22 }}>
             <div style={mono({ fontSize: 9, letterSpacing: '0.22em', textTransform: 'uppercase', color: C.tan, marginBottom: 12 })}>Exam at a glance</div>
-            {[['Questions','129'],['Topics','13'],['Per question','25 sec'],['Your best score', 'Not yet taken']].map(([k,v]) => (
+            {[['Questions',String(TOTAL_QUESTIONS)],['Topics','13'],['Per question','25 sec'],['Your best score', 'Not yet taken']].map(([k,v]) => (
               <div key={k} style={{ display: 'flex', justifyContent: 'space-between', fontFamily: F.body, fontSize: 13, color: 'rgba(248,243,236,0.75)', padding: '6px 0', borderBottom: '1px dashed rgba(248,243,236,0.10)' }}>
                 <span>{k}</span><span style={{ fontFamily: F.display, fontWeight: 600, color: C.cream }}>{v}</span>
               </div>
@@ -4943,7 +5036,7 @@ function AppShell({user, setUser, onSignOut, completedLessons=new Set(), markLes
         {route==="bookmarks" && <BookmarksPage setRoute={setRoute} bookmarks={bookmarks} toggleBookmark={toggleBookmark}/>}
         {route==="notes"     && <NotesPage setRoute={setRoute} user={user}/>}
         {route==="continue"  && <ContinuePage setRoute={setRoute} completedLessons={completedLessons}/>}
-        {route==="exam"      && <ExamPage setRoute={setRoute} user={user} userSubscription={user?.plan ? {plan:user.plan,exam_addon:user.examAddon||false} : null} isMobile={isMobile}/>}
+        {route==="exam"      && <ExamPage setRoute={setRoute} user={user} userSubscription={user?.plan ? {plan:user.plan,exam_addon:user.examAddon||false,status:user.status||'active'} : null} isMobile={isMobile}/>}
         {route==="cert"      && <CertPage setRoute={setRoute} user={user} completedLessons={completedLessons} userSubscription={user?.plan ? {plan:user.plan,current_period_end:null} : null}/>}
         {route==="account"   && <AccountPage user={user} setUser={setUser} setRoute={setRoute}/>}
         {route==="community"       && <CommunityPage setRoute={setRoute} user={user} userSubscription={user?.plan?{plan:user.plan}:null}/>}

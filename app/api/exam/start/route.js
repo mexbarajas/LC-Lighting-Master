@@ -1,52 +1,114 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
-import { EXAM_QUESTIONS } from '@/lib/exam-data'
-import { signSession } from '@/lib/exam-session'
+import { NextResponse } from 'next/server'
 
-function examAccess(plan, examAddon) {
-  return plan === 't1' || plan === 't3' || (plan === 't2' && !!examAddon)
-}
+const MODE_COUNTS = { quick: 20, mid: 50, full: 180 }
 
-export async function POST(request) {
-  const supabaseAuth = await createClient()
-  const { data: { user }, error: authError } = await supabaseAuth.auth.getUser()
-  if (authError || !user) {
-    return Response.json({ error: 'Not authenticated' }, { status: 401 })
+export async function POST(req) {
+  try {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    const userId = user.id
+
+    const SERVICE = createServiceClient()
+
+    const { data: sub } = await SERVICE
+      .from('subscriptions')
+      .select('plan, status, exam_addon')
+      .eq('user_id', userId)
+      .single()
+
+    const hasPlan    = sub && ['t2','t3'].includes(sub.plan) && sub.status === 'active'
+    const hasAddon   = sub && sub.exam_addon === true && sub.status === 'active'
+    const hasT1Addon = sub && sub.plan === 't1' && sub.exam_addon === true && sub.status === 'active'
+    if (!hasPlan && !hasAddon && !hasT1Addon) {
+      return NextResponse.json({ error: 'Exam access required' }, { status: 403 })
+    }
+
+    const { count: completedCount } = await SERVICE
+      .from('exam_sessions')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('status', 'completed')
+
+    if ((completedCount || 0) >= 5) {
+      return NextResponse.json({ error: 'MAX_ATTEMPTS', attempts: completedCount }, { status: 403 })
+    }
+
+    let body
+    try { body = await req.json() } catch { body = {} }
+    const mode  = ['quick','mid','full'].includes(body.mode) ? body.mode : 'full'
+    const count = MODE_COUNTS[mode]
+
+    const { data: allQs, error: qErr } = await SERVICE
+      .from('exam_questions')
+      .select('id')
+      .order('id')
+
+    if (qErr || !allQs || allQs.length === 0) {
+      return NextResponse.json({ error: 'Questions unavailable' }, { status: 500 })
+    }
+
+    // Fisher-Yates shuffle — correct answers never leave the server until answer submitted
+    const shuffled = [...allQs]
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+    }
+    const selected     = shuffled.slice(0, Math.min(count, shuffled.length))
+    const questionIds  = selected.map(q => q.id)
+
+    const { data: session_row, error: sessionErr } = await SERVICE
+      .from('exam_sessions')
+      .insert({
+        user_id:             userId,
+        mode,
+        question_ids:        questionIds,
+        answers:             {},
+        current_idx:         0,
+        started_at:          new Date().toISOString(),
+        status:              'active',
+        questions_attempted: questionIds.length,
+      })
+      .select('id')
+      .single()
+
+    if (sessionErr || !session_row) {
+      console.error('exam/start session insert error:', sessionErr)
+      return NextResponse.json({ error: 'Failed to create session' }, { status: 500 })
+    }
+
+    const { data: firstQ, error: firstQErr } = await SERVICE
+      .from('exam_questions')
+      .select('id, topic, prompt, choices')
+      .eq('id', questionIds[0])
+      .single()
+
+    if (firstQErr || !firstQ) {
+      return NextResponse.json({ error: 'Failed to load first question' }, { status: 500 })
+    }
+
+    return NextResponse.json({
+      sessionId:    session_row.id,
+      mode,
+      totalCount:   questionIds.length,
+      idx:          0,
+      attemptsUsed: completedCount || 0,
+      question: {
+        qid:     firstQ.id,
+        topic:   firstQ.topic,
+        prompt:  firstQ.prompt,
+        choices: typeof firstQ.choices === 'string'
+          ? JSON.parse(firstQ.choices)
+          : firstQ.choices,
+      },
+    })
+
+  } catch (err) {
+    console.error('exam/start error:', err)
+    return NextResponse.json({ error: 'Server error' }, { status: 500 })
   }
-
-  const supabase = createServiceClient()
-  const { data: sub } = await supabase
-    .from('subscriptions')
-    .select('plan, exam_addon')
-    .eq('user_id', user.id)
-    .single()
-
-  if (!examAccess(sub?.plan, sub?.exam_addon)) {
-    return Response.json({ error: 'Exam access required' }, { status: 403 })
-  }
-
-  let body
-  try { body = await request.json() } catch { body = {} }
-  const count = Math.max(1, Math.min(200, parseInt(body.count) || 20))
-
-  // Shuffle server-side and slice — correct answers never leave the server
-  const shuffled = [...EXAM_QUESTIONS].sort(() => Math.random() - 0.5)
-  const selected = shuffled.slice(0, Math.min(count, EXAM_QUESTIONS.length))
-  const ids = selected.map(q => q.id)
-
-  // Sign a session token — carries question ordering + position, tamper-proof
-  const token = signSession({
-    uid: user.id,
-    ids,
-    idx: 0,
-    correctCount: 0,
-    exp: Date.now() + 4 * 60 * 60 * 1000,  // 4-hour window
-  })
-
-  const first = selected[0]
-  return Response.json({
-    sessionToken: token,
-    total: ids.length,
-    question: { id: first.id, topic: first.topic, prompt: first.prompt, choices: first.choices },
-  })
 }

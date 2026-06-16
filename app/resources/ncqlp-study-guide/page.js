@@ -155,7 +155,7 @@ export default function Article() {
       </p>
 
       <div style={ctaBox}>
-        <p style={ctaHeading}>All 12 modules. 74 lessons. 129 timed practice questions.</p>
+        <p style={ctaHeading}>All 12 modules. 74 lessons. 50 timed practice questions.</p>
         <p style={ctaDesc}>
           LC · Lighting Master sequences every topic in the order that builds the most
           durable comprehension. 24 CEU credit hours included.

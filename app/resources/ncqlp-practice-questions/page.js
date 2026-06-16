@@ -164,9 +164,9 @@ export default function Article() {
       </p>
 
       <div style={ctaBox}>
-        <p style={ctaHeading}>129 more practice questions — timed, with explanations</p>
+        <p style={ctaHeading}>50 more practice questions — timed, with explanations</p>
         <p style={ctaDesc}>
-          LC · Lighting Master includes 129 full-length timed practice questions across all
+          LC · Lighting Master includes 50 full-length timed practice questions across all
           exam topics, plus 74 structured lessons and 24 CEU credit hours.
         </p>
         <a href="/pricing" style={ctaBtn}>See plans →</a>

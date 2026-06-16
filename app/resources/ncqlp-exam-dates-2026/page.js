@@ -148,7 +148,7 @@ export default function Article() {
       </p>
 
       <div style={ctaBox}>
-        <p style={ctaHeading}>Study with 74 lessons + 129 practice questions</p>
+        <p style={ctaHeading}>Study with 74 lessons + 50 practice questions</p>
         <p style={ctaDesc}>
           Start now and work through all 12 modules before the October window.
           24 CEU credit hours included with the full course.

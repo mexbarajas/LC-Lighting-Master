@@ -72,7 +72,7 @@ export default function ResourcesIndex() {
           Ready to start studying?
         </p>
         <p style={{ margin: '0 0 18px', fontSize: 15, color: '#5A6B5E', lineHeight: 1.6 }}>
-          74 structured lessons, 129 timed practice questions, 24 CEU hours. Self-paced. Built for North American lighting professionals.
+          74 structured lessons, 50 timed practice questions, 24 CEU hours. Self-paced. Built for North American lighting professionals.
         </p>
         <a href="/pricing" style={ctaBtn}>See plans & pricing →</a>
       </div>

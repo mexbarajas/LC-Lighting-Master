@@ -147,7 +147,7 @@ export default function Article() {
       </ul>
 
       <div style={ctaBox}>
-        <p style={ctaHeading}>Study with 74 lessons + 129 practice questions</p>
+        <p style={ctaHeading}>Study with 74 lessons + 50 practice questions</p>
         <p style={ctaDesc}>
           Structured modules, visual diagrams, audio narration, and timed exams — everything
           you need to pass on your first attempt.

@@ -129,7 +129,7 @@ export default function PricingCard({ userId, userEmail, onContactUs }) {
             Already studied? Use our LC practice engine as your final accuracy check before exam day.
           </p>
           <div style={{ marginBottom: 18 }}>
-            {['129 LC practice questions', '13 topic breakdown',
+            {['50 LC practice questions', '13 topic breakdown',
               '25-sec timed exam engine', 'Speed bonuses & streaks', 'Unlimited attempts']
               .map((f, i) => <FeatureRow key={i} item={f} dark={false} />)}
           </div>
@@ -227,7 +227,7 @@ export default function PricingCard({ userId, userEmail, onContactUs }) {
           </p>
           <div style={{ marginBottom: 18 }}>
             {['Everything in Full Course', 'Exam engine bundled',
-              '129 LC practice questions', 'Unlimited exam attempts',
+              '50 LC practice questions', 'Unlimited exam attempts',
               'Topic accuracy analytics', 'Priority support']
               .map((f, i) => <FeatureRow key={i} item={f} dark={true} />)}
           </div>

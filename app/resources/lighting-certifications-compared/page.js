@@ -170,7 +170,7 @@ export default function Article() {
       </p>
 
       <div style={ctaBox}>
-        <p style={ctaHeading}>Prepare for the LC with 74 lessons + 129 practice questions</p>
+        <p style={ctaHeading}>Prepare for the LC with 74 lessons + 50 practice questions</p>
         <p style={ctaDesc}>
           The most comprehensive NCQLP prep platform — covering all 13 exam topics with
           structured lessons, timed practice questions, and 24 CEU credit hours.

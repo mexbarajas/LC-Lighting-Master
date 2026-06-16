@@ -144,7 +144,7 @@ export default function Article() {
       </p>
 
       <div style={ctaBox}>
-        <p style={ctaHeading}>Study with 74 lessons + 129 practice questions</p>
+        <p style={ctaHeading}>Study with 74 lessons + 50 practice questions</p>
         <p style={ctaDesc}>
           LC · Lighting Master covers all 13 exam topics with structured lessons, visual
           diagrams, audio narration, and timed practice questions. 24 CEU credit hours included.

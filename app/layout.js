@@ -12,7 +12,7 @@ export const metadata = {
     default: 'LC · Lighting Master | NCQLP Exam Prep — Lighting Certification Study Guide',
     template: '%s | LC Lighting Master'
   },
-  description: 'The most comprehensive NCQLP exam prep platform for lighting professionals. 12 modules, 74 lessons, 129 timed practice questions, 24 CEU credit hours. Pass your Lighting Certified (LC) exam. Study online at your own pace.',
+  description: 'The most comprehensive NCQLP exam prep platform for lighting professionals. 12 modules, 74 lessons, 50 timed practice questions, 24 CEU credit hours. Pass your Lighting Certified (LC) exam. Study online at your own pace.',
   keywords: [
     'NCQLP exam prep',
     'NCQLP study guide',
@@ -95,7 +95,7 @@ export const metadata = {
     url: siteUrl,
     siteName: 'LC · Lighting Master',
     title: 'LC · Lighting Master | NCQLP Exam Prep & Lighting Certification Study Guide',
-    description: 'Pass your NCQLP Lighting Certified exam with the most comprehensive online prep platform. 12 modules, 74 lessons, 129 practice questions, 24 CEU hours. Self-paced, built for North American lighting professionals.',
+    description: 'Pass your NCQLP Lighting Certified exam with the most comprehensive online prep platform. 12 modules, 74 lessons, 50 practice questions, 24 CEU hours. Self-paced, built for North American lighting professionals.',
     images: [{
       url: '/og-image.png',
       width: 1200,
@@ -106,7 +106,7 @@ export const metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'LC · Lighting Master | NCQLP Exam Prep',
-    description: 'Pass your Lighting Certified (LC) exam. 12 modules, 74 lessons, 129 practice questions, 24 CEU hours. The most comprehensive NCQLP prep platform.',
+    description: 'Pass your Lighting Certified (LC) exam. 12 modules, 74 lessons, 50 practice questions, 24 CEU hours. The most comprehensive NCQLP prep platform.',
     images: ['/og-image.png'],
     creator: '@luxartmedia',
   },
@@ -153,7 +153,7 @@ export default function RootLayout({ children }) {
         '@type': 'Course',
         '@id': siteUrl + '/#course',
         name: 'LC · Lighting Master — NCQLP Exam Prep',
-        description: 'Comprehensive NCQLP exam preparation course covering all 12 blueprint modules for the Lighting Certified (LC) credential. Includes 74 lessons, 129 timed practice questions, and 24 CEU credit hours.',
+        description: 'Comprehensive NCQLP exam preparation course covering all 12 blueprint modules for the Lighting Certified (LC) credential. Includes 74 lessons, 50 timed practice questions, and 24 CEU credit hours.',
         url: siteUrl,
         provider: { '@id': siteUrl + '/#organization' },
         educationalCredentialAwarded: 'Lighting Certified (LC) — NCQLP',
@@ -244,7 +244,7 @@ export default function RootLayout({ children }) {
             name: 'How many questions are on the NCQLP LC exam?',
             acceptedAnswer: {
               '@type': 'Answer',
-              text: 'The NCQLP LC exam contains approximately 150 multiple-choice questions covering 13 topic areas. LC · Lighting Master includes 129 timed practice questions with detailed explanations for every answer.',
+              text: 'The NCQLP LC exam contains approximately 150 multiple-choice questions covering 13 topic areas. LC · Lighting Master includes 50 timed practice questions with detailed explanations for every answer.',
             },
           },
           {
@@ -276,7 +276,7 @@ export default function RootLayout({ children }) {
             name: 'How is LC Lighting Master different from the IES study group?',
             acceptedAnswer: {
               '@type': 'Answer',
-              text: 'LC · Lighting Master is a self-paced online platform available year-round, with 74 structured lessons, 129 timed practice questions, audio narration, visual diagrams, bookmarks, and progress tracking. The IES study group is a 10-week Zoom course offered once per year. LC Lighting Master also costs less and includes 24 CEU credit hours.',
+              text: 'LC · Lighting Master is a self-paced online platform available year-round, with 74 structured lessons, 50 timed practice questions, audio narration, visual diagrams, bookmarks, and progress tracking. The IES study group is a 10-week Zoom course offered once per year. LC Lighting Master also costs less and includes 24 CEU credit hours.',
             },
           },
         ],
