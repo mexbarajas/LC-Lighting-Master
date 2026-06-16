@@ -48,7 +48,17 @@ export async function POST(req) {
       .select('id')
       .order('id')
 
-    if (qErr || !allQs || allQs.length === 0) {
+    console.log('Questions fetch result:', {
+      count: allQs?.length,
+      error: qErr?.message,
+      serviceUrl: process.env.NEXT_PUBLIC_SUPABASE_URL?.slice(0, 30),
+      hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+    })
+
+    if (qErr) {
+      return NextResponse.json({ error: 'DB error: ' + qErr.message }, { status: 500 })
+    }
+    if (!allQs || allQs.length === 0) {
       return NextResponse.json({ error: 'Questions unavailable' }, { status: 500 })
     }
 
