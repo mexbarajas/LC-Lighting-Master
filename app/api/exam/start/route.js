@@ -14,11 +14,24 @@ export async function POST(req) {
     }
     const userId = user.id
 
-    // Service client — created inside handler so env vars are always resolved at runtime
+    // Service client — explicit schema, RLS bypass, created at runtime
     const SERVICE = createSupabaseClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY,
-      { auth: { autoRefreshToken: false, persistSession: false } }
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+        db: {
+          schema: 'public',
+        },
+        global: {
+          headers: {
+            'x-supabase-bypass-rls': 'true',
+          },
+        },
+      }
     )
 
     console.log('[exam/start] env check:', {
@@ -28,6 +41,7 @@ export async function POST(req) {
     })
 
     const { data: sub } = await SERVICE
+      .schema('public')
       .from('subscriptions')
       .select('plan, status, exam_addon')
       .eq('user_id', userId)
@@ -41,6 +55,7 @@ export async function POST(req) {
     }
 
     const { count: completedCount } = await SERVICE
+      .schema('public')
       .from('exam_sessions')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', userId)
@@ -56,6 +71,7 @@ export async function POST(req) {
     const count = MODE_COUNTS[mode]
 
     const { data: allQs, error: qErr } = await SERVICE
+      .schema('public')
       .from('exam_questions')
       .select('id')
       .order('id')
@@ -89,6 +105,7 @@ export async function POST(req) {
     const questionIds = selected.map(q => q.id)
 
     const { data: session_row, error: sessionErr } = await SERVICE
+      .schema('public')
       .from('exam_sessions')
       .insert({
         user_id:             userId,
@@ -109,6 +126,7 @@ export async function POST(req) {
     }
 
     const { data: firstQ, error: firstQErr } = await SERVICE
+      .schema('public')
       .from('exam_questions')
       .select('id, topic, prompt, choices')
       .eq('id', questionIds[0])
