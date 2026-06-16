@@ -1,6 +1,7 @@
 ﻿'use client'
 
 import React, { useState, useEffect, useRef, useCallback } from "react"
+import DOMPurify from 'dompurify'
 import { createClient } from '@/lib/supabase/client'
 import PricingCard from '@/components/PricingCard'
 
@@ -3418,7 +3419,7 @@ function LessonPage({lessonRef,setRoute,user,setShowUpgrade,completedLessons=new
       {visual&&(
         <div style={{background:C.paper,border:`1px solid ${C.rule}`,borderRadius:6,padding:"16px 18px",marginBottom:14,overflow:"hidden"}}>
           <div style={{fontFamily:F.display,fontSize:13,fontWeight:700,color:C.ink,letterSpacing:'0.06em',textTransform:'uppercase',marginBottom:10}}>Visual overview</div>
-          <div dangerouslySetInnerHTML={{__html:visual}}/>
+          <div dangerouslySetInnerHTML={{__html:DOMPurify.sanitize(visual)}}/>
         </div>
       )}
 
@@ -3434,7 +3435,7 @@ function LessonPage({lessonRef,setRoute,user,setShowUpgrade,completedLessons=new
             {content?.body?.length > 0 ? (
               content.body.map((para, i) => (
                 <div key={i} style={{fontFamily:F.body,fontSize:14,lineHeight:1.8,color:C.ink,marginBottom:18}}
-                  dangerouslySetInnerHTML={{__html:para}}
+                  dangerouslySetInnerHTML={{__html:DOMPurify.sanitize(para)}}
                 />
               ))
             ) : (
