@@ -6,7 +6,6 @@ const MODE_COUNTS = { quick: 20, mid: 50, full: 180 }
 
 export async function POST(req) {
   try {
-    // Auth client — uses cookies for session
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
@@ -14,34 +13,13 @@ export async function POST(req) {
     }
     const userId = user.id
 
-    // Service client — explicit schema, RLS bypass, created at runtime
     const SERVICE = createSupabaseClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-        db: {
-          schema: 'public',
-        },
-        global: {
-          headers: {
-            'x-supabase-bypass-rls': 'true',
-          },
-        },
-      }
+      { auth: { autoRefreshToken: false, persistSession: false } }
     )
 
-    console.log('[exam/start] env check:', {
-      hasUrl:    !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-      hasKey:    !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-      keyPrefix: process.env.SUPABASE_SERVICE_ROLE_KEY?.slice(0, 12),
-    })
-
     const { data: sub } = await SERVICE
-      .schema('public')
       .from('subscriptions')
       .select('plan, status, exam_addon')
       .eq('user_id', userId)
@@ -55,7 +33,6 @@ export async function POST(req) {
     }
 
     const { count: completedCount } = await SERVICE
-      .schema('public')
       .from('exam_sessions')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', userId)
@@ -71,28 +48,16 @@ export async function POST(req) {
     const count = MODE_COUNTS[mode]
 
     const { data: allQs, error: qErr } = await SERVICE
-      .schema('public')
       .from('exam_questions')
       .select('id')
       .order('id')
 
-    console.log('[exam/start] questions query:', {
-      count: allQs?.length,
-      error: qErr?.message,
-      code:  qErr?.code,
-    })
-
     if (qErr) {
-      return NextResponse.json(
-        { error: 'DB error: ' + qErr.message },
-        { status: 500 }
-      )
+      console.error('[exam/start] questions error:', qErr.message)
+      return NextResponse.json({ error: 'DB error: ' + qErr.message }, { status: 500 })
     }
     if (!allQs || allQs.length === 0) {
-      return NextResponse.json(
-        { error: 'Questions unavailable — table empty or access denied' },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: 'Questions unavailable' }, { status: 500 })
     }
 
     // Fisher-Yates shuffle — correct answers never leave the server until answer submitted
@@ -105,7 +70,6 @@ export async function POST(req) {
     const questionIds = selected.map(q => q.id)
 
     const { data: session_row, error: sessionErr } = await SERVICE
-      .schema('public')
       .from('exam_sessions')
       .insert({
         user_id:             userId,
@@ -126,7 +90,6 @@ export async function POST(req) {
     }
 
     const { data: firstQ, error: firstQErr } = await SERVICE
-      .schema('public')
       .from('exam_questions')
       .select('id, topic, prompt, choices')
       .eq('id', questionIds[0])

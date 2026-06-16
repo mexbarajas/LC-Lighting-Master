@@ -20,28 +20,13 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Missing sessionId or qid' }, { status: 400 })
     }
 
-    // Service client — explicit schema, RLS bypass, created at runtime
     const SERVICE = createSupabaseClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-        db: {
-          schema: 'public',
-        },
-        global: {
-          headers: {
-            'x-supabase-bypass-rls': 'true',
-          },
-        },
-      }
+      { auth: { autoRefreshToken: false, persistSession: false } }
     )
 
     const { data: examSession, error: sessionErr } = await SERVICE
-      .schema('public')
       .from('exam_sessions')
       .select('*')
       .eq('id', sessionId)
@@ -65,7 +50,6 @@ export async function POST(req) {
     }
 
     const { data: questionRow, error: qErr } = await SERVICE
-      .schema('public')
       .from('exam_questions')
       .select('id, correct, explanation, topic')
       .eq('id', qid)
@@ -89,7 +73,6 @@ export async function POST(req) {
     const nextIdx = idx + 1
     const isLast  = nextIdx >= questionIds.length
 
-    // Topic breakdown — accumulate from stored session answers
     const topic     = questionRow.topic
     const breakdown = { ...(examSession.topic_breakdown || {}) }
     if (!breakdown[topic]) breakdown[topic] = { correct: 0, total: 0 }
@@ -104,7 +87,6 @@ export async function POST(req) {
     }
 
     const { error: updateErr } = await SERVICE
-      .schema('public')
       .from('exam_sessions')
       .update({
         answers:         updatedAnswers,
@@ -125,7 +107,6 @@ export async function POST(req) {
     if (!isLast) {
       const nextQId = questionIds[nextIdx]
       const { data: nextQ } = await SERVICE
-        .schema('public')
         .from('exam_questions')
         .select('id, topic, prompt, choices')
         .eq('id', nextQId)
