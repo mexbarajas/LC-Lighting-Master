@@ -1,10 +1,13 @@
 import { createServiceClient } from '@/lib/supabase/service'
 import { verifyAdminToken, parseCookie } from '@/lib/admin-auth'
+import { requireAdmin } from '@/lib/admin'
 
 export async function GET(request) {
+  // Accept valid admin-session cookie (primary) OR Supabase is_admin (secondary)
   const token = parseCookie(request.headers.get('cookie'), 'admin_session')
   if (!verifyAdminToken(token)) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
+    const { error } = await requireAdmin()
+    if (error) return error
   }
 
   const supabase = createServiceClient()
