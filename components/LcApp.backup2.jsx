@@ -1677,18 +1677,58 @@ const PARTS = [
   {id:3,title:"Design practice & sustainability",modules:[9,10,11,12]},
 ]
 
-const TOPIC_COUNTS = {
-  "Light Sources & Lamps":3,"Photometry & Calculations":3,"Color & Vision":3,
-  "Energy & Controls":3,"Luminaire Design & Optics":2,"Codes, Standards & Sustainability":1,
-  "Daylighting":1,"Interior Lighting Design":1,"Lighting Design Process":1,
-  "Human Factors & Health":2,"Emergency & Exit Lighting":1,"Exterior & Outdoor Lighting":1,
-  "Accent Lighting":1,"Conservation Lighting":2,"UV & Radiation":2,"Color Rendering":2,
-  "Exterior Lighting":5,"Retinal Safety":1,"LED Technology":2,"Ballasts":1,
-  "Luminaire Optics":1,"Optics":1,"Photometry":3,"Luminaire Classification":1,
-  "Emergency Lighting":2,"Design Process":1,"Design Standards":1,"Product Labelling":1,
-  "Lamp Life":1,
-}
-const TOTAL_QUESTIONS = 50
+const QUESTIONS = [
+  {id:"q001",topic:"Light Sources & Lamps",prompt:"Which lamp type produces light through electroluminescence at a P-N semiconductor junction?",choices:["High-pressure sodium (HPS)","LED","Compact fluorescent (CFL)","Metal halide"],correct:"LED",explanation:"LEDs produce light through electroluminescence when current passes through a P-N semiconductor junction, exciting electrons that release photons."},
+  {id:"q002",topic:"Photometry & Calculations",prompt:"According to the inverse-square law, if the distance from a point source doubles, illuminance:",choices:["Doubles","Halves","Reduces to one-quarter","Remains the same"],correct:"Reduces to one-quarter",explanation:"E = I/d². When distance doubles, E = I/(2d)² = I/4d² — illuminance reduces to 1/4 of the original value."},
+  {id:"q003",topic:"Color & Vision",prompt:"Correlated color temperature (CCT) describes:",choices:["The actual temperature of a light source","The perceived warmth or coolness of a light source","The color rendering ability","The luminous efficacy at different temperatures"],correct:"The perceived warmth or coolness of a light source",explanation:"CCT is the temperature of a blackbody radiator that best matches the chromaticity of the light source. Lower CCT = warm/amber; higher CCT = cool/blue-white."},
+  {id:"q004",topic:"Energy & Controls",prompt:"Lighting Power Density (LPD) is expressed in:",choices:["Watts per lumen","Watts per square foot","Lumens per watt","Foot-candles per watt"],correct:"Watts per square foot",explanation:"LPD (W/ft²) = total connected lighting load ÷ gross floor area. ASHRAE 90.1 uses LPD as the primary energy code compliance metric."},
+  {id:"q005",topic:"Luminaire Design & Optics",prompt:"A luminaire's coefficient of utilization (CU) accounts for:",choices:["Lamp lumen depreciation only","Both room geometry and luminaire efficiency","Only the luminaire's optical efficiency","Maintenance factors and lamp life"],correct:"Both room geometry and luminaire efficiency",explanation:"The CU combines luminaire efficiency with room cavity ratio (RCR) to represent the fraction of lamp lumens that reach the work plane."},
+  {id:"q006",topic:"Color & Vision",prompt:"IES TM-30 improves upon CRI by providing:",choices:["A single number above 100","Both fidelity (Rf) and gamut (Rg) measures","Only a gamut area metric","A measure of flicker performance"],correct:"Both fidelity (Rf) and gamut (Rg) measures",explanation:"TM-30 uses 99 color evaluation samples and provides Rf (fidelity) and Rg (gamut index) — two complementary metrics that together characterize color rendering."},
+  {id:"q007",topic:"Emergency & Exit Lighting",prompt:"NFPA 101 requires emergency lighting to maintain illuminance for a minimum of:",choices:["30 minutes","60 minutes","90 minutes","120 minutes"],correct:"90 minutes",explanation:"NFPA 101 requires emergency lighting systems to provide maintained illuminance for a minimum of 90 minutes following normal power failure."},
+  {id:"q008",topic:"Exterior & Outdoor Lighting",prompt:"What does the BUG rating system evaluate for outdoor luminaires?",choices:["Brightness, Uniformity, and Glare","Backlight, Uplight, and Glare","Beam angle, Uniformity, and Geometry","Brightness, Usage, and Generation"],correct:"Backlight, Uplight, and Glare",explanation:"The IES BUG (Backlight-Uplight-Glare) rating system quantifies outdoor luminaire light distribution to help minimize light pollution and trespass."},
+  {id:"q009",topic:"Energy & Controls",prompt:"A vacancy sensor differs from an occupancy sensor in that it:",choices:["Detects occupancy more accurately","Requires manual activation but turns off automatically","Turns on and off automatically","Only works with daylight harvesting"],correct:"Requires manual activation but turns off automatically",explanation:"Vacancy sensors require occupants to manually switch lights ON but automatically switch OFF — saving more energy than occupancy sensors (which auto-on)."},
+  {id:"q010",topic:"Photometry & Calculations",prompt:"Illuminance (lux) is equivalent to:",choices:["Candelas per square meter","Lumens per square meter","Watts per square meter","Candelas per steradian"],correct:"Lumens per square meter",explanation:"1 lux = 1 lumen per square meter (lm/m²). Illuminance measures the quantity of luminous flux falling on a surface per unit area."},
+  {id:"q011",topic:"Light Sources & Lamps",prompt:"A lamp rated at 1000 lumens consuming 10 watts has an efficacy of:",choices:["10 lm/W","100 lm/W","1000 lm/W","0.1 lm/W"],correct:"100 lm/W",explanation:"Luminous efficacy = lumens ÷ watts = 1000 ÷ 10 = 100 lm/W."},
+  {id:"q012",topic:"Codes, Standards & Sustainability",prompt:"LEED v4.1 lighting quality credits address:",choices:["Only energy savings from lighting","Interior lighting quality including glare control, color quality, and controllability","Exterior lighting trespass only","Emergency lighting compliance"],correct:"Interior lighting quality including glare control, color quality, and controllability",explanation:"LEED v4.1 Interior Lighting credits address glare control, CRI ≥90, R9 ≥50, and occupant lighting controls for at least 90% of regularly occupied spaces."},
+  {id:"q013",topic:"Daylighting",prompt:"Spatial daylight autonomy (sDA) measures:",choices:["Peak daylight illuminance","The percentage of floor area receiving sufficient daylight for a specified percentage of occupied hours","Annual direct sunlight exposure","Glare probability from windows"],correct:"The percentage of floor area receiving sufficient daylight for a specified percentage of occupied hours",explanation:"sDA300/50% quantifies the percentage of floor area receiving ≥300 lux for at least 50% of annual occupied hours — the primary LEED daylighting metric."},
+  {id:"q014",topic:"Interior Lighting Design",prompt:"The IES illuminance recommendation for a general office task area is approximately:",choices:["10–15 fc (100–150 lux)","30–50 fc (300–500 lux)","75–100 fc (750–1000 lux)","150–200 fc (1500–2000 lux)"],correct:"30–50 fc (300–500 lux)",explanation:"IES RP-1 recommends 300–500 lux (30–50 fc) for general office tasks."},
+  {id:"q015",topic:"Lighting Design Process",prompt:"The Owner's Project Requirements (OPR) document establishes:",choices:["Fixture specifications and quantities","The owner's goals, functional requirements, and performance criteria","Electrical load calculations","Lamp replacement schedules"],correct:"The owner's goals, functional requirements, and performance criteria",explanation:"The OPR is a foundational commissioning document capturing the owner's operational needs, energy targets, and performance expectations."},
+  {id:"q016",topic:"Human Factors & Health",prompt:"Melanopic illuminance relates to the effect of lighting on:",choices:["Cone photoreceptors and color vision","ipRGC cells and circadian regulation","Rod photoreceptors and scotopic vision","Pupillary light reflex only"],correct:"ipRGC cells and circadian regulation",explanation:"Melanopic illuminance weights light according to the sensitivity of ipRGCs containing melanopsin, which drive circadian entrainment and melatonin suppression. Peak sensitivity ~480nm."},
+  {id:"q017",topic:"Luminaire Design & Optics",prompt:"Luminaire efficacy is calculated as:",choices:["Source lumens ÷ luminaire watts","Delivered lumens ÷ luminaire watts","Source lumens ÷ driver watts","Delivered lumens ÷ source lumens"],correct:"Delivered lumens ÷ luminaire watts",explanation:"Luminaire efficacy (lm/W) = total delivered lumens ÷ total luminaire input watts (including driver losses)."},
+  {id:"q018",topic:"Energy & Controls",prompt:"DALI-2 is best described as:",choices:["A wireless mesh lighting control protocol","A standardized digital protocol for addressable dimming control","A motion sensor communication standard","An emergency lighting test system"],correct:"A standardized digital protocol for addressable dimming control",explanation:"DALI-2 is an IEC 62386 open protocol for digital communication between lighting control devices, allowing individual addressing, scene setting, and status feedback."},
+  {id:"q019",topic:"Light Sources & Lamps",prompt:"What does 'T8' refer to in a fluorescent lamp designation?",choices:["Tube length of 8 feet","Tube diameter of 8/8 inch (1 inch)","Wattage of 8 watts","Color temperature of 8000K"],correct:"Tube diameter of 8/8 inch (1 inch)",explanation:"The 'T' designation indicates tubular shape; the number indicates diameter in eighths of an inch. T8 = 8/8 = 1 inch diameter."},
+  {id:"q020",topic:"Photometry & Calculations",prompt:"The light loss factor (LLF) accounts for:",choices:["Only lamp lumen depreciation","Multiple factors reducing maintained illuminance over time","Only luminaire dirt depreciation","Only voltage fluctuations"],correct:"Multiple factors reducing maintained illuminance over time",explanation:"LLF = product of all recoverable and non-recoverable factors including lamp lumen depreciation (LLD), luminaire dirt depreciation (LDD), room surface dirt depreciation (RSDD), and others."},
+  {id:"q021",topic:"Accent Lighting",prompt:"Which of the following best describes the purpose of accent lighting in a space?",choices:["Providing uniform horizontal illuminance","Creating visual interest, drawing attention, and supporting wayfinding","Supplementing daylight during overcast conditions","Meeting minimum egress illuminance requirements"],correct:"Creating visual interest, drawing attention, and supporting wayfinding",explanation:"Accent lighting is designed to positively affect brightness perception, provide visual relief, and direct attention to specific elements — it is not a general illuminance strategy."},
+  {id:"q022",topic:"Conservation Lighting",prompt:"In a museum task lighting system for conservation labs, what minimum CRI is required for lamps?",choices:["80","85","90","100"],correct:"100",explanation:"Task lighting in conservation labs requires a CRI of 100 (perfect colour rendering) to ensure accurate assessment of artefact condition. Ambient systems require CRI 85 as a minimum."},
+  {id:"q023",topic:"UV & Radiation",prompt:"What is the primary concern with ultraviolet radiation when applied to museum artefacts?",choices:["It generates excessive heat on surfaces","It causes irreversible photochemical damage such as colour change and physical deterioration","It reflects off surfaces and creates glare","It interferes with occupancy sensor operation"],correct:"It causes irreversible photochemical damage such as colour change and physical deterioration",explanation:"UV radiation induces photochemical damage to many organic materials. This damage is evidenced by colour change and physical deterioration and is irreversible. When UV data is unavailable, UV filters should be used."},
+  {id:"q024",topic:"UV & Radiation",prompt:"Ultraviolet radiation generally causes more damage to sensitive materials than visible radiation because its damage mechanism is:",choices:["Thermal — heating the surface","Photochemical — altering molecular bonds irreversibly","Mechanical — causing surface abrasion","Electrical — inducing current in conductive materials"],correct:"Photochemical — altering molecular bonds irreversibly",explanation:"UV radiation induces photochemical damage, which is wavelength dependent and irreversible. Visible radiation can also cause damage but is generally less destructive than UV at comparable exposure levels."},
+  {id:"q025",topic:"Color Rendering",prompt:"A lamp with a CRI greater than 80 is generally preferred for occupied spaces because:",choices:["It produces more lumens per watt","It helps occupants better identify and distinguish colours","It has a longer rated life","It operates at a lower correlated colour temperature"],correct:"It helps occupants better identify and distinguish colours",explanation:"CRI above 80 is the IES threshold for spaces where accurate colour discrimination is important. Higher CRI sources more faithfully reproduce object colours as they would appear under reference illuminants."},
+  {id:"q026",topic:"Conservation Lighting",prompt:"For conservation purposes, preservation-worthy objects are classified according to:",choices:["Their monetary value","Their sensitivity to light exposure (high, low, or no sensitivity)","The country of origin","Whether they are displayed indoors or outdoors"],correct:"Their sensitivity to light exposure (high, low, or no sensitivity)",explanation:"IES and conservation guidelines categorise objects by light sensitivity. Highly sensitive items (textiles, watercolours, photographs) require lower illuminance and stricter annual lux-hour limits than moderately sensitive or insensitive objects."},
+  {id:"q027",topic:"Exterior Lighting",prompt:"For luminaires used in outdoor applications subject to extreme temperatures, what components must be specifically rated for those conditions?",choices:["Only the lamp","Only the driver","Lamps, ballasts or drivers, transformers, and control devices","The housing and lens only"],correct:"Lamps, ballasts or drivers, transformers, and control devices",explanation:"All active electrical components — lamps, ballasts/drivers, transformers, and controls — must be rated for the expected ambient temperature range when used in outdoor conditions with temperature extremes."},
+  {id:"q028",topic:"Exterior Lighting",prompt:"When designing a parking lot lighting layout, which sequence of steps is most appropriate?",choices:["Select luminaires first, then calculate illuminance","Define activity zones, establish horizontal illuminance and uniformity criteria, then define any accent lighting requirements","Calculate LPD compliance first, then position fixtures","Choose poles, then select luminaire distribution"],correct:"Define activity zones, establish horizontal illuminance and uniformity criteria, then define any accent lighting requirements",explanation:"The correct strategy is to first define the activities and tasks in the space, then establish illuminance and uniformity criteria, and finally incorporate accent or wayfinding lighting where needed."},
+  {id:"q029",topic:"Exterior Lighting",prompt:"For pedestrian and bicycle pathway lighting, the design is primarily influenced by:",choices:["Architectural style of adjacent buildings","Proximity to vehicular traffic, activity level, and nighttime outdoor lighting zone","The number of streetlight poles available","Average daily temperature"],correct:"Proximity to vehicular traffic, activity level, and nighttime outdoor lighting zone",explanation:"IES guidance for pedestrian and bike ways requires the designer to define activities, surface reflectances, and any needed accent lighting, with design influenced by traffic proximity, activity level, and the applicable lighting zone."},
+  {id:"q030",topic:"Retinal Safety",prompt:"Radiant energy in the 400–1400 nm range can cause retinal damage through which mechanisms?",choices:["Only thermal damage","Only photochemical damage","Photochemical, thermal, and mechanical mechanisms","Electrical and chemical mechanisms only"],correct:"Photochemical, thermal, and mechanical mechanisms",explanation:"Research confirms at least three mechanisms of retinal damage for radiant energy between 400 and 1400 nm: photochemical damage (wavelength-dependent), thermal damage (from pulse durations of microseconds to seconds), and mechanical shock-wave damage from ultrashort laser pulses."},
+  {id:"q031",topic:"LED Technology",prompt:"An individual LED chip within a luminaire typically operates at a forward voltage of approximately:",choices:["12 volts","24 volts","2 to 3 volts","110 volts"],correct:"2 to 3 volts",explanation:"Individual LED junctions operate at forward voltages of approximately 2 to 3 volts. Multiple LEDs are arranged in series/parallel arrays, and a constant-current driver regulates the total voltage applied to the array."},
+  {id:"q032",topic:"Ballasts",prompt:"The ballast factor is best defined as:",choices:["The ratio of actual delivered lumens on a specific ballast versus lumens on a reference ballast","The number of lamps a ballast can operate","The ballast's power factor","The ratio of ballast watts to lamp watts"],correct:"The ratio of actual delivered lumens on a specific ballast versus lumens on a reference ballast",explanation:"Ballast factor (BF) is the ratio of light output produced by a specific lamp-ballast combination to the output of that same lamp on a standardised ANSI reference ballast. It varies by ballast type and lamp."},
+  {id:"q033",topic:"Luminaire Optics",prompt:"Which of the following physical processes are used to control the direction and quality of light emitted from a luminaire?",choices:["Reflection, absorption, and diffraction","Conduction, convection, and radiation","Refraction, dispersion, and fluorescence","Diffraction, polarisation, and scattering only"],correct:"Reflection, absorption, and diffraction",explanation:"Luminaire optical systems rely on reflection (mirrors, reflectors), absorption (baffles, finishes), and diffraction (prismatic lenses, diffusers) to redirect and redistribute emitted light."},
+  {id:"q034",topic:"Optics",prompt:"Specular reflection is the phenomenon where:",choices:["Light scatters in all directions equally","The angle of incidence equals the angle of reflection","Light is completely absorbed by the surface","The reflected beam spreads wider than the incident beam"],correct:"The angle of incidence equals the angle of reflection",explanation:"Specular reflection follows the law of reflection: the angle of incidence equals the angle of reflection. It produces mirror-like images and is characteristic of polished metal and glass surfaces."},
+  {id:"q035",topic:"Photometry",prompt:"Photometric testing of a luminaire measures:",choices:["Only the wattage consumed","Light output from multiple viewing planes at various angles through the luminaire","The lamp's spectral power distribution only","The thermal performance of the driver"],correct:"Light output from multiple viewing planes at various angles through the luminaire",explanation:"Photometric testing, typically performed with a goniophotometer or large integrating sphere per IES LM-79, measures luminous intensity from many viewing planes to build a complete three-dimensional light distribution."},
+  {id:"q036",topic:"Luminaire Classification",prompt:"Which terms describe the general distribution character of luminaires?",choices:["Efficient, moderate, and inefficient","Downward, multidirectional, and concentrated","Static, dynamic, and adaptive","Recessed, surface, and pendant"],correct:"Downward, multidirectional, and concentrated",explanation:"IES luminaire classification uses terms like downward (direct), multidirectional, and concentrated to describe how a luminaire distributes its output spatially."},
+  {id:"q037",topic:"Color & Vision",prompt:"The human eye sees better in low-level light conditions when the source contains:",choices:["Dominant long-wavelength red light","Short-wavelength blue-rich light","Only green wavelengths","Infrared radiation"],correct:"Short-wavelength blue-rich light",explanation:"Under mesopic and scotopic conditions, the eye shifts its peak sensitivity toward shorter wavelengths (scotopic peak ~507 nm). Blue-rich sources with high S/P ratios appear brighter at low light levels."},
+  {id:"q038",topic:"Exterior Lighting",prompt:"Proper exterior lighting of a building site contributes to safety and security by:",choices:["Eliminating all shadows","Aiding police protection, facilitating traffic flow, and promoting business activity","Maximising illuminance uniformity above all else","Preventing all light from leaving the site boundary"],correct:"Aiding police protection, facilitating traffic flow, and promoting business activity",explanation:"Well-designed exterior lighting serves multiple functions: supporting personal security, aiding law enforcement presence, facilitating safe traffic and pedestrian movement, and encouraging commerce."},
+  {id:"q039",topic:"Design Process",prompt:"Which sequence best represents the standard lighting design process?",choices:["Bidding, construction, commissioning, and closeout","Programming, schematic design, contract documentation, and bidding","Concept, feasibility, testing, and delivery","Installation, testing, approval, and handover"],correct:"Programming, schematic design, contract documentation, and bidding",explanation:"The standard design process follows programming (OPR), schematic design (SD), design development and contract documentation (CD), then the construction and bidding phase."},
+  {id:"q040",topic:"Human Factors & Health",prompt:"The ipRGC (intrinsically photosensitive retinal ganglion cell) plays a key role in:",choices:["Providing high-resolution colour vision","Synchronising the circadian rhythm and regulating melatonin release from the pineal gland","Detecting motion in peripheral vision","Controlling pupil size exclusively"],correct:"Synchronising the circadian rhythm and regulating melatonin release from the pineal gland",explanation:"ipRGCs contain melanopsin and respond to light independently of rods and cones. They drive circadian entrainment via the SCN and regulate acute photic suppression of melatonin from the pineal gland. Peak sensitivity is approximately 480 nm."},
+  {id:"q041",topic:"Exterior Lighting",prompt:"In the IES BUG outdoor luminaire rating system, the letter U stands for:",choices:["Uniformity","Uplight","Usage","UV output"],correct:"Uplight",explanation:"BUG stands for Backlight, Uplight, and Glare. Uplight (U) quantifies the flux emitted above the horizontal plane, which is the primary contributor to sky glow. U0 indicates zero uplight."},
+  {id:"q042",topic:"Emergency Lighting",prompt:"Per NFPA 70, emergency lighting must provide a minimum average of how many foot-candles along the egress path?",choices:["0.5 fc average, 0.05 fc minimum","1.0 fc average, 0.1 fc minimum","2.0 fc average, 0.5 fc minimum","5.0 fc average, 1.0 fc minimum"],correct:"1.0 fc average, 0.1 fc minimum",explanation:"NFPA 70 and NFPA 101 require emergency lighting to provide an initial average of at least 1.0 fc along the egress path, with no point falling below 0.1 fc."},
+  {id:"q043",topic:"Color Rendering",prompt:"The Color Rendering Index (CRI) measures:",choices:["How warm or cool a light source appears","The degree of colour shift test samples undergo when illuminated by a source compared to a reference illuminant of the same CCT","The total light output of a source","The efficiency of converting electrical energy to light"],correct:"The degree of colour shift test samples undergo when illuminated by a source compared to a reference illuminant of the same CCT",explanation:"CRI quantifies how faithfully a light source renders a set of standardised test colour samples relative to a reference light source of the same correlated colour temperature. A perfect score is Ra 100."},
+  {id:"q044",topic:"Photometry",prompt:"Photometric calculations for LED luminaires should use which type of photometry?",choices:["Relative photometry","Absolute photometry","Comparative photometry","Relative spectral photometry"],correct:"Absolute photometry",explanation:"LED luminaires must use absolute photometry (IES LM-79), which measures actual lumens output at a stabilised operating temperature — not relative photometry referenced to an external source standard."},
+  {id:"q045",topic:"Emergency Lighting",prompt:"Functional testing of emergency lighting shall be conducted monthly, with a maximum interval of how many weeks between tests?",choices:["4 weeks","5 weeks","6 weeks","8 weeks"],correct:"5 weeks",explanation:"NFPA 101 requires monthly functional tests with a minimum spacing of 3 weeks and a maximum of 5 weeks between tests, unless the local authority having jurisdiction approves otherwise."},
+  {id:"q046",topic:"LED Technology",prompt:"LED stands for which of the following?",choices:["Lumen-Efficacy Device","Light Emitting Diode","Low-Energy Downlight","Laser-Enhanced Diffuser"],correct:"Light Emitting Diode",explanation:"LED stands for Light Emitting Diode — a semiconductor device that emits light through electroluminescence when current flows through the P-N junction."},
+  {id:"q047",topic:"Design Standards",prompt:"IES uses three age groups to account for differences in visual capability. These groups are:",choices:["Children, adults, elderly","Under 25, 25–65, over 65","Under 18, 18–50, over 50","Under 30, 30–60, over 60"],correct:"Under 25, 25–65, over 65",explanation:"IES Handbook 10th edition uses three target age groups — under 25, 25–65, and over 65 — to address the wide variation in visual sensitivity and recommend appropriate illuminance adjustments."},
+  {id:"q048",topic:"Product Labelling",prompt:"US DOE Lighting Facts labels for luminaires are required to include which of the following?",choices:["CCT, CRI, and rated life only","Watts, IESNA LM-79-2008 test data, and CRI","Lumens, efficacy, and beam angle","Wattage, input voltage, and power factor"],correct:"Watts, IESNA LM-79-2008 test data, and CRI",explanation:"US DOE Lighting Facts programme requires labels to state wattage, confirm compliance with LM-79-2008 testing, and report CRI — ensuring consumers have comparable, verified performance data."},
+  {id:"q049",topic:"Lamp Life",prompt:"Average rated lamp life is defined as the operating time at which:",choices:["All lamps in a large group have failed","50% of a large group of lamps are still burning","The lamp reaches 70% of its initial lumen output","The lamp first shows visible colour shift"],correct:"50% of a large group of lamps are still burning",explanation:"Average rated life is a statistical value — the elapsed operating time at which exactly half of a large sample of identically tested lamps have failed. Individual lamps may fail earlier or later."},
+  {id:"q050",topic:"Photometry",prompt:"Foot-candles are a unit of:",choices:["Luminous flux","Luminance","Illuminance when area is measured in square feet","Luminous intensity"],correct:"Illuminance when area is measured in square feet",explanation:"Illuminance is the density of luminous flux incident on a surface. When area is in square feet, the unit is foot-candles (fc). When area is in square metres, the unit is lux (lx). 1 fc = 10.76 lux."}
+]
 
 /* ══════════════════════════════════════════
    APP SHELL — sidebar + dashboard
@@ -2390,35 +2430,24 @@ function CertPage({ setRoute, user, completedLessons = new Set(), userSubscripti
 function ExamPage({setRoute, user, userSubscription, isMobile=false}) {
   const [examLoading, setExamLoading] = useState(false)
   const [screen,setScreen] = useState("landing") // landing | start | play | results
-  const [session,setSession] = useState({sessionId:null,currentQuestion:null,total:0,answered:0,answers:[],score:0,streak:0,bestStreak:0})
+  const [session,setSession] = useState({questions:[],idx:0,answers:[],score:0,streak:0,bestStreak:0,startTime:Date.now()})
   const [timeLeft,setTimeLeft] = useState(25)
   const [answered,setAnswered] = useState(null)
   const [chosen,setChosen] = useState(null)
   const [floatPts,setFloatPts] = useState(null)
-  const [isSubmitting,setIsSubmitting] = useState(false)
   const timerRef = useRef(null)
   const deadlineRef = useRef(null)
-  const submittingRef = useRef(false)
 
+  const topicCounts = QUESTIONS.reduce((acc,q)=>{acc[q.topic]=(acc[q.topic]||0)+1;return acc},{})
   const TOPIC_COLORS = {"Light Sources & Lamps":"#A06A38","Photometry & Calculations":"#2F4A3F","Color & Vision":"#C67A38","Energy & Controls":"#B84030","Luminaire Design & Optics":"#2D7A8A","Codes, Standards & Sustainability":"#6B4E8A","Daylighting":"#2D7A8A","Interior Lighting Design":"#4A7A52","Emergency & Exit Lighting":"#C65A3A","Exterior & Outdoor Lighting":"#3A7A5A","Lighting Design Process":"#7E9B86","Human Factors & Health":"#4A6A2F","Technology & Innovation":"#7A4A9A","Commissioning & Maintenance":"#8A4A2F","Electrical & Installation":"#5A5A8A","Sports & Special Applications":"#8A6A3A"}
 
-  async function startSession(count) {
-    setIsSubmitting(true)
-    try {
-      const res = await fetch('/api/exam/start', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({count})
-      })
-      const data = await res.json()
-      if (data.error) { alert('Failed to start exam: '+data.error); return }
-      submittingRef.current = false
-      setSession({sessionId:data.sessionId,currentQuestion:data.question,total:data.total,answered:0,answers:[],score:0,streak:0,bestStreak:0})
-      setScreen("play")
-      setAnswered(null)
-      setChosen(null)
-      startTimer()
-    } catch { alert('Network error. Please try again.') }
-    finally { setIsSubmitting(false) }
+  function startSession(count) {
+    const shuffled = [...QUESTIONS].sort(()=>Math.random()-0.5).slice(0,count)
+    setSession({questions:shuffled,idx:0,answers:[],score:0,streak:0,bestStreak:0,startTime:Date.now()})
+    setScreen("play")
+    setAnswered(null)
+    setChosen(null)
+    startTimer()
   }
 
   function startTimer() {
@@ -2432,42 +2461,58 @@ function ExamPage({setRoute, user, userSubscription, isMobile=false}) {
     },100)
   }
 
-  async function handleAnswer(choice) {
+  function handleAnswer(choice) {
     clearInterval(timerRef.current)
-    if (submittingRef.current) return
-    submittingRef.current = true
-    setIsSubmitting(true)
-    const sLeft = Math.max(0,Math.ceil((deadlineRef.current-Date.now())/1000))
+    if (answered!==null) return
+    const q = session.questions[session.idx]
+    const correct = choice===q.correct
+    const sLeft = Math.ceil((deadlineRef.current-Date.now())/1000)
+    const newStreak = correct ? session.streak+1 : 0
+    const mult = newStreak>=2 ? 1+newStreak*0.1 : 1
+    const pts = correct ? Math.round((100+Math.max(0,sLeft)*10)*mult) : 0
+    const newScore = session.score+pts
+    const newBest = Math.max(session.bestStreak,newStreak)
+    setAnswered({correct,choice,pts,sLeft})
     setChosen(choice)
-    try {
-      const res = await fetch('/api/exam/answer', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({sessionId:session.sessionId,questionId:session.currentQuestion.id,answer:choice})
-      })
-      const data = await res.json()
-      const correct = data.correct
-      const newStreak = correct ? session.streak+1 : 0
-      const mult = newStreak>=2 ? 1+newStreak*0.1 : 1
-      const pts = correct ? Math.round((100+Math.max(0,sLeft)*10)*mult) : 0
-      const newScore = session.score+pts
-      const newBest = Math.max(session.bestStreak,newStreak)
-      setAnswered({correct,correctAnswer:data.correctAnswer,explanation:data.explanation,choice,pts,sLeft,nextQuestion:data.nextQuestion})
-      setSession(s=>({...s,score:newScore,streak:newStreak,bestStreak:newBest,answered:s.answered+1,answers:[...s.answers,{correct,pts,time:25-sLeft,topic:s.currentQuestion.topic}]}))
-      if (pts>0) {setFloatPts("+"+pts);setTimeout(()=>setFloatPts(null),1200)}
-      if (!data.nextQuestion) setScreen("results")
-    } catch { console.error('Answer submission failed') }
-    finally { submittingRef.current=false; setIsSubmitting(false) }
+    setSession(s=>({...s,score:newScore,streak:newStreak,bestStreak:newBest,answers:[...s.answers,{correct,pts,time:25-sLeft}]}))
+    if (pts>0) {setFloatPts("+"+pts);setTimeout(()=>setFloatPts(null),1200)}
   }
 
   function nextQuestion() {
-    if (!answered?.nextQuestion) { setScreen("results"); return }
-    setSession(s=>({...s,currentQuestion:answered.nextQuestion}))
+    const {questions,idx} = session
+    if (idx+1>=questions.length) { setScreen("results"); return }
+    setSession(s=>({...s,idx:s.idx+1}))
     setAnswered(null)
     setChosen(null)
     startTimer()
   }
 
   useEffect(()=>()=>clearInterval(timerRef.current),[])
+
+  useEffect(() => {
+    if (screen !== 'results' || !user?.id) return
+    const { answers, score, questions } = session
+    const correct = answers.filter(a => a.correct).length
+    const topicBreakdown = questions.reduce((acc, q, i) => {
+      if (!acc[q.topic]) acc[q.topic] = { correct: 0, total: 0 }
+      acc[q.topic].total++
+      if (answers[i]?.correct) acc[q.topic].correct++
+      return acc
+    }, {})
+    supabase
+      .from('exam_sessions')
+      .insert({
+        user_id:             user.id,
+        score:               score,
+        questions_attempted: questions.length,
+        correct_count:       correct,
+        topic_breakdown:     topicBreakdown,
+      })
+      .then(({ error }) => {
+        if (error) console.error('Exam save failed:', error)
+        else console.log('✓ Exam saved:', Math.round(correct / questions.length * 100) + '%')
+      })
+  }, [screen])
 
   const timerColor = timeLeft>14?"#7E9B86":timeLeft>7?"#e8a020":C.accent
   const timerPct = (timeLeft/25)*100
@@ -2523,9 +2568,9 @@ function ExamPage({setRoute, user, userSubscription, isMobile=false}) {
   }
 
   if (screen==="play") {
-    const q = session.currentQuestion
-    const qNum = session.answered+1
-    const total = session.total
+    const q = session.questions[session.idx]
+    const qNum = session.idx+1
+    const total = session.questions.length
     return (
       <div style={{padding:"28px 36px 48px"}}>
         <style>{`@keyframes floatUp{0%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-40px)}}`}</style>
@@ -2546,9 +2591,9 @@ function ExamPage({setRoute, user, userSubscription, isMobile=false}) {
 
         {/* Progress rail */}
         <div style={{display:"flex",gap:2,marginBottom:28}}>
-          {Array.from({length:session.total},(_,i)=>{
+          {session.questions.map((_,i)=>{
             const ans = session.answers[i]
-            return <span key={i} style={{flex:1,height:3,borderRadius:2,background:i<session.answers.length?(ans?.correct?C.forest:C.accent):i===session.answered?C.inkMute:C.rule}}/>
+            return <span key={i} style={{flex:1,height:3,borderRadius:2,background:i<session.answers.length?(ans?.correct?C.forest:C.accent):i===session.idx?C.inkMute:C.rule}}/>
           })}
         </div>
 
@@ -2561,37 +2606,33 @@ function ExamPage({setRoute, user, userSubscription, isMobile=false}) {
         {/* Choices */}
         <div style={{display:"grid",gap:10}}>
           {q.choices.map((c,i)=>{
-            const ca = answered?.correctAnswer
             let bg=C.paper,border=`1px solid ${C.rule}`,color=C.ink
             if (answered) {
-              if (c===ca) {bg=C.forestLight;border=`1px solid ${C.forest}`;color=C.forest}
-              else if (c===chosen&&c!==ca) {bg="rgba(198,90,58,0.1)";border=`1px solid ${C.accent}`;color=C.accent}
+              if (c===q.correct) {bg=C.forestLight;border=`1px solid ${C.forest}`;color=C.forest}
+              else if (c===chosen&&c!==q.correct) {bg="rgba(198,90,58,0.1)";border=`1px solid ${C.accent}`;color=C.accent}
             } else if (c===chosen) {bg=C.accentLight;border=`1px solid ${C.accent}`}
             return (
-              <button key={i} onClick={()=>!answered&&!isSubmitting&&handleAnswer(c)} disabled={!!answered||isSubmitting}
-                style={{display:"flex",alignItems:"center",gap:14,padding:"14px 18px",background:answered&&c===ca?C.forestLight:answered&&c===chosen&&c!==ca?"rgba(198,90,58,0.08)":bg,border:answered&&c===ca?`1px solid ${C.forest}`:answered&&c===chosen&&c!==ca?`1px solid ${C.accent}`:border,borderRadius:4,cursor:answered||isSubmitting?"default":"pointer",fontFamily:F.display,fontWeight:600,fontSize:14,color:answered&&c===ca?C.forest:answered&&c===chosen&&c!==ca?C.accent:color,textAlign:"left",transition:"all 140ms",width:"100%"}}>
+              <button key={i} onClick={()=>!answered&&handleAnswer(c)} disabled={!!answered}
+                style={{display:"flex",alignItems:"center",gap:14,padding:"14px 18px",background:answered&&c===q.correct?C.forestLight:answered&&c===chosen&&c!==q.correct?"rgba(198,90,58,0.08)":bg,border:answered&&c===q.correct?`1px solid ${C.forest}`:answered&&c===chosen&&c!==q.correct?`1px solid ${C.accent}`:border,borderRadius:4,cursor:answered?"default":"pointer",fontFamily:F.display,fontWeight:600,fontSize:14,color:answered&&c===q.correct?C.forest:answered&&c===chosen&&c!==q.correct?C.accent:color,textAlign:"left",transition:"all 140ms",width:"100%"}}>
                 <span style={mono({fontSize:11,color:C.inkMute,flexShrink:0})}>{["A","B","C","D"][i]}</span>
                 {c}
-                {answered&&c===ca&&<span style={{marginLeft:"auto",color:C.forest}}>✓</span>}
-                {answered&&c===chosen&&c!==ca&&<span style={{marginLeft:"auto",color:C.accent}}>✗</span>}
+                {answered&&c===q.correct&&<span style={{marginLeft:"auto",color:C.forest}}>✓</span>}
+                {answered&&c===chosen&&c!==q.correct&&<span style={{marginLeft:"auto",color:C.accent}}>✗</span>}
               </button>
             )
           })}
         </div>
 
         {/* Feedback */}
-        {isSubmitting&&!answered&&(
-          <div style={{marginTop:16,padding:"14px 20px",background:C.paper,border:`1px solid ${C.rule}`,borderRadius:4,fontFamily:F.body,fontSize:13,color:C.inkMute}}>Checking answer…</div>
-        )}
         {answered&&(
           <div style={{marginTop:16,background:answered.correct?C.forestLight:"rgba(198,90,58,0.08)",border:`1px solid ${answered.correct?C.forest:C.accent}`,borderRadius:4,padding:"16px 20px"}}>
             <div style={{fontFamily:F.display,fontWeight:700,fontSize:16,color:answered.correct?C.forest:C.accent,marginBottom:6}}>
               {answered.choice===null?"Time's up ⏱":answered.correct?"Correct ✓":"Not quite ✗"}
               {answered.pts>0&&<span style={mono({fontSize:10,letterSpacing:"0.1em",marginLeft:12,color:C.forest})}>+{answered.pts} pts</span>}
             </div>
-            <p style={{fontFamily:F.body,fontSize:13,lineHeight:1.6,color:C.inkSoft,margin:0}}>{answered.explanation}</p>
+            <p style={{fontFamily:F.body,fontSize:13,lineHeight:1.6,color:C.inkSoft,margin:0}}>{session.questions[session.idx].explanation}</p>
             <button onClick={nextQuestion} style={{marginTop:12,fontFamily:F.display,fontWeight:700,fontSize:13,background:C.ink,color:"#fff",border:"none",borderRadius:99,padding:"9px 20px",cursor:"pointer"}}>
-              {answered.nextQuestion?"Next question →":"See results →"}
+              {session.idx+1>=session.questions.length?"See results →":"Next question →"}
             </button>
           </div>
         )}
@@ -2600,15 +2641,15 @@ function ExamPage({setRoute, user, userSubscription, isMobile=false}) {
   }
 
   if (screen==="results") {
-    const {answers,score,bestStreak} = session
+    const {answers,score,bestStreak,questions} = session
     const correct = answers.filter(a=>a.correct).length
     const accuracy = Math.round(correct/answers.length*100)
     const grade = accuracy>=85?"Exam ready 🎉":accuracy>=70?"On track ✓":accuracy>=50?"Keep studying":"Review fundamentals"
     const gradeColor = accuracy>=85?C.forest:accuracy>=70?C.amber:C.accent
-    const topicResults = answers.reduce((acc,a)=>{
-      if (!acc[a.topic]) acc[a.topic]={correct:0,total:0}
-      acc[a.topic].total++
-      if (a.correct) acc[a.topic].correct++
+    const topicResults = questions.reduce((acc,q,i)=>{
+      if (!acc[q.topic]) acc[q.topic]={correct:0,total:0}
+      acc[q.topic].total++
+      if (answers[i]?.correct) acc[q.topic].correct++
       return acc
     },{})
     return (
@@ -2654,11 +2695,11 @@ function ExamPage({setRoute, user, userSubscription, isMobile=false}) {
         <div style={{margin:"28px 0"}}>
           <div style={mono({fontSize:9,letterSpacing:"0.22em",textTransform:"uppercase",color:C.inkMute,marginBottom:14})}>Session length</div>
           <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
-            {[[10,"Quick · 10 questions"],[20,"Standard · 20 questions"],[TOTAL_QUESTIONS,"Full exam · all "+TOTAL_QUESTIONS]].map(([n,label])=>(
-              <button key={n} onClick={()=>!isSubmitting&&startSession(n)} disabled={isSubmitting} style={{fontFamily:F.display,fontWeight:600,fontSize:14,background:isSubmitting?C.rule:C.ink,color:"#fff",border:"none",borderRadius:4,padding:"14px 24px",cursor:isSubmitting?"not-allowed":"pointer",transition:"background 140ms"}}
-                onMouseEnter={e=>{if(!isSubmitting)e.currentTarget.style.background=C.accent}}
-                onMouseLeave={e=>{if(!isSubmitting)e.currentTarget.style.background=C.ink}}>
-                {isSubmitting?"Loading…":label}
+            {[[10,"Quick · 10 questions"],[20,"Standard · 20 questions"],[129,"Full exam · all 129"]].map(([n,label])=>(
+              <button key={n} onClick={()=>startSession(Math.min(n,QUESTIONS.length))} style={{fontFamily:F.display,fontWeight:600,fontSize:14,background:C.ink,color:"#fff",border:"none",borderRadius:4,padding:"14px 24px",cursor:"pointer",transition:"background 140ms"}}
+                onMouseEnter={e=>e.currentTarget.style.background=C.accent}
+                onMouseLeave={e=>e.currentTarget.style.background=C.ink}>
+                {label}
               </button>
             ))}
           </div>
@@ -2693,9 +2734,9 @@ function ExamPage({setRoute, user, userSubscription, isMobile=false}) {
 
       {/* Topics */}
       <div style={{margin:"32px 0 0",background:C.paper,border:`1px solid ${C.rule}`,borderRadius:4,padding:"24px 28px"}}>
-        <div style={mono({fontSize:9,letterSpacing:"0.22em",textTransform:"uppercase",color:C.inkMute,marginBottom:16})}>Topics covered ({Object.keys(TOPIC_COUNTS).length} topics · {TOTAL_QUESTIONS} questions)</div>
+        <div style={mono({fontSize:9,letterSpacing:"0.22em",textTransform:"uppercase",color:C.inkMute,marginBottom:16})}>Topics covered ({Object.keys(topicCounts).length} topics · {QUESTIONS.length} questions shown)</div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8}}>
-          {Object.entries(TOPIC_COUNTS).map(([topic,count])=>(
+          {Object.entries(topicCounts).map(([topic,count])=>(
             <div key={topic} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",background:C.cream,borderRadius:4}}>
               <span style={{width:8,height:8,borderRadius:"50%",background:TOPIC_COLORS[topic]||C.inkMute,flexShrink:0}}/>
               <span style={{fontFamily:F.body,fontSize:13,color:C.ink,flex:1}}>{topic}</span>
