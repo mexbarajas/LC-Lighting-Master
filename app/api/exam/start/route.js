@@ -48,12 +48,11 @@ export async function POST(req) {
     const count = MODE_COUNTS[mode]
 
     const { data: allQs, error: qErr } = await SERVICE
-      .from('exam_questions')
-      .select('id')
-      .order('id')
+      .rpc('get_question_ids')
+
+    console.log('[start] allQs count:', allQs?.length, 'error:', qErr?.message)
 
     if (qErr) {
-      console.error('[exam/start] questions error:', qErr.message)
       return NextResponse.json({ error: 'DB error: ' + qErr.message }, { status: 500 })
     }
     if (!allQs || allQs.length === 0) {
@@ -89,11 +88,9 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Failed to create session' }, { status: 500 })
     }
 
-    const { data: firstQ, error: firstQErr } = await SERVICE
-      .from('exam_questions')
-      .select('id, topic, prompt, choices')
-      .eq('id', questionIds[0])
-      .single()
+    const { data: firstQArr, error: firstQErr } = await SERVICE
+      .rpc('get_question_by_id', { p_id: questionIds[0] })
+    const firstQ = firstQArr?.[0]
 
     if (firstQErr || !firstQ) {
       return NextResponse.json({ error: 'Failed to load first question' }, { status: 500 })

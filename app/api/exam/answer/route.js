@@ -49,11 +49,9 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Question mismatch' }, { status: 400 })
     }
 
-    const { data: questionRow, error: qErr } = await SERVICE
-      .from('exam_questions')
-      .select('id, correct, explanation, topic')
-      .eq('id', qid)
-      .single()
+    const { data: qArr, error: qErr } = await SERVICE
+      .rpc('get_question_answer', { p_id: qid })
+    const questionRow = qArr?.[0]
 
     if (qErr || !questionRow) {
       return NextResponse.json({ error: 'Question not found' }, { status: 404 })
@@ -106,11 +104,9 @@ export async function POST(req) {
     let nextQuestion = null
     if (!isLast) {
       const nextQId = questionIds[nextIdx]
-      const { data: nextQ } = await SERVICE
-        .from('exam_questions')
-        .select('id, topic, prompt, choices')
-        .eq('id', nextQId)
-        .single()
+      const { data: nextQArr } = await SERVICE
+        .rpc('get_question_by_id', { p_id: nextQId })
+      const nextQ = nextQArr?.[0]
 
       if (nextQ) {
         nextQuestion = {
