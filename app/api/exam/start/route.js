@@ -1,11 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
-import { createServiceClient } from '@/lib/supabase/service'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 
 const MODE_COUNTS = { quick: 20, mid: 50, full: 180 }
 
 export async function POST(req) {
   try {
+    // Auth client — uses cookies for session
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
@@ -13,7 +14,18 @@ export async function POST(req) {
     }
     const userId = user.id
 
-    const SERVICE = createServiceClient()
+    // Service client — created inside handler so env vars are always resolved at runtime
+    const SERVICE = createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY,
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    )
+
+    console.log('[exam/start] env check:', {
+      hasUrl:    !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+      hasKey:    !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      keyPrefix: process.env.SUPABASE_SERVICE_ROLE_KEY?.slice(0, 12),
+    })
 
     const { data: sub } = await SERVICE
       .from('subscriptions')
@@ -48,18 +60,23 @@ export async function POST(req) {
       .select('id')
       .order('id')
 
-    console.log('Questions fetch result:', {
+    console.log('[exam/start] questions query:', {
       count: allQs?.length,
       error: qErr?.message,
-      serviceUrl: process.env.NEXT_PUBLIC_SUPABASE_URL?.slice(0, 30),
-      hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      code:  qErr?.code,
     })
 
     if (qErr) {
-      return NextResponse.json({ error: 'DB error: ' + qErr.message }, { status: 500 })
+      return NextResponse.json(
+        { error: 'DB error: ' + qErr.message },
+        { status: 500 }
+      )
     }
     if (!allQs || allQs.length === 0) {
-      return NextResponse.json({ error: 'Questions unavailable' }, { status: 500 })
+      return NextResponse.json(
+        { error: 'Questions unavailable — table empty or access denied' },
+        { status: 500 }
+      )
     }
 
     // Fisher-Yates shuffle — correct answers never leave the server until answer submitted
@@ -68,8 +85,8 @@ export async function POST(req) {
       const j = Math.floor(Math.random() * (i + 1))
       ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
     }
-    const selected     = shuffled.slice(0, Math.min(count, shuffled.length))
-    const questionIds  = selected.map(q => q.id)
+    const selected    = shuffled.slice(0, Math.min(count, shuffled.length))
+    const questionIds = selected.map(q => q.id)
 
     const { data: session_row, error: sessionErr } = await SERVICE
       .from('exam_sessions')
@@ -87,7 +104,7 @@ export async function POST(req) {
       .single()
 
     if (sessionErr || !session_row) {
-      console.error('exam/start session insert error:', sessionErr)
+      console.error('[exam/start] session insert error:', sessionErr)
       return NextResponse.json({ error: 'Failed to create session' }, { status: 500 })
     }
 
@@ -118,7 +135,7 @@ export async function POST(req) {
     })
 
   } catch (err) {
-    console.error('exam/start error:', err)
+    console.error('[exam/start] error:', err)
     return NextResponse.json({ error: 'Server error' }, { status: 500 })
   }
 }

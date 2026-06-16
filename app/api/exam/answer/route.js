@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { createServiceClient } from '@/lib/supabase/service'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 
 export async function POST(req) {
@@ -20,7 +20,12 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Missing sessionId or qid' }, { status: 400 })
     }
 
-    const SERVICE = createServiceClient()
+    // Service client — created inside handler so env vars are always resolved at runtime
+    const SERVICE = createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY,
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    )
 
     const { data: examSession, error: sessionErr } = await SERVICE
       .from('exam_sessions')
@@ -70,7 +75,7 @@ export async function POST(req) {
     const isLast  = nextIdx >= questionIds.length
 
     // Topic breakdown — accumulate from stored session answers
-    const topic = questionRow.topic
+    const topic     = questionRow.topic
     const breakdown = { ...(examSession.topic_breakdown || {}) }
     if (!breakdown[topic]) breakdown[topic] = { correct: 0, total: 0 }
     breakdown[topic].total++
@@ -97,7 +102,7 @@ export async function POST(req) {
       .eq('id', sessionId)
 
     if (updateErr) {
-      console.error('exam/answer update error:', updateErr)
+      console.error('[exam/answer] update error:', updateErr)
     }
 
     let nextQuestion = null
@@ -122,21 +127,21 @@ export async function POST(req) {
     }
 
     return NextResponse.json({
-      correct:         isCorrect,
-      correctAnswer:   questionRow.correct,
-      explanation:     questionRow.explanation,
+      correct:        isCorrect,
+      correctAnswer:  questionRow.correct,
+      explanation:    questionRow.explanation,
       speedBonus,
       nextQuestion,
-      nextIdx:         isLast ? null : nextIdx,
+      nextIdx:        isLast ? null : nextIdx,
       isLast,
-      finalScore:      isLast ? finalScore : null,
-      correctCount:    isLast ? correctCount : null,
-      totalCount:      questionIds.length,
-      topicBreakdown:  isLast ? breakdown : null,
+      finalScore:     isLast ? finalScore : null,
+      correctCount:   isLast ? correctCount : null,
+      totalCount:     questionIds.length,
+      topicBreakdown: isLast ? breakdown : null,
     })
 
   } catch (err) {
-    console.error('exam/answer error:', err)
+    console.error('[exam/answer] error:', err)
     return NextResponse.json({ error: 'Server error' }, { status: 500 })
   }
 }

@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { createServiceClient } from '@/lib/supabase/service'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 
 export async function POST(req) {
@@ -16,7 +16,12 @@ export async function POST(req) {
     try { body = await req.json() } catch { body = {} }
     const reason = typeof body.reason === 'string' ? body.reason.slice(0, 500) : ''
 
-    const SERVICE = createServiceClient()
+    // Service client — created inside handler so env vars are always resolved at runtime
+    const SERVICE = createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY,
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    )
 
     const { error: insertErr } = await SERVICE
       .from('exam_retake_requests')
@@ -29,7 +34,7 @@ export async function POST(req) {
       })
 
     if (insertErr) {
-      console.error('exam/retake insert error:', insertErr)
+      console.error('[exam/retake] insert error:', insertErr)
       return NextResponse.json({ error: 'Failed to submit request' }, { status: 500 })
     }
 
@@ -57,13 +62,13 @@ export async function POST(req) {
             for this user to reset their attempt count.</p>
           `,
         }),
-      }).catch(e => console.error('Retake email send failed:', e))
+      }).catch(e => console.error('[exam/retake] email send failed:', e))
     }
 
     return NextResponse.json({ submitted: true })
 
   } catch (err) {
-    console.error('exam/retake error:', err)
+    console.error('[exam/retake] error:', err)
     return NextResponse.json({ error: 'Server error' }, { status: 500 })
   }
 }
