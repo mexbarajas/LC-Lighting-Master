@@ -117,6 +117,7 @@ export async function POST(request) {
         current_period_end:    expiry.toISOString(),
         seats:                 plan === 'team' ? seats : 1,
         exam_addon:            plan === 'exam_addon' ? true : false,
+        is_admin:              false,
         updated_at:            new Date().toISOString(),
       }, { onConflict: 'user_id' })
 
