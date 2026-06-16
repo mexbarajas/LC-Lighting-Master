@@ -49,3 +49,6 @@ next-env.d.ts
 *.backup.ts
 *.backup.tsx
 .backups/
+
+# Archived old versions — single source of truth is components/LcApp.jsx
+archives/
