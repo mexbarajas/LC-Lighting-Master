@@ -1,29 +1,7 @@
-// Run this SQL in Supabase SQL Editor before deploying:
-//
-// 1. Create exam_questions table (no public SELECT — service role only):
-// CREATE TABLE public.exam_questions (
-//   id text PRIMARY KEY,
-//   topic text NOT NULL,
-//   prompt text NOT NULL,
-//   choices jsonb NOT NULL,
-//   correct text NOT NULL,
-//   explanation text NOT NULL,
-//   created_at timestamptz DEFAULT now()
-// );
-// ALTER TABLE public.exam_questions ENABLE ROW LEVEL SECURITY;
-//
-// 2. Add session-tracking columns to exam_sessions:
-// ALTER TABLE public.exam_sessions
-//   ADD COLUMN IF NOT EXISTS question_ids jsonb,
-//   ADD COLUMN IF NOT EXISTS current_idx integer DEFAULT 0,
-//   ADD COLUMN IF NOT EXISTS answers_log jsonb DEFAULT '[]'::jsonb,
-//   ADD COLUMN IF NOT EXISTS status text DEFAULT 'completed';
-//
-// 3. Seed exam_questions with:
-//    supabase/exam-questions-seed.sql
-
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
+import { EXAM_QUESTIONS } from '@/lib/exam-data'
+import { signSession } from '@/lib/exam-session'
 
 function examAccess(plan, examAddon) {
   return plan === 't1' || plan === 't3' || (plan === 't2' && !!examAddon)
@@ -37,7 +15,6 @@ export async function POST(request) {
   }
 
   const supabase = createServiceClient()
-
   const { data: sub } = await supabase
     .from('subscriptions')
     .select('plan, exam_addon')
@@ -52,51 +29,24 @@ export async function POST(request) {
   try { body = await request.json() } catch { body = {} }
   const count = Math.max(1, Math.min(200, parseInt(body.count) || 20))
 
-  const { data: allIds, error: qError } = await supabase
-    .from('exam_questions')
-    .select('id')
+  // Shuffle server-side and slice — correct answers never leave the server
+  const shuffled = [...EXAM_QUESTIONS].sort(() => Math.random() - 0.5)
+  const selected = shuffled.slice(0, Math.min(count, EXAM_QUESTIONS.length))
+  const ids = selected.map(q => q.id)
 
-  if (qError || !allIds?.length) {
-    return Response.json({ error: 'Questions unavailable' }, { status: 503 })
-  }
+  // Sign a session token — carries question ordering + position, tamper-proof
+  const token = signSession({
+    uid: user.id,
+    ids,
+    idx: 0,
+    correctCount: 0,
+    exp: Date.now() + 4 * 60 * 60 * 1000,  // 4-hour window
+  })
 
-  const shuffled = [...allIds].sort(() => Math.random() - 0.5)
-  const questionIds = shuffled.slice(0, Math.min(count, allIds.length)).map(q => q.id)
-
-  const { data: firstQ, error: fqError } = await supabase
-    .from('exam_questions')
-    .select('id, topic, prompt, choices')
-    .eq('id', questionIds[0])
-    .single()
-
-  if (fqError || !firstQ) {
-    return Response.json({ error: 'Failed to load first question' }, { status: 500 })
-  }
-
-  const { data: session, error: sError } = await supabase
-    .from('exam_sessions')
-    .insert({
-      user_id:             user.id,
-      question_ids:        questionIds,
-      current_idx:         0,
-      answers_log:         [],
-      status:              'active',
-      score:               0,
-      questions_attempted: questionIds.length,
-      correct_count:       0,
-      topic_breakdown:     {},
-    })
-    .select('id')
-    .single()
-
-  if (sError || !session) {
-    console.error('Failed to create exam session:', sError)
-    return Response.json({ error: 'Failed to create session' }, { status: 500 })
-  }
-
+  const first = selected[0]
   return Response.json({
-    sessionId: session.id,
-    total:     questionIds.length,
-    question:  firstQ,
+    sessionToken: token,
+    total: ids.length,
+    question: { id: first.id, topic: first.topic, prompt: first.prompt, choices: first.choices },
   })
 }

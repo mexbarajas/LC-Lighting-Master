@@ -2390,7 +2390,7 @@ function CertPage({ setRoute, user, completedLessons = new Set(), userSubscripti
 function ExamPage({setRoute, user, userSubscription, isMobile=false}) {
   const [examLoading, setExamLoading] = useState(false)
   const [screen,setScreen] = useState("landing") // landing | start | play | results
-  const [session,setSession] = useState({sessionId:null,currentQuestion:null,total:0,answered:0,answers:[],score:0,streak:0,bestStreak:0})
+  const [session,setSession] = useState({sessionToken:null,currentQuestion:null,total:0,answered:0,answers:[],score:0,streak:0,bestStreak:0})
   const [timeLeft,setTimeLeft] = useState(25)
   const [answered,setAnswered] = useState(null)
   const [chosen,setChosen] = useState(null)
@@ -2412,7 +2412,7 @@ function ExamPage({setRoute, user, userSubscription, isMobile=false}) {
       const data = await res.json()
       if (data.error) { alert('Failed to start exam: '+data.error); return }
       submittingRef.current = false
-      setSession({sessionId:data.sessionId,currentQuestion:data.question,total:data.total,answered:0,answers:[],score:0,streak:0,bestStreak:0})
+      setSession({sessionToken:data.sessionToken,currentQuestion:data.question,total:data.total,answered:0,answers:[],score:0,streak:0,bestStreak:0})
       setScreen("play")
       setAnswered(null)
       setChosen(null)
@@ -2440,9 +2440,24 @@ function ExamPage({setRoute, user, userSubscription, isMobile=false}) {
     const sLeft = Math.max(0,Math.ceil((deadlineRef.current-Date.now())/1000))
     setChosen(choice)
     try {
+      // Build topic breakdown from answers so far + this question (sent on last Q so server can save it)
+      const thisTopic = session.currentQuestion.topic
+      const topicBreakdown = [...session.answers,{topic:thisTopic,correct:false}].reduce((acc,a)=>{
+        if (!acc[a.topic]) acc[a.topic]={correct:0,total:0}
+        acc[a.topic].total++
+        if (a.correct) acc[a.topic].correct++
+        return acc
+      },{})
+      const isLastQ = session.answered+1 >= session.total
       const res = await fetch('/api/exam/answer', {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({sessionId:session.sessionId,questionId:session.currentQuestion.id,answer:choice})
+        body:JSON.stringify({
+          sessionToken:session.sessionToken,
+          questionId:session.currentQuestion.id,
+          answer:choice,
+          score: isLastQ ? session.score : undefined,
+          topicBreakdown: isLastQ ? topicBreakdown : undefined,
+        })
       })
       const data = await res.json()
       const correct = data.correct
@@ -2451,8 +2466,8 @@ function ExamPage({setRoute, user, userSubscription, isMobile=false}) {
       const pts = correct ? Math.round((100+Math.max(0,sLeft)*10)*mult) : 0
       const newScore = session.score+pts
       const newBest = Math.max(session.bestStreak,newStreak)
-      setAnswered({correct,correctAnswer:data.correctAnswer,explanation:data.explanation,choice,pts,sLeft,nextQuestion:data.nextQuestion})
-      setSession(s=>({...s,score:newScore,streak:newStreak,bestStreak:newBest,answered:s.answered+1,answers:[...s.answers,{correct,pts,time:25-sLeft,topic:s.currentQuestion.topic}]}))
+      setAnswered({correct,correctAnswer:data.correctAnswer,explanation:data.explanation,choice,pts,sLeft,nextQuestion:data.nextQuestion,sessionToken:data.sessionToken})
+      setSession(s=>({...s,sessionToken:data.sessionToken,score:newScore,streak:newStreak,bestStreak:newBest,answered:s.answered+1,answers:[...s.answers,{correct,pts,time:25-sLeft,topic:s.currentQuestion.topic}]}))
       if (pts>0) {setFloatPts("+"+pts);setTimeout(()=>setFloatPts(null),1200)}
       if (!data.nextQuestion) setScreen("results")
     } catch { console.error('Answer submission failed') }
@@ -2461,7 +2476,7 @@ function ExamPage({setRoute, user, userSubscription, isMobile=false}) {
 
   function nextQuestion() {
     if (!answered?.nextQuestion) { setScreen("results"); return }
-    setSession(s=>({...s,currentQuestion:answered.nextQuestion}))
+    setSession(s=>({...s,currentQuestion:answered.nextQuestion,sessionToken:answered.sessionToken||s.sessionToken}))
     setAnswered(null)
     setChosen(null)
     startTimer()

@@ -1,5 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
+import { EXAM_BY_ID } from '@/lib/exam-data'
+import { verifySession, signSession } from '@/lib/exam-session'
 
 export async function POST(request) {
   const supabaseAuth = await createClient()
@@ -12,78 +14,61 @@ export async function POST(request) {
   try { body = await request.json() } catch {
     return Response.json({ error: 'Invalid request body' }, { status: 400 })
   }
-  const { sessionId, questionId, answer } = body
-  if (!sessionId || !questionId) {
-    return Response.json({ error: 'Missing sessionId or questionId' }, { status: 400 })
+  const { sessionToken, questionId, answer } = body
+  if (!sessionToken || !questionId) {
+    return Response.json({ error: 'Missing sessionToken or questionId' }, { status: 400 })
   }
 
-  const supabase = createServiceClient()
+  // Verify HMAC token — ensures question order hasn't been tampered with
+  const payload = verifySession(sessionToken)
+  if (!payload) return Response.json({ error: 'Invalid or expired session' }, { status: 401 })
+  if (payload.uid !== user.id) return Response.json({ error: 'Session mismatch' }, { status: 403 })
 
-  const { data: sess, error: sessError } = await supabase
-    .from('exam_sessions')
-    .select('id, question_ids, current_idx, answers_log')
-    .eq('id', sessionId)
-    .eq('user_id', user.id)
-    .eq('status', 'active')
-    .single()
+  const { ids, idx, correctCount } = payload
+  if (idx >= ids.length) return Response.json({ error: 'Session already complete' }, { status: 400 })
+  if (questionId !== ids[idx]) return Response.json({ error: 'Question mismatch' }, { status: 400 })
 
-  if (sessError || !sess) {
-    return Response.json({ error: 'Session not found or already completed' }, { status: 404 })
-  }
-
-  const expectedId = sess.question_ids?.[sess.current_idx]
-  if (questionId !== expectedId) {
-    return Response.json({ error: 'Question mismatch' }, { status: 400 })
-  }
-
-  const { data: q, error: qError } = await supabase
-    .from('exam_questions')
-    .select('correct, explanation, topic')
-    .eq('id', questionId)
-    .single()
-
-  if (qError || !q) {
-    return Response.json({ error: 'Question not found' }, { status: 404 })
-  }
+  const q = EXAM_BY_ID[questionId]
+  if (!q) return Response.json({ error: 'Question not found' }, { status: 404 })
 
   const isCorrect = answer === q.correct
-  const newIdx = sess.current_idx + 1
-  const answersLog = [...(sess.answers_log || []), {
-    questionId, answer, correct: isCorrect, topic: q.topic,
-  }]
-  const correctCount = answersLog.filter(a => a.correct).length
-  const isComplete = newIdx >= sess.question_ids.length
+  const newIdx = idx + 1
+  const newCorrectCount = correctCount + (isCorrect ? 1 : 0)
+  const isComplete = newIdx >= ids.length
 
-  const topicBreakdown = answersLog.reduce((acc, a) => {
-    if (!acc[a.topic]) acc[a.topic] = { correct: 0, total: 0 }
-    acc[a.topic].total++
-    if (a.correct) acc[a.topic].correct++
-    return acc
-  }, {})
-
+  // Issue next token with incremented position
+  let nextToken = null
   let nextQuestion = null
   if (!isComplete) {
-    const nextId = sess.question_ids[newIdx]
-    const { data: nq } = await supabase
-      .from('exam_questions')
-      .select('id, topic, prompt, choices')
-      .eq('id', nextId)
-      .single()
-    nextQuestion = nq || null
+    const nq = EXAM_BY_ID[ids[newIdx]]
+    nextQuestion = { id: nq.id, topic: nq.topic, prompt: nq.prompt, choices: nq.choices }
+    nextToken = signSession({
+      uid: user.id,
+      ids,
+      idx: newIdx,
+      correctCount: newCorrectCount,
+      exp: Date.now() + 4 * 60 * 60 * 1000,
+    })
   }
 
-  await supabase.from('exam_sessions').update({
-    current_idx:     newIdx,
-    answers_log:     answersLog,
-    correct_count:   correctCount,
-    topic_breakdown: topicBreakdown,
-    status:          isComplete ? 'completed' : 'active',
-  }).eq('id', sess.id)
+  // Save completed session to exam_sessions for CertPage
+  if (isComplete) {
+    const supabase = createServiceClient()
+    const { score: clientScore, topicBreakdown } = body
+    await supabase.from('exam_sessions').insert({
+      user_id:             user.id,
+      score:               clientScore || 0,
+      questions_attempted: ids.length,
+      correct_count:       newCorrectCount,
+      topic_breakdown:     topicBreakdown || {},
+    })
+  }
 
   return Response.json({
     correct:       isCorrect,
     correctAnswer: q.correct,
     explanation:   q.explanation,
     nextQuestion,
+    sessionToken:  nextToken,
   })
 }
