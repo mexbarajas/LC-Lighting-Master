@@ -2052,293 +2052,412 @@ function NotesPage({setRoute, user}) {
 
 /* ── CERTIFICATE PAGE ────────────────────────────────────────── */
 function CertPage() {
-  const [authUser, setAuthUser]         = useState(null)
-  const [completedCount, setCompleted]  = useState(0)
-  const [completionDate, setCompDate]   = useState(null)
-  const [loading, setLoading]           = useState(true)
-  const [downloading, setDownloading]   = useState(false)
-  const certRef = useRef(null)
+  const [authUser, setAuthUser]        = useState(null)
+  const [completedCount, setCompleted] = useState(0)
+  const [completionDate, setCompDate]  = useState(null)
+  const [loading, setLoading]          = useState(true)
+  const [downloading, setDownloading]  = useState(false)
+  const [scale, setScale]              = useState(0.5)
+  const wrapperRef = useRef(null)
+  const certRef    = useRef(null)
 
-  const TOTAL_LESSONS = 74
-  const isUnlocked = completedCount >= TOTAL_LESSONS
+  const CERT_W = 1240
+  const CERT_H = 826
+  const TOTAL  = 74
 
+  /* Scale visible cert to fit its container */
+  useEffect(() => {
+    function resize() {
+      if (wrapperRef.current)
+        setScale(wrapperRef.current.offsetWidth / CERT_W)
+    }
+    resize()
+    const t = setTimeout(resize, 60)
+    window.addEventListener('resize', resize)
+    return () => { clearTimeout(t); window.removeEventListener('resize', resize) }
+  }, [])
+
+  /* Fetch user + progress */
   useEffect(() => {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { setLoading(false); return }
       setAuthUser(user)
-
       const { data: prog } = await supabase
-        .from('progress')
-        .select('completed_at')
-        .eq('user_id', user.id)
-
-      if (prog && prog.length > 0) {
+        .from('progress').select('completed_at').eq('user_id', user.id)
+      if (prog?.length > 0) {
         setCompleted(prog.length)
-        const sorted = [...prog].sort(
-          (a, b) => new Date(b.completed_at) - new Date(a.completed_at)
-        )
-        setCompDate(new Date(sorted[0].completed_at))
+        const latest = [...prog].sort(
+          (a,b) => new Date(b.completed_at) - new Date(a.completed_at)
+        )[0]
+        setCompDate(new Date(latest.completed_at))
       }
       setLoading(false)
     }
     load()
   }, [])
 
-  // Derive display name — try full_name, then first+last, then email prefix
-  const userName = (() => {
-    if (!authUser) return 'Your Name'
-    const m = authUser.user_metadata || {}
-    if (m.full_name)  return m.full_name
-    const fl = [m.first_name, m.last_name].filter(Boolean).join(' ')
-    if (fl) return fl
-    return authUser.email?.split('@')[0] || 'Your Name'
-  })()
+  const isUnlocked = completedCount >= TOTAL
+  const pct        = Math.min(100, Math.round((completedCount / TOTAL) * 100))
 
-  const issuedDate = isUnlocked && completionDate
+  /* Name split: first_name/last_name -> full_name split -> email fallback */
+  const m         = authUser?.user_metadata || {}
+  const firstName = m.first_name
+    || m.full_name?.trim().split(' ')[0]
+    || authUser?.email?.split('@')[0]
+    || 'First'
+  const lastName  = m.last_name
+    || m.full_name?.trim().split(' ').slice(1).join(' ')
+    || 'Last'
+
+  const issuedDate = (isUnlocked && completionDate)
     ? completionDate.toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' })
     : new Date().toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' })
 
-  const readinessPct = Math.min(100, Math.round((completedCount / TOTAL_LESSONS) * 100))
-
+  /* Download: capture the hidden full-size certRef */
   async function handleDownload() {
     if (!certRef.current) return
     setDownloading(true)
     try {
-      const { toPng } = await import('html-to-image')
-      const dataUrl = await toPng(certRef.current, {
-        quality: 1,
-        pixelRatio: 3,
+      const html2canvas = (await import('html2canvas')).default
+      const canvas = await html2canvas(certRef.current, {
+        scale:           3,
+        useCORS:         true,
+        allowTaint:      false,
         backgroundColor: '#F5EFE6',
+        logging:         false,
+        width:           CERT_W,
+        height:          CERT_H,
+        scrollX:         0,
+        scrollY:         0,
       })
-      const link = document.createElement('a')
-      link.download = `LC_Certificate_${userName.replace(/\s+/g,'_')}.png`
-      link.href = dataUrl
-      link.click()
+      const a = document.createElement('a')
+      a.download = `LC_Certificate_${firstName}_${lastName}.png`
+      a.href     = canvas.toDataURL('image/png', 1.0)
+      a.click()
     } catch(e) {
-      console.error('Certificate download failed:', e)
+      console.error('Certificate download error:', e)
+      window.alert('Download failed. Use Ctrl+P to print instead.')
     } finally {
       setDownloading(false)
     }
   }
 
-  if (loading) return (
-    <div style={{padding:"60px 36px",textAlign:"center",fontFamily:F.body,color:C.inkMute}}>
-      Loading certificate…
+  /* Shared certificate markup rendered twice:
+     1) visible scaled display (no ref)
+     2) hidden full-size (certRef) for download capture */
+  const certMarkup = (
+    <div style={{
+      position:   'relative',
+      width:       CERT_W,
+      height:      CERT_H,
+      overflow:   'hidden',
+      background: 'linear-gradient(155deg,#F8F3EA 0%,#F2EBE0 55%,#EDE5D8 100%)',
+      fontFamily: "'DM Serif Display',Georgia,serif",
+      boxShadow:  'inset 0 0 0 3px #C9A87C, inset 0 0 0 22px #F5EFE6, inset 0 0 0 24px rgba(201,168,124,0.45)',
+    }}>
+
+      {/* Blueprint background lines */}
+      <svg style={{position:'absolute',inset:0,width:'100%',height:'100%',opacity:0.055}} viewBox={`0 0 ${CERT_W} ${CERT_H}`} preserveAspectRatio="none">
+        {[80,160,240,320,400,480,560,640,720].map(y=>(
+          <line key={`h${y}`} x1="0" y1={y} x2={CERT_W} y2={y} stroke="#2F4A3F" strokeWidth="0.8"/>
+        ))}
+        {[120,240,360,480,600,720,840,960,1080,1200].map(x=>(
+          <line key={`v${x}`} x1={x} y1="0" x2={x} y2={CERT_H} stroke="#2F4A3F" strokeWidth="0.8"/>
+        ))}
+        <rect x="830" y="190" width="220" height="420" fill="none" stroke="#2F4A3F" strokeWidth="1.5"/>
+        <rect x="870" y="250" width="55" height="90" fill="none" stroke="#2F4A3F" strokeWidth="1"/>
+        <rect x="955" y="250" width="55" height="90" fill="none" stroke="#2F4A3F" strokeWidth="1"/>
+        <rect x="905" y="460" width="70" height="150" fill="none" stroke="#2F4A3F" strokeWidth="1"/>
+        <line x1="830" y1="380" x2="1050" y2="380" stroke="#2F4A3F" strokeWidth="0.8"/>
+        {[[100,180],[165,120],[230,155]].map(([x,yEnd],i)=>(
+          <g key={i}>
+            <line x1={x} y1="0" x2={x} y2={yEnd} stroke="#2F4A3F" strokeWidth="0.8"/>
+            <ellipse cx={x} cy={yEnd+18} rx={18-i*2} ry={9-i} fill="none" stroke="#2F4A3F" strokeWidth="1"/>
+          </g>
+        ))}
+      </svg>
+
+      {/* Top-left dark teal corner */}
+      <div style={{position:'absolute',top:0,left:0,width:210,height:170,background:'#1E3A34',clipPath:'polygon(0 0,100% 0,0 100%)'}}/>
+      <div style={{position:'absolute',top:32,left:32,width:60,height:60,borderTop:'1px solid #C9A87C',borderLeft:'1px solid #C9A87C'}}/>
+
+      {/* Bottom-right dark teal corner */}
+      <div style={{position:'absolute',bottom:0,right:0,width:210,height:170,background:'#1E3A34',clipPath:'polygon(100% 0,100% 100%,0 100%)'}}/>
+      <div style={{position:'absolute',bottom:32,right:32,width:60,height:60,borderBottom:'1px solid #C9A87C',borderRight:'1px solid #C9A87C'}}/>
+
+      {/* Photometric polar diagram (top-right) */}
+      <svg style={{position:'absolute',top:20,right:20,opacity:0.75}} viewBox="0 0 220 205" width="220" height="205">
+        <text x="110" y="14" textAnchor="middle" fontSize="9" fill="#8a7a6a" fontFamily="monospace" letterSpacing="1.5">90 deg</text>
+        <text x="175" y="52" textAnchor="start"  fontSize="9" fill="#8a7a6a" fontFamily="monospace">60 deg</text>
+        <text x="196" y="122" textAnchor="start" fontSize="9" fill="#8a7a6a" fontFamily="monospace">30 deg</text>
+        <text x="196" y="190" textAnchor="start" fontSize="9" fill="#8a7a6a" fontFamily="monospace">0 deg</text>
+        <line x1="110" y1="195" x2="110" y2="22"  stroke="#C9A87C" strokeWidth="0.6" opacity="0.5"/>
+        <line x1="110" y1="195" x2="188" y2="98"  stroke="#C9A87C" strokeWidth="0.6" opacity="0.5"/>
+        <line x1="110" y1="195" x2="168" y2="22"  stroke="#C9A87C" strokeWidth="0.6" opacity="0.5"/>
+        {[38,76,114,152].map(r=>(
+          <path key={r} d={`M ${110-r} 195 A ${r} ${r} 0 0 1 ${110+r} 195`} fill="none" stroke="#C9A87C" strokeWidth="0.6" opacity="0.5"/>
+        ))}
+        {['1500','3000','4500','6000'].map((v,i)=>(
+          <text key={v} x="113" y={[160,122,84,46][i]} fontSize="7" fill="#8a7a6a" fontFamily="monospace">{v}</text>
+        ))}
+        <path d="M 110 195 C 86 162,56 130,68 92 C 80 54,110 24,110 24 C 110 24,140 54,152 92 C 164 130,134 162,110 195 Z"
+          fill="rgba(201,168,124,0.1)" stroke="#C9A87C" strokeWidth="2"/>
+      </svg>
+
+      {/* Main content column */}
+      <div style={{
+        position:'absolute',inset:0,
+        display:'flex',flexDirection:'column',alignItems:'center',
+        paddingTop:52,paddingBottom:32,paddingLeft:90,paddingRight:90,
+        boxSizing:'border-box',
+      }}>
+
+        {/* Logo + brand */}
+        <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:16}}>
+          <div style={{
+            width:36,height:36,borderRadius:7,background:'#1E3A34',
+            display:'flex',alignItems:'center',justifyContent:'center',
+            fontFamily:"'Space Grotesk',sans-serif",fontWeight:800,fontSize:11,
+            color:'#C9A87C',letterSpacing:'0.05em',
+          }}>LC</div>
+          <div>
+            <div style={{fontFamily:"'Space Grotesk',sans-serif",fontWeight:700,fontSize:13,
+              color:'#1E3A34',letterSpacing:'0.26em',textTransform:'uppercase'}}>
+              LC - Lighting Master
+            </div>
+            <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:8,color:'#8a7a6a',
+              letterSpacing:'0.24em',textTransform:'uppercase',marginTop:2}}>
+              by Luxart LLC
+            </div>
+          </div>
+        </div>
+
+        {/* CERTIFICATE OF COMPLETION */}
+        <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11,
+          letterSpacing:'0.34em',textTransform:'uppercase',color:'#C9A87C',marginBottom:14}}>
+          Certificate of Completion
+        </div>
+
+        {/* Gold divider */}
+        <div style={{display:'flex',alignItems:'center',gap:14,width:'68%',marginBottom:14}}>
+          <div style={{flex:1,height:'1px',background:'linear-gradient(to left,#C9A87C,transparent)'}}/>
+          <div style={{color:'#C9A87C',fontSize:10,lineHeight:1}}>&#9670;</div>
+          <div style={{flex:1,height:'1px',background:'linear-gradient(to right,#C9A87C,transparent)'}}/>
+        </div>
+
+        {/* Certified Lighting Designer */}
+        <div style={{fontFamily:"'DM Serif Display',Georgia,serif",fontSize:50,fontWeight:400,
+          color:'#1A3230',lineHeight:1.05,textAlign:'center',marginBottom:8}}>
+          Certified Lighting Designer
+        </div>
+
+        {/* EXAM PREPARATION */}
+        <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,
+          letterSpacing:'0.36em',textTransform:'uppercase',color:'#8a7a6a',marginBottom:18}}>
+          Exam Preparation
+        </div>
+
+        {/* AWARDED TO */}
+        <div style={{display:'flex',alignItems:'center',gap:14,width:'50%',marginBottom:14}}>
+          <div style={{flex:1,height:'1px',background:'#C9A87C',opacity:0.55}}/>
+          <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:8,
+            letterSpacing:'0.28em',textTransform:'uppercase',color:'#C9A87C',whiteSpace:'nowrap'}}>
+            Awarded To
+          </div>
+          <div style={{flex:1,height:'1px',background:'#C9A87C',opacity:0.55}}/>
+        </div>
+
+        {/* NAME: First line / Last line */}
+        <div style={{textAlign:'center',lineHeight:0.92,marginBottom:12}}>
+          <div style={{fontFamily:"'DM Serif Display',Georgia,serif",fontSize:76,
+            fontWeight:400,color:'#16120e',display:'block'}}>
+            {firstName}
+          </div>
+          <div style={{fontFamily:"'DM Serif Display',Georgia,serif",fontSize:76,
+            fontWeight:400,color:'#16120e',display:'block'}}>
+            {lastName}
+          </div>
+        </div>
+
+        {/* Diamond */}
+        <div style={{color:'#C9A87C',fontSize:12,marginBottom:16}}>&#9670;</div>
+
+        {/* Body text */}
+        <p style={{fontFamily:"'Inter',sans-serif",fontSize:14,lineHeight:1.75,
+          color:'#5a4a3a',textAlign:'center',maxWidth:540,margin:'0'}}>
+          For completing all{' '}<strong style={{color:'#b85835'}}>74</strong>{' '}lessons across{' '}
+          <strong style={{color:'#b85835'}}>12</strong>{' '}modules and passing the practice exam with a score of{' '}
+          <strong style={{color:'#b85835'}}>100%</strong>,{' '}earning{' '}
+          <strong style={{color:'#b85835'}}>24 CEU</strong>{' '}contact hours of professional development.
+        </p>
+
+        <div style={{flex:1}}/>
+
+        {/* Bottom bar */}
+        <div style={{
+          display:'flex',alignItems:'center',justifyContent:'center',
+          gap:64,width:'72%',
+          borderTop:'1px solid rgba(201,168,124,0.45)',
+          paddingTop:20,
+        }}>
+          <div style={{textAlign:'center'}}>
+            <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:8,
+              letterSpacing:'0.24em',textTransform:'uppercase',color:'#8a7a6a',marginBottom:5}}>Date</div>
+            <div style={{fontFamily:"'Inter',sans-serif",fontWeight:600,fontSize:13,
+              color:'#16120e'}}>{issuedDate}</div>
+          </div>
+          <div style={{
+            width:70,height:70,borderRadius:'50%',
+            background:'#1E3A34',border:'2.5px solid #C9A87C',
+            display:'flex',alignItems:'center',justifyContent:'center',
+            fontFamily:"'Space Grotesk',sans-serif",fontWeight:800,fontSize:20,
+            color:'#C9A87C',letterSpacing:'0.08em',flexShrink:0,
+          }}>LC</div>
+          <div style={{textAlign:'center'}}>
+            <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:8,
+              letterSpacing:'0.24em',textTransform:'uppercase',color:'#8a7a6a',marginBottom:5}}>Provided by</div>
+            <div style={{fontFamily:"'Inter',sans-serif",fontWeight:500,fontSize:12,
+              color:'#1E3A34'}}>lightingmasterlc.com</div>
+          </div>
+        </div>
+      </div>
     </div>
   )
 
-  // ── Certificate card (used both for display and download capture) ──
-  const certCard = (
-    <div
-      ref={certRef}
-      style={{
-        position:'relative',
-        width:'100%',
-        aspectRatio:'3/2',
-        background:'#F5EFE6',
-        borderRadius:4,
-        overflow:'hidden',
-        boxShadow:`inset 0 0 0 12px #F5EFE6, inset 0 0 0 14px #C9A87C`,
-        fontFamily:"'DM Serif Display', Georgia, serif",
-        display:'flex', flexDirection:'column',
-        alignItems:'center', justifyContent:'center',
-        padding:'5% 8%',
-        boxSizing:'border-box',
-        textAlign:'center',
-      }}
-    >
-      {/* Corner decorations — Deep Forest teal triangles */}
-      <div style={{position:'absolute',top:0,left:0,width:'16%',paddingBottom:'10.7%',background:'#2F4A3F',clipPath:'polygon(0 0,100% 0,0 100%)'}}/>
-      <div style={{position:'absolute',bottom:0,right:0,width:'16%',paddingBottom:'10.7%',background:'#2F4A3F',clipPath:'polygon(100% 0,100% 100%,0 100%)'}}/>
-      {/* Corner inner accent lines */}
-      <div style={{position:'absolute',top:14,left:14,width:40,height:40,borderTop:`1px solid #C9A87C`,borderLeft:`1px solid #C9A87C`}}/>
-      <div style={{position:'absolute',bottom:14,right:14,width:40,height:40,borderBottom:`1px solid #C9A87C`,borderRight:`1px solid #C9A87C`}}/>
+  /* Readiness data */
+  const hours = ((completedCount / TOTAL) * 24).toFixed(1)
+  const reqs  = [
+    { label:`Complete all ${TOTAL} lessons`, detail:`${completedCount} of ${TOTAL} lessons done`, done: completedCount >= TOTAL },
+    { label:'Earn 24 CEU contact hours',     detail:`${hours} of 24 hours logged`,               done: completedCount >= TOTAL },
+  ]
 
-      {/* Logo row */}
-      <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:'3%'}}>
-        <div style={{width:28,height:28,borderRadius:6,background:'#2F4A3F',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:F.display,fontWeight:800,fontSize:10,color:'#C9A87C',letterSpacing:'0.04em'}}>LC</div>
-        <div style={{textAlign:'left'}}>
-          <div style={{fontFamily:F.display,fontWeight:700,fontSize:11,color:'#2F4A3F',letterSpacing:'0.18em',textTransform:'uppercase'}}>LC · Lighting Master</div>
-          <div style={{fontFamily:F.mono,fontWeight:400,fontSize:7,color:'#8a7a6a',letterSpacing:'0.22em',textTransform:'uppercase'}}>by Luxart LLC</div>
-        </div>
-      </div>
-
-      {/* CERTIFICATE OF COMPLETION */}
-      <div style={{fontFamily:F.mono,fontSize:'clamp(6px,1.1vw,10px)',letterSpacing:'0.28em',textTransform:'uppercase',color:'#C9A87C',marginBottom:'1.5%'}}>
-        Certificate of Completion
-      </div>
-
-      {/* Divider */}
-      <div style={{display:'flex',alignItems:'center',gap:8,width:'70%',marginBottom:'2%'}}>
-        <div style={{flex:1,height:1,background:'#C9A87C'}}/>
-        <div style={{color:'#C9A87C',fontSize:8}}>◆</div>
-        <div style={{flex:1,height:1,background:'#C9A87C'}}/>
-      </div>
-
-      {/* Main title */}
-      <div style={{fontSize:'clamp(18px,3.2vw,40px)',fontWeight:400,color:'#1A3230',lineHeight:1.1,marginBottom:'0.8%'}}>
-        Certified Lighting Designer
-      </div>
-      <div style={{fontFamily:F.mono,fontSize:'clamp(7px,1vw,10px)',letterSpacing:'0.32em',textTransform:'uppercase',color:'#8a7a6a',marginBottom:'2.5%'}}>
-        Exam Preparation
-      </div>
-
-      {/* AWARDED TO row */}
-      <div style={{display:'flex',alignItems:'center',gap:10,width:'60%',marginBottom:'2%'}}>
-        <div style={{flex:1,height:1,background:'#C9A87C',opacity:0.5}}/>
-        <div style={{fontFamily:F.mono,fontSize:'clamp(6px,0.8vw,8px)',letterSpacing:'0.3em',textTransform:'uppercase',color:'#C9A87C'}}>Awarded to</div>
-        <div style={{flex:1,height:1,background:'#C9A87C',opacity:0.5}}/>
-      </div>
-
-      {/* USER NAME — dynamic */}
-      <div style={{fontSize:'clamp(22px,4.2vw,58px)',fontWeight:400,color:'#16120e',lineHeight:1.05,marginBottom:'1%'}}>
-        {userName}
-      </div>
-
-      {/* Diamond separator */}
-      <div style={{color:'#C9A87C',fontSize:10,marginBottom:'2%'}}>◆</div>
-
-      {/* Body text */}
-      <p style={{fontFamily:F.body,fontSize:'clamp(8px,1.1vw,13px)',lineHeight:1.7,color:'#5a4a3a',maxWidth:'72%',margin:'0 0 4%'}}>
-        For completing all <strong style={{color:'#b85835'}}>74</strong> lessons across <strong style={{color:'#b85835'}}>12</strong> modules and
-        passing the practice exam with a score of <strong style={{color:'#b85835'}}>100%</strong>,
-        earning <strong style={{color:'#b85835'}}>24 CEU</strong> contact hours of professional development.
-      </p>
-
-      {/* Bottom bar */}
-      <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'6%',width:'80%',borderTop:`1px solid rgba(201,168,124,0.4)`,paddingTop:'2.5%'}}>
-        {/* Date */}
-        <div style={{textAlign:'center'}}>
-          <div style={{fontFamily:F.mono,fontSize:'clamp(5px,0.7vw,7px)',letterSpacing:'0.22em',textTransform:'uppercase',color:'#8a7a6a',marginBottom:4}}>Date</div>
-          <div style={{fontFamily:F.body,fontWeight:600,fontSize:'clamp(8px,1vw,12px)',color:'#16120e'}}>{issuedDate}</div>
-        </div>
-
-        {/* LC Seal */}
-        <div style={{
-          width:'clamp(36px,6vw,64px)',
-          height:'clamp(36px,6vw,64px)',
-          borderRadius:'50%',
-          background:'#2F4A3F',
-          border:`2px solid #C9A87C`,
-          display:'flex', alignItems:'center', justifyContent:'center',
-          fontFamily:F.display, fontWeight:800,
-          fontSize:'clamp(10px,1.6vw,18px)',
-          color:'#C9A87C',
-          letterSpacing:'0.06em',
-          flexShrink:0,
-        }}>LC</div>
-
-        {/* Website */}
-        <div style={{textAlign:'center'}}>
-          <div style={{fontFamily:F.mono,fontSize:'clamp(5px,0.7vw,7px)',letterSpacing:'0.22em',textTransform:'uppercase',color:'#8a7a6a',marginBottom:4}}>Provided by</div>
-          <div style={{fontFamily:F.body,fontWeight:500,fontSize:'clamp(7px,0.9vw,11px)',color:'#2F4A3F'}}>lightingmasterlc.com</div>
-        </div>
-      </div>
+  if (loading) return (
+    <div style={{padding:'80px 36px',textAlign:'center',fontFamily:"'Inter',sans-serif",color:'#8a7a6a'}}>
+      Loading...
     </div>
   )
 
   return (
-    <div style={{padding:"0 36px 48px"}}>
-      <PageHead eyebrow="My progress · Course completion" title="Your" em="certificate."/>
+    <div style={{padding:'0 36px 48px'}}>
+      <PageHead eyebrow="My progress - Course completion" title="Your" em="certificate."/>
 
-      <section style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:40,margin:"32px 0 0",alignItems:"start"}}>
+      <section style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:40,margin:'32px 0 0',alignItems:'start'}}>
 
-        {/* Certificate + Download */}
+        {/* LEFT: visible scaled cert + download */}
         <div>
-          <div style={{position:'relative'}}>
-            {certCard}
+          <div ref={wrapperRef} style={{position:'relative',width:'100%',borderRadius:4,overflow:'hidden'}}>
+            {/* Aspect-ratio spacer */}
+            <div style={{paddingBottom:`${(CERT_H/CERT_W)*100}%`,position:'relative',overflow:'hidden'}}>
+              <div style={{
+                position:'absolute',top:0,left:0,
+                width:CERT_W,height:CERT_H,
+                transformOrigin:'top left',
+                transform:`scale(${scale})`,
+              }}>
+                {certMarkup}
+              </div>
+            </div>
 
-            {/* Lock overlay — only shown when NOT unlocked */}
+            {/* Lock overlay */}
             {!isUnlocked && (
               <div style={{
-                position:"absolute",inset:0,
-                background:"rgba(248,243,236,0.92)",
-                display:"flex",flexDirection:"column",
-                alignItems:"center",justifyContent:"center",gap:10,
-                backdropFilter:"blur(3px)",
-                borderRadius:4,
+                position:'absolute',inset:0,
+                background:'rgba(248,243,236,0.93)',
+                display:'flex',flexDirection:'column',
+                alignItems:'center',justifyContent:'center',gap:10,
+                backdropFilter:'blur(3px)',
               }}>
-                <div style={{fontSize:28}}>🔒</div>
-                <div style={{fontFamily:F.display,fontWeight:700,fontSize:16,color:C.ink}}>Not unlocked yet</div>
-                <div style={{fontFamily:F.body,fontSize:13,color:C.inkMute,textAlign:"center",maxWidth:240}}>
-                  Complete all {TOTAL_LESSONS} lessons to unlock and download your certificate.
+                <div style={{fontSize:28}}>&#128274;</div>
+                <div style={{fontFamily:"'Space Grotesk',sans-serif",fontWeight:700,fontSize:16,color:'#16120e'}}>
+                  Not unlocked yet
+                </div>
+                <div style={{fontFamily:"'Inter',sans-serif",fontSize:13,color:'#8a7a6a',textAlign:'center',maxWidth:240}}>
+                  Complete all {TOTAL} lessons to unlock and download your certificate.
                 </div>
               </div>
             )}
           </div>
 
-          {/* Download button — only when unlocked */}
           {isUnlocked && (
             <button
               onClick={handleDownload}
               disabled={downloading}
               style={{
-                marginTop:16,width:"100%",
-                padding:"13px 0",
-                background: downloading ? C.inkMute : C.forest,
-                color:"#fff",border:"none",borderRadius:4,
-                fontFamily:F.display,fontWeight:700,fontSize:14,
-                letterSpacing:"0.04em",cursor: downloading ? "default" : "pointer",
-                transition:"background 200ms",
+                marginTop:12,width:'100%',padding:'13px 0',
+                background:downloading?'#8a7a6a':'#2a6048',
+                color:'#fff',border:'none',borderRadius:4,
+                fontFamily:"'Space Grotesk',sans-serif",fontWeight:700,fontSize:14,
+                letterSpacing:'0.04em',cursor:downloading?'default':'pointer',
+                transition:'background 200ms',
               }}
             >
-              {downloading ? "Generating PDF…" : "⬇ Download Certificate"}
+              {downloading ? 'Generating...' : 'Download Certificate'}
             </button>
           )}
         </div>
 
-        {/* Readiness panel */}
-        <div style={{background:C.ink,borderRadius:6,padding:"28px 32px",color:"#fff"}}>
-          <div style={mono({fontSize:9,letterSpacing:"0.22em",textTransform:"uppercase",color:C.tan,marginBottom:12})}>Certificate readiness</div>
-          <div style={{fontFamily:F.display,fontWeight:700,fontSize:52,letterSpacing:"-0.03em",lineHeight:1,marginBottom:6}}>
-            {readinessPct}<em style={{fontStyle:"normal",fontSize:24,color:C.tan}}>%</em>
+        {/* RIGHT: readiness panel */}
+        <div style={{background:'#16120e',borderRadius:6,padding:'28px 32px',color:'#fff'}}>
+          <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:9,letterSpacing:'0.22em',
+            textTransform:'uppercase',color:'#c9a87c',marginBottom:12}}>
+            Certificate readiness
           </div>
-          <div style={mono({fontSize:10,letterSpacing:"0.16em",color:"rgba(255,255,255,0.5)",marginBottom:16})}>
-            {completedCount} of {TOTAL_LESSONS} lessons completed
+          <div style={{fontFamily:"'Space Grotesk',sans-serif",fontWeight:700,fontSize:52,
+            letterSpacing:'-0.03em',lineHeight:1,marginBottom:6}}>
+            {pct}<em style={{fontStyle:'normal',fontSize:24,color:'#c9a87c'}}>%</em>
           </div>
-          <div style={{height:4,background:"rgba(255,255,255,0.12)",borderRadius:99,overflow:"hidden",marginBottom:24}}>
-            <div style={{height:"100%",width:`${readinessPct}%`,background:isUnlocked?C.forest:C.accent,borderRadius:99,transition:"width 700ms cubic-bezier(.4,0,.2,1)"}}/>
+          <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,letterSpacing:'0.16em',
+            color:'rgba(255,255,255,0.5)',marginBottom:16}}>
+            {completedCount} of {TOTAL} lessons completed
           </div>
-
-          {[
-            {
-              label:`Complete all ${TOTAL_LESSONS} lessons`,
-              detail:`${completedCount} of ${TOTAL_LESSONS} lessons done`,
-              done: completedCount >= TOTAL_LESSONS,
-            },
-            {
-              label:"Earn 24 CEU contact hours",
-              detail:`${Math.round((completedCount/TOTAL_LESSONS)*24*10)/10} of 24 hours logged`,
-              done: completedCount >= TOTAL_LESSONS,
-            },
-          ].map((r,i)=>(
-            <div key={i} style={{display:"flex",alignItems:"flex-start",gap:12,padding:"10px 0",borderBottom:i<1?`1px solid rgba(255,255,255,0.08)`:"none"}}>
+          <div style={{height:4,background:'rgba(255,255,255,0.12)',borderRadius:99,overflow:'hidden',marginBottom:24}}>
+            <div style={{height:'100%',width:`${pct}%`,
+              background:isUnlocked?'#2a6048':'#b85835',
+              borderRadius:99,transition:'width 700ms cubic-bezier(.4,0,.2,1)'}}/>
+          </div>
+          {reqs.map((r,i)=>(
+            <div key={i} style={{display:'flex',alignItems:'flex-start',gap:12,padding:'10px 0',
+              borderBottom:i===0?'1px solid rgba(255,255,255,0.08)':'none'}}>
               <span style={{
-                width:18,height:18,borderRadius:"50%",flexShrink:0,marginTop:2,
-                border:`1px solid ${r.done?"transparent":"rgba(255,255,255,0.3)"}`,
-                background:r.done?C.forest:"transparent",
-                display:"flex",alignItems:"center",justifyContent:"center",
-                fontSize:9,color:"#fff",
-              }}>{r.done?"✓":""}</span>
+                width:18,height:18,borderRadius:'50%',flexShrink:0,marginTop:2,
+                border:`1px solid ${r.done?'transparent':'rgba(255,255,255,0.3)'}`,
+                background:r.done?'#2a6048':'transparent',
+                display:'flex',alignItems:'center',justifyContent:'center',
+                fontSize:9,color:'#fff',
+              }}>{r.done?'v':''}</span>
               <div>
-                <div style={{fontFamily:F.display,fontWeight:600,fontSize:13,color:r.done?"#fff":"rgba(255,255,255,0.7)",marginBottom:3}}>{r.label}</div>
-                <div style={mono({fontSize:9,letterSpacing:"0.1em",color:"rgba(255,255,255,0.38)"})}>{r.detail}</div>
+                <div style={{fontFamily:"'Space Grotesk',sans-serif",fontWeight:600,fontSize:13,
+                  color:r.done?'#fff':'rgba(255,255,255,0.7)',marginBottom:3}}>{r.label}</div>
+                <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:9,
+                  letterSpacing:'0.1em',color:'rgba(255,255,255,0.38)'}}>{r.detail}</div>
               </div>
             </div>
           ))}
-
           {isUnlocked && (
-            <div style={{marginTop:20,padding:"14px 16px",background:C.forest,borderRadius:4,display:"flex",alignItems:"center",gap:10}}>
-              <span style={{fontSize:18}}>🎓</span>
+            <div style={{marginTop:20,padding:'14px 16px',background:'#2a6048',borderRadius:4,
+              display:'flex',alignItems:'center',gap:10}}>
+              <span style={{fontSize:18}}>&#127891;</span>
               <div>
-                <div style={{fontFamily:F.display,fontWeight:700,fontSize:13,color:"#fff"}}>Certificate unlocked!</div>
-                <div style={{fontFamily:F.body,fontSize:11,color:"rgba(255,255,255,0.7)",marginTop:2}}>Issued {issuedDate}</div>
+                <div style={{fontFamily:"'Space Grotesk',sans-serif",fontWeight:700,fontSize:13,color:'#fff'}}>
+                  Certificate unlocked!
+                </div>
+                <div style={{fontFamily:"'Inter',sans-serif",fontSize:11,
+                  color:'rgba(255,255,255,0.7)',marginTop:2}}>Issued {issuedDate}</div>
               </div>
             </div>
           )}
         </div>
       </section>
+
+      {/* HIDDEN full-size cert for download capture only */}
+      <div style={{position:'fixed',top:0,left:0,
+        transform:'translateX(-200vw)',
+        pointerEvents:'none',zIndex:-1}}>
+        <div ref={certRef}>
+          {certMarkup}
+        </div>
+      </div>
     </div>
   )
 }
