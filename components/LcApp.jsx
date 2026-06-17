@@ -4,6 +4,9 @@ import React, { useState, useEffect, useRef, useCallback } from "react"
 import DOMPurify from 'dompurify'
 import { createClient } from '@/lib/supabase/client'
 import PricingCard from '@/components/PricingCard'
+import { Cormorant_Garamond, Inter as InterGF } from 'next/font/google'
+const cormorant = Cormorant_Garamond({ subsets: ['latin'], weight: ['700'], variable: '--font-cormorant' })
+const interCert = InterGF({ subsets: ['latin'], weight: ['400', '600', '700'], variable: '--font-cert-inter' })
 
 const supabase = createClient()
 
@@ -2070,6 +2073,22 @@ function NotesPage({setRoute, user}) {
 
 
 /* ── CERTIFICATE PAGE ────────────────────────────────────────── */
+async function loadFontBase64(family, weight = 400) {
+  try {
+    const css = await fetch(
+      `https://fonts.googleapis.com/css?family=${encodeURIComponent(family)}:${weight}&subset=latin`,
+      { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; bot)' } }
+    ).then(r => r.text())
+    const url = css.match(/url\(([^)]+\.ttf)\)/)?.[1]
+    if (!url) return null
+    const buf = await fetch(url).then(r => r.arrayBuffer())
+    const bytes = new Uint8Array(buf)
+    let bin = ''
+    for (let i = 0; i < bytes.byteLength; i++) bin += String.fromCharCode(bytes[i])
+    return btoa(bin)
+  } catch { return null }
+}
+
 function CertPage() {
   const [authUser, setAuthUser]        = useState(null)
   const [completedCount, setCompleted] = useState(0)
@@ -2078,17 +2097,14 @@ function CertPage() {
   const [downloading, setDownloading]  = useState(false)
   const [scale, setScale]              = useState(0.5)
   const wrapperRef = useRef(null)
-  const certRef    = useRef(null)
 
   const CERT_W = 1240
   const CERT_H = 826
   const TOTAL  = 74
 
-  /* Scale visible cert to fit its container */
   useEffect(() => {
     function resize() {
-      if (wrapperRef.current)
-        setScale(wrapperRef.current.offsetWidth / CERT_W)
+      if (wrapperRef.current) setScale(wrapperRef.current.offsetWidth / CERT_W)
     }
     resize()
     const t = setTimeout(resize, 60)
@@ -2096,7 +2112,6 @@ function CertPage() {
     return () => { clearTimeout(t); window.removeEventListener('resize', resize) }
   }, [])
 
-  /* Fetch user + progress */
   useEffect(() => {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser()
@@ -2106,9 +2121,7 @@ function CertPage() {
         .from('progress').select('completed_at').eq('user_id', user.id)
       if (prog?.length > 0) {
         setCompleted(prog.length)
-        const latest = [...prog].sort(
-          (a,b) => new Date(b.completed_at) - new Date(a.completed_at)
-        )[0]
+        const latest = [...prog].sort((a,b) => new Date(b.completed_at) - new Date(a.completed_at))[0]
         setCompDate(new Date(latest.completed_at))
       }
       setLoading(false)
@@ -2117,363 +2130,315 @@ function CertPage() {
   }, [])
 
   const isUnlocked = completedCount >= TOTAL
-  const pct        = Math.min(100, Math.round((completedCount / TOTAL) * 100))
-
-  /* Name split: first_name/last_name -> full_name split -> email fallback */
-  const m         = authUser?.user_metadata || {}
-  const firstName = m.first_name
-    || m.full_name?.trim().split(' ')[0]
-    || authUser?.email?.split('@')[0]
-    || 'First'
-  const lastName  = m.last_name
-    || m.full_name?.trim().split(' ').slice(1).join(' ')
-    || 'Last'
-
+  const pct = Math.min(100, Math.round((completedCount / TOTAL) * 100))
+  const m = authUser?.user_metadata || {}
+  const firstName = m.first_name || m.full_name?.trim().split(' ')[0] || authUser?.email?.split('@')[0] || 'First'
+  const lastName  = m.last_name  || m.full_name?.trim().split(' ').slice(1).join(' ') || 'Last'
   const issuedDate = (isUnlocked && completionDate)
     ? completionDate.toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' })
     : new Date().toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' })
 
-  /* Download: capture the hidden full-size certRef */
   async function handleDownload() {
     setDownloading(true)
     try {
-      const params = new URLSearchParams({
-        fn:   firstName,
-        ln:   lastName,
-        date: issuedDate,
+      const [{ jsPDF }, cormorantB64, interRegB64, interSemB64] = await Promise.all([
+        import('jspdf'),
+        loadFontBase64('Cormorant Garamond', 700),
+        loadFontBase64('Inter', 400),
+        loadFontBase64('Inter', 600),
+      ])
+
+      const W = 792, H = 612
+      const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: [W, H] })
+      const CX = W / 2
+
+      if (cormorantB64) { doc.addFileToVFS('Cormorant-Bold.ttf', cormorantB64); doc.addFont('Cormorant-Bold.ttf', 'Cormorant', 'bold') }
+      if (interRegB64)  { doc.addFileToVFS('Inter-Regular.ttf', interRegB64);   doc.addFont('Inter-Regular.ttf', 'Inter', 'normal') }
+      if (interSemB64)  { doc.addFileToVFS('Inter-600.ttf', interSemB64);       doc.addFont('Inter-600.ttf', 'Inter', 'semibold') }
+
+      const SF   = !!cormorantB64
+      const sans  = () => doc.setFont(interRegB64 ? 'Inter' : 'helvetica', 'normal')
+      const sansM = () => doc.setFont(interSemB64 ? 'Inter' : 'helvetica', interSemB64 ? 'semibold' : 'bold')
+      const serif = () => doc.setFont(SF ? 'Cormorant' : 'times', 'bold')
+
+      // Background
+      doc.setFillColor(245, 239, 230)
+      doc.rect(0, 0, W, H, 'F')
+
+      // Blueprint grid
+      doc.setDrawColor(193, 210, 206); doc.setLineWidth(0.22)
+      ;[60,120,180,240,300,360,420,480,540].forEach(y => doc.line(0, y, W, y))
+      ;[80,160,240,320,400,480,560,640,720].forEach(x => doc.line(x, 0, x, H))
+      doc.setLineWidth(0.4)
+      doc.rect(628, 142, 148, 292)
+      doc.rect(652, 184, 35, 58)
+      doc.rect(720, 184, 35, 58)
+      doc.line(628, 288, 776, 288)
+      doc.line(80, 0, 80, 128); doc.ellipse(80, 138, 12, 6)
+      doc.line(128, 0, 128, 88); doc.ellipse(128, 97, 9, 5)
+
+      // Gold borders
+      doc.setDrawColor(201, 168, 124); doc.setLineWidth(1.5)
+      doc.rect(12, 12, W - 24, H - 24)
+      doc.setLineWidth(0.4); doc.rect(18, 18, W - 36, H - 36)
+
+      // Teal L-bar corners
+      doc.setFillColor(30, 58, 52)
+      doc.rect(0, 0, 142, 3, 'F'); doc.rect(0, 0, 3, 112, 'F')
+      doc.rect(W - 142, H - 3, 142, 3, 'F'); doc.rect(W - 3, H - 112, 3, 112, 'F')
+
+      // Gold inner corner accents
+      doc.setDrawColor(201, 168, 124); doc.setLineWidth(0.7)
+      doc.line(26, 26, 66, 26); doc.line(26, 26, 26, 66)
+      doc.line(W - 26, H - 26, W - 66, H - 26); doc.line(W - 26, H - 26, W - 26, H - 66)
+
+      // Polar diagram (top-right, approximated arcs)
+      doc.setDrawColor(201, 168, 124); doc.setLineWidth(0.45)
+      const px = W - 82, py = H - 56
+      doc.line(px, py, px, py - 118)
+      doc.line(px, py, px + 62, py - 51)
+      doc.line(px, py, px - 62, py - 51)
+      ;[27, 54, 81, 108].forEach(r => {
+        for (let i = 0; i < 10; i++) {
+          const a1 = Math.PI - (Math.PI * i / 10)
+          const a2 = Math.PI - (Math.PI * (i + 1) / 10)
+          doc.line(px + r * Math.cos(a1), py + r * Math.sin(a1), px + r * Math.cos(a2), py + r * Math.sin(a2))
+        }
       })
-      const res = await fetch(`/api/cert?${params}`)
-      if (!res.ok) throw new Error(`Server error ${res.status}`)
-      const blob = await res.blob()
-      const url  = URL.createObjectURL(blob)
-      const a    = document.createElement('a')
-      a.href     = url
-      a.download = `LC_Certificate_${firstName}_${lastName}.png`
-      a.click()
-      URL.revokeObjectURL(url)
-    } catch(e) {
-      console.error('Certificate download error:', e)
-      window.alert('Download failed — please try again.')
+
+      // Content
+      let y = 36
+
+      // Logo box
+      doc.setFillColor(30, 58, 52); doc.roundedRect(CX - 92, y, 20, 20, 2, 2, 'F')
+      sans(); doc.setFontSize(7.5); doc.setTextColor(201, 168, 124)
+      doc.text('LC', CX - 82, y + 14, { align: 'center' })
+      sans(); doc.setFontSize(9); doc.setTextColor(30, 58, 52); doc.setCharSpace(2.2)
+      doc.text('LC · LIGHTING MASTER', CX - 68, y + 9)
+      doc.setFontSize(7); doc.setTextColor(138, 122, 106)
+      doc.text('BY LUXART LLC', CX - 68, y + 19)
+      doc.setCharSpace(0); y += 36
+
+      // CERTIFICATE OF COMPLETION
+      sans(); doc.setFontSize(7.5); doc.setTextColor(201, 168, 124); doc.setCharSpace(3)
+      doc.text('CERTIFICATE OF COMPLETION', CX, y, { align: 'center' })
+      doc.setCharSpace(0); y += 13
+
+      // Gold divider with diamond
+      doc.setDrawColor(201, 168, 124); doc.setLineWidth(0.5)
+      doc.line(CX - 188, y + 4, CX - 8, y + 4); doc.line(CX + 8, y + 4, CX + 188, y + 4)
+      sans(); doc.setFontSize(7); doc.setTextColor(201, 168, 124)
+      doc.text('◆', CX, y + 7, { align: 'center' }); y += 14
+
+      // Certified Lighting Designer
+      serif(); doc.setFontSize(38); doc.setTextColor(26, 50, 48)
+      doc.text('Certified Lighting Designer', CX, y, { align: 'center' }); y += 44
+
+      // EXAM PREPARATION
+      sans(); doc.setFontSize(7.5); doc.setTextColor(138, 122, 106); doc.setCharSpace(3.5)
+      doc.text('EXAM PREPARATION', CX, y, { align: 'center' })
+      doc.setCharSpace(0); y += 16
+
+      // AWARDED TO
+      doc.setDrawColor(201, 168, 124); doc.setLineWidth(0.4)
+      doc.line(CX - 142, y + 4, CX - 38, y + 4); doc.line(CX + 38, y + 4, CX + 142, y + 4)
+      sans(); doc.setFontSize(7); doc.setTextColor(201, 168, 124); doc.setCharSpace(2.5)
+      doc.text('AWARDED TO', CX, y + 7, { align: 'center' })
+      doc.setCharSpace(0); y += 18
+
+      // Name
+      serif(); doc.setFontSize(58); doc.setTextColor(22, 18, 14)
+      doc.text(firstName, CX, y, { align: 'center' }); y += 60
+      doc.text(lastName,  CX, y, { align: 'center' }); y += 46
+
+      // Diamond
+      sans(); doc.setFontSize(9); doc.setTextColor(201, 168, 124)
+      doc.text('◆', CX, y, { align: 'center' }); y += 14
+
+      // Body text
+      sans(); doc.setFontSize(9.5); doc.setTextColor(90, 74, 58)
+      const bodyLines = doc.splitTextToSize(
+        'For completing all 74 lessons across 12 modules and passing the practice exam, earning 24 CEU contact hours of professional development.',
+        338
+      )
+      doc.text(bodyLines, CX, y, { align: 'center' })
+
+      // Bottom bar
+      const barY = H - 65
+      doc.setDrawColor(201, 168, 124); doc.setLineWidth(0.5)
+      doc.line(CX - 198, barY, CX + 198, barY)
+
+      sans(); doc.setFontSize(7); doc.setTextColor(138, 122, 106); doc.setCharSpace(2)
+      doc.text('DATE', CX - 118, barY + 12, { align: 'center' }); doc.setCharSpace(0)
+      sansM(); doc.setFontSize(10); doc.setTextColor(22, 18, 14)
+      doc.text(issuedDate, CX - 118, barY + 25, { align: 'center' })
+
+      doc.setFillColor(30, 58, 52); doc.setDrawColor(201, 168, 124); doc.setLineWidth(2)
+      doc.circle(CX, barY + 21, 25, 'FD')
+      sans(); doc.setFontSize(13); doc.setTextColor(201, 168, 124)
+      doc.text('LC', CX, barY + 26, { align: 'center' })
+
+      sans(); doc.setFontSize(7); doc.setTextColor(138, 122, 106); doc.setCharSpace(2)
+      doc.text('PROVIDED BY', CX + 118, barY + 12, { align: 'center' }); doc.setCharSpace(0)
+      doc.setFontSize(10); doc.setTextColor(30, 58, 52)
+      doc.text('lightingmasterlc.com', CX + 118, barY + 25, { align: 'center' })
+
+      doc.save(`LC_Certificate_${firstName}_${lastName}.pdf`)
+    } catch (e) {
+      console.error('[cert]', e)
+      alert('Download failed — please try again.')
     } finally {
       setDownloading(false)
     }
   }
 
-  /* Shared certificate markup rendered twice:
-     1) visible scaled display (no ref)
-     2) hidden full-size (certRef) for download capture */
-  const certMarkup = (
-    <div style={{
-      position:   'relative',
-      width:       CERT_W,
-      height:      CERT_H,
-      overflow:   'hidden',
-      background: 'linear-gradient(155deg,#F8F3EA 0%,#F2EBE0 55%,#EDE5D8 100%)',
-      fontFamily: "'DM Serif Display',Georgia,serif",
-      boxShadow:  'inset 0 0 0 3px #C9A87C, inset 0 0 0 22px #F5EFE6, inset 0 0 0 24px rgba(201,168,124,0.45)',
-    }}>
-
-      {/* Blueprint background lines */}
-      <svg style={{position:'absolute',inset:0,width:'100%',height:'100%',opacity:0.055}} viewBox={`0 0 ${CERT_W} ${CERT_H}`} preserveAspectRatio="none">
-        {[80,160,240,320,400,480,560,640,720].map(y=>(
-          <line key={`h${y}`} x1="0" y1={y} x2={CERT_W} y2={y} stroke="#2F4A3F" strokeWidth="0.8"/>
-        ))}
-        {[120,240,360,480,600,720,840,960,1080,1200].map(x=>(
-          <line key={`v${x}`} x1={x} y1="0" x2={x} y2={CERT_H} stroke="#2F4A3F" strokeWidth="0.8"/>
-        ))}
-        <rect x="830" y="190" width="220" height="420" fill="none" stroke="#2F4A3F" strokeWidth="1.5"/>
-        <rect x="870" y="250" width="55" height="90" fill="none" stroke="#2F4A3F" strokeWidth="1"/>
-        <rect x="955" y="250" width="55" height="90" fill="none" stroke="#2F4A3F" strokeWidth="1"/>
-        <rect x="905" y="460" width="70" height="150" fill="none" stroke="#2F4A3F" strokeWidth="1"/>
-        <line x1="830" y1="380" x2="1050" y2="380" stroke="#2F4A3F" strokeWidth="0.8"/>
-        {[[100,180],[165,120],[230,155]].map(([x,yEnd],i)=>(
-          <g key={i}>
-            <line x1={x} y1="0" x2={x} y2={yEnd} stroke="#2F4A3F" strokeWidth="0.8"/>
-            <ellipse cx={x} cy={yEnd+18} rx={18-i*2} ry={9-i} fill="none" stroke="#2F4A3F" strokeWidth="1"/>
-          </g>
-        ))}
-      </svg>
-
-      {/* Top-left dark teal corner */}
-      <div style={{position:'absolute',top:0,left:0,width:210,height:170,background:'#1E3A34',clipPath:'polygon(0 0,100% 0,0 100%)'}}/>
-      <div style={{position:'absolute',top:32,left:32,width:60,height:60,borderTop:'1px solid #C9A87C',borderLeft:'1px solid #C9A87C'}}/>
-
-      {/* Bottom-right dark teal corner */}
-      <div style={{position:'absolute',bottom:0,right:0,width:210,height:170,background:'#1E3A34',clipPath:'polygon(100% 0,100% 100%,0 100%)'}}/>
-      <div style={{position:'absolute',bottom:32,right:32,width:60,height:60,borderBottom:'1px solid #C9A87C',borderRight:'1px solid #C9A87C'}}/>
-
-      {/* Photometric polar diagram (top-right) */}
-      <svg style={{position:'absolute',top:20,right:20,opacity:0.75}} viewBox="0 0 220 205" width="220" height="205">
-        <text x="110" y="14" textAnchor="middle" fontSize="9" fill="#8a7a6a" fontFamily="monospace" letterSpacing="1.5">90 deg</text>
-        <text x="175" y="52" textAnchor="start"  fontSize="9" fill="#8a7a6a" fontFamily="monospace">60 deg</text>
-        <text x="196" y="122" textAnchor="start" fontSize="9" fill="#8a7a6a" fontFamily="monospace">30 deg</text>
-        <text x="196" y="190" textAnchor="start" fontSize="9" fill="#8a7a6a" fontFamily="monospace">0 deg</text>
-        <line x1="110" y1="195" x2="110" y2="22"  stroke="#C9A87C" strokeWidth="0.6" opacity="0.5"/>
-        <line x1="110" y1="195" x2="188" y2="98"  stroke="#C9A87C" strokeWidth="0.6" opacity="0.5"/>
-        <line x1="110" y1="195" x2="168" y2="22"  stroke="#C9A87C" strokeWidth="0.6" opacity="0.5"/>
-        {[38,76,114,152].map(r=>(
-          <path key={r} d={`M ${110-r} 195 A ${r} ${r} 0 0 1 ${110+r} 195`} fill="none" stroke="#C9A87C" strokeWidth="0.6" opacity="0.5"/>
-        ))}
-        {['1500','3000','4500','6000'].map((v,i)=>(
-          <text key={v} x="113" y={[160,122,84,46][i]} fontSize="7" fill="#8a7a6a" fontFamily="monospace">{v}</text>
-        ))}
-        <path d="M 110 195 C 86 162,56 130,68 92 C 80 54,110 24,110 24 C 110 24,140 54,152 92 C 164 130,134 162,110 195 Z"
-          fill="rgba(201,168,124,0.1)" stroke="#C9A87C" strokeWidth="2"/>
-      </svg>
-
-      {/* Main content column */}
-      <div style={{
-        position:'absolute',inset:0,
-        display:'flex',flexDirection:'column',alignItems:'center',
-        paddingTop:52,paddingBottom:32,paddingLeft:90,paddingRight:90,
-        boxSizing:'border-box',
-      }}>
-
-        {/* Logo + brand */}
-        <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:16}}>
-          <div style={{
-            width:36,height:36,borderRadius:7,background:'#1E3A34',
-            display:'flex',alignItems:'center',justifyContent:'center',
-            fontFamily:"'Space Grotesk',sans-serif",fontWeight:800,fontSize:11,
-            color:'#C9A87C',letterSpacing:'0.05em',
-          }}>LC</div>
-          <div>
-            <div style={{fontFamily:"'Space Grotesk',sans-serif",fontWeight:700,fontSize:13,
-              color:'#1E3A34',letterSpacing:'0.26em',textTransform:'uppercase'}}>
-              LC - Lighting Master
-            </div>
-            <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:8,color:'#8a7a6a',
-              letterSpacing:'0.24em',textTransform:'uppercase',marginTop:2}}>
-              by Luxart LLC
-            </div>
-          </div>
-        </div>
-
-        {/* CERTIFICATE OF COMPLETION */}
-        <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11,
-          letterSpacing:'0.34em',textTransform:'uppercase',color:'#C9A87C',marginBottom:14}}>
-          Certificate of Completion
-        </div>
-
-        {/* Gold divider */}
-        <div style={{display:'flex',alignItems:'center',gap:14,width:'68%',marginBottom:14}}>
-          <div style={{flex:1,height:'1px',background:'linear-gradient(to left,#C9A87C,transparent)'}}/>
-          <div style={{color:'#C9A87C',fontSize:10,lineHeight:1}}>&#9670;</div>
-          <div style={{flex:1,height:'1px',background:'linear-gradient(to right,#C9A87C,transparent)'}}/>
-        </div>
-
-        {/* Certified Lighting Designer */}
-        <div style={{fontFamily:"'DM Serif Display',Georgia,serif",fontSize:50,fontWeight:400,
-          color:'#1A3230',lineHeight:1.05,textAlign:'center',marginBottom:8}}>
-          Certified Lighting Designer
-        </div>
-
-        {/* EXAM PREPARATION */}
-        <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,
-          letterSpacing:'0.36em',textTransform:'uppercase',color:'#8a7a6a',marginBottom:18}}>
-          Exam Preparation
-        </div>
-
-        {/* AWARDED TO */}
-        <div style={{display:'flex',alignItems:'center',gap:14,width:'50%',marginBottom:14}}>
-          <div style={{flex:1,height:'1px',background:'#C9A87C',opacity:0.55}}/>
-          <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:8,
-            letterSpacing:'0.28em',textTransform:'uppercase',color:'#C9A87C',whiteSpace:'nowrap'}}>
-            Awarded To
-          </div>
-          <div style={{flex:1,height:'1px',background:'#C9A87C',opacity:0.55}}/>
-        </div>
-
-        {/* NAME: First line / Last line */}
-        <div style={{textAlign:'center',lineHeight:0.92,marginBottom:12}}>
-          <div style={{fontFamily:"'DM Serif Display',Georgia,serif",fontSize:76,
-            fontWeight:400,color:'#16120e',display:'block'}}>
-            {firstName}
-          </div>
-          <div style={{fontFamily:"'DM Serif Display',Georgia,serif",fontSize:76,
-            fontWeight:400,color:'#16120e',display:'block'}}>
-            {lastName}
-          </div>
-        </div>
-
-        {/* Diamond */}
-        <div style={{color:'#C9A87C',fontSize:12,marginBottom:16}}>&#9670;</div>
-
-        {/* Body text */}
-        <p style={{fontFamily:"'Inter',sans-serif",fontSize:14,lineHeight:1.75,
-          color:'#5a4a3a',textAlign:'center',maxWidth:540,margin:'0'}}>
-          For completing all{' '}<strong style={{color:'#b85835'}}>74</strong>{' '}lessons across{' '}
-          <strong style={{color:'#b85835'}}>12</strong>{' '}modules and passing the practice exam with a score of{' '}
-          <strong style={{color:'#b85835'}}>100%</strong>,{' '}earning{' '}
-          <strong style={{color:'#b85835'}}>24 CEU</strong>{' '}contact hours of professional development.
-        </p>
-
-        <div style={{flex:1}}/>
-
-        {/* Bottom bar */}
-        <div style={{
-          display:'flex',alignItems:'center',justifyContent:'center',
-          gap:64,width:'72%',
-          borderTop:'1px solid rgba(201,168,124,0.45)',
-          paddingTop:20,
-        }}>
-          <div style={{textAlign:'center'}}>
-            <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:8,
-              letterSpacing:'0.24em',textTransform:'uppercase',color:'#8a7a6a',marginBottom:5}}>Date</div>
-            <div style={{fontFamily:"'Inter',sans-serif",fontWeight:600,fontSize:13,
-              color:'#16120e'}}>{issuedDate}</div>
-          </div>
-          <div style={{
-            width:70,height:70,borderRadius:'50%',
-            background:'#1E3A34',border:'2.5px solid #C9A87C',
-            display:'flex',alignItems:'center',justifyContent:'center',
-            fontFamily:"'Space Grotesk',sans-serif",fontWeight:800,fontSize:20,
-            color:'#C9A87C',letterSpacing:'0.08em',flexShrink:0,
-          }}>LC</div>
-          <div style={{textAlign:'center'}}>
-            <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:8,
-              letterSpacing:'0.24em',textTransform:'uppercase',color:'#8a7a6a',marginBottom:5}}>Provided by</div>
-            <div style={{fontFamily:"'Inter',sans-serif",fontWeight:500,fontSize:12,
-              color:'#1E3A34'}}>lightingmasterlc.com</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-
-  /* Readiness data */
   const hours = ((completedCount / TOTAL) * 24).toFixed(1)
-  const reqs  = [
+  const reqs = [
     { label:`Complete all ${TOTAL} lessons`, detail:`${completedCount} of ${TOTAL} lessons done`, done: completedCount >= TOTAL },
     { label:'Earn 24 CEU contact hours',     detail:`${hours} of 24 hours logged`,               done: completedCount >= TOTAL },
   ]
 
   if (loading) return (
-    <div style={{padding:'80px 36px',textAlign:'center',fontFamily:"'Inter',sans-serif",color:'#8a7a6a'}}>
-      Loading...
+    <div style={{padding:'80px 36px',textAlign:'center',fontFamily:'sans-serif',color:'#8a7a6a'}}>Loading...</div>
+  )
+
+  const certPreview = (
+    <div style={{position:'relative',width:CERT_W,height:CERT_H,overflow:'hidden',background:'linear-gradient(155deg,#F8F3EA 0%,#F2EBE0 55%,#EDE5D8 100%)'}}>
+      <svg style={{position:'absolute',inset:0,width:'100%',height:'100%',opacity:0.055}} viewBox={`0 0 ${CERT_W} ${CERT_H}`} preserveAspectRatio="none">
+        {[80,160,240,320,400,480,560,640,720].map(y=>(<line key={`h${y}`} x1="0" y1={y} x2={CERT_W} y2={y} stroke="#2F4A3F" strokeWidth="0.8"/>))}
+        {[120,240,360,480,600,720,840,960,1080,1200].map(x=>(<line key={`v${x}`} x1={x} y1="0" x2={x} y2={CERT_H} stroke="#2F4A3F" strokeWidth="0.8"/>))}
+        <rect x="830" y="190" width="220" height="420" fill="none" stroke="#2F4A3F" strokeWidth="1.5"/>
+        <rect x="870" y="250" width="55" height="90" fill="none" stroke="#2F4A3F" strokeWidth="1"/>
+        <rect x="955" y="250" width="55" height="90" fill="none" stroke="#2F4A3F" strokeWidth="1"/>
+        <rect x="905" y="460" width="70" height="150" fill="none" stroke="#2F4A3F" strokeWidth="1"/>
+        <line x1="830" y1="380" x2="1050" y2="380" stroke="#2F4A3F" strokeWidth="0.8"/>
+        {[[100,180],[165,120],[230,155]].map(([x,yEnd],i)=>(<g key={i}><line x1={x} y1="0" x2={x} y2={yEnd} stroke="#2F4A3F" strokeWidth="0.8"/><ellipse cx={x} cy={yEnd+18} rx={18-i*2} ry={9-i} fill="none" stroke="#2F4A3F" strokeWidth="1"/></g>))}
+      </svg>
+      <div style={{position:'absolute',inset:14,border:'1.5px solid #C9A87C',pointerEvents:'none'}}/>
+      <div style={{position:'absolute',inset:20,border:'0.5px solid rgba(201,168,124,0.4)',pointerEvents:'none'}}/>
+      <div style={{position:'absolute',top:0,left:0,width:180,height:4,background:'#1E3A34'}}/>
+      <div style={{position:'absolute',top:0,left:0,width:4,height:140,background:'#1E3A34'}}/>
+      <div style={{position:'absolute',top:32,left:32,width:60,height:60,borderTop:'1px solid #C9A87C',borderLeft:'1px solid #C9A87C'}}/>
+      <div style={{position:'absolute',bottom:0,right:0,width:180,height:4,background:'#1E3A34'}}/>
+      <div style={{position:'absolute',bottom:0,right:0,width:4,height:140,background:'#1E3A34'}}/>
+      <div style={{position:'absolute',bottom:32,right:32,width:60,height:60,borderBottom:'1px solid #C9A87C',borderRight:'1px solid #C9A87C'}}/>
+      <svg style={{position:'absolute',top:20,right:20,opacity:0.75}} viewBox="0 0 220 205" width="220" height="205">
+        <text x="110" y="14" textAnchor="middle" fontSize="9" fill="#8a7a6a" fontFamily="monospace" letterSpacing="1.5">90 deg</text>
+        <text x="175" y="52" textAnchor="start" fontSize="9" fill="#8a7a6a" fontFamily="monospace">60 deg</text>
+        <text x="196" y="122" textAnchor="start" fontSize="9" fill="#8a7a6a" fontFamily="monospace">30 deg</text>
+        <text x="196" y="190" textAnchor="start" fontSize="9" fill="#8a7a6a" fontFamily="monospace">0 deg</text>
+        <line x1="110" y1="195" x2="110" y2="22" stroke="#C9A87C" strokeWidth="0.6" opacity="0.5"/>
+        <line x1="110" y1="195" x2="188" y2="98" stroke="#C9A87C" strokeWidth="0.6" opacity="0.5"/>
+        <line x1="110" y1="195" x2="168" y2="22" stroke="#C9A87C" strokeWidth="0.6" opacity="0.5"/>
+        {[38,76,114,152].map(r=>(<path key={r} d={`M ${110-r} 195 A ${r} ${r} 0 0 1 ${110+r} 195`} fill="none" stroke="#C9A87C" strokeWidth="0.6" opacity="0.5"/>))}
+        {['1500','3000','4500','6000'].map((v,i)=>(<text key={v} x="113" y={[160,122,84,46][i]} fontSize="7" fill="#8a7a6a" fontFamily="monospace">{v}</text>))}
+        <path d="M 110 195 C 86 162,56 130,68 92 C 80 54,110 24,110 24 C 110 24,140 54,152 92 C 164 130,134 162,110 195 Z" fill="rgba(201,168,124,0.1)" stroke="#C9A87C" strokeWidth="2"/>
+      </svg>
+      <div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',paddingTop:52,paddingBottom:32,paddingLeft:90,paddingRight:90,boxSizing:'border-box'}}>
+        <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:16}}>
+          <div style={{width:36,height:36,borderRadius:7,background:'#1E3A34',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:11,color:'#C9A87C',letterSpacing:'0.05em',fontFamily:"var(--font-cert-inter,'Inter',sans-serif)"}}>LC</div>
+          <div>
+            <div style={{fontWeight:700,fontSize:13,color:'#1E3A34',letterSpacing:'0.26em',textTransform:'uppercase',fontFamily:"var(--font-cert-inter,'Inter',sans-serif)"}}>LC · Lighting Master</div>
+            <div style={{fontSize:8,color:'#8a7a6a',letterSpacing:'0.24em',textTransform:'uppercase',marginTop:2,fontFamily:'monospace'}}>by Luxart LLC</div>
+          </div>
+        </div>
+        <div style={{fontSize:11,letterSpacing:'0.34em',textTransform:'uppercase',color:'#C9A87C',marginBottom:14,fontFamily:"var(--font-cert-inter,'Inter',sans-serif)"}}>Certificate of Completion</div>
+        <div style={{display:'flex',alignItems:'center',gap:14,width:'68%',marginBottom:14}}>
+          <div style={{flex:1,height:'1px',background:'linear-gradient(to left,#C9A87C,transparent)'}}/>
+          <div style={{color:'#C9A87C',fontSize:10,lineHeight:1}}>&#9670;</div>
+          <div style={{flex:1,height:'1px',background:'linear-gradient(to right,#C9A87C,transparent)'}}/>
+        </div>
+        <div style={{fontFamily:"var(--font-cormorant,'Georgia',serif)",fontSize:50,fontWeight:700,color:'#1A3230',lineHeight:1.05,textAlign:'center',marginBottom:8}}>Certified Lighting Designer</div>
+        <div style={{fontSize:10,letterSpacing:'0.36em',textTransform:'uppercase',color:'#8a7a6a',marginBottom:18,fontFamily:"var(--font-cert-inter,'Inter',sans-serif)"}}>Exam Preparation</div>
+        <div style={{display:'flex',alignItems:'center',gap:14,width:'50%',marginBottom:14}}>
+          <div style={{flex:1,height:'1px',background:'#C9A87C',opacity:0.55}}/>
+          <div style={{fontSize:8,letterSpacing:'0.28em',textTransform:'uppercase',color:'#C9A87C',whiteSpace:'nowrap',fontFamily:"var(--font-cert-inter,'Inter',sans-serif)"}}>Awarded To</div>
+          <div style={{flex:1,height:'1px',background:'#C9A87C',opacity:0.55}}/>
+        </div>
+        <div style={{textAlign:'center',lineHeight:0.92,marginBottom:12}}>
+          <div style={{fontFamily:"var(--font-cormorant,'Georgia',serif)",fontSize:76,fontWeight:700,color:'#16120e'}}>{firstName}</div>
+          <div style={{fontFamily:"var(--font-cormorant,'Georgia',serif)",fontSize:76,fontWeight:700,color:'#16120e'}}>{lastName}</div>
+        </div>
+        <div style={{color:'#C9A87C',fontSize:12,marginBottom:16}}>&#9670;</div>
+        <p style={{fontFamily:"var(--font-cert-inter,'Inter',sans-serif)",fontSize:14,lineHeight:1.75,color:'#5a4a3a',textAlign:'center',maxWidth:540,margin:0}}>
+          For completing all{' '}<strong style={{color:'#b85835'}}>74</strong>{' '}lessons across{' '}<strong style={{color:'#b85835'}}>12</strong>{' '}modules and passing the practice exam, earning{' '}<strong style={{color:'#b85835'}}>24 CEU</strong>{' '}contact hours of professional development.
+        </p>
+        <div style={{flex:1}}/>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:64,width:'72%',borderTop:'1px solid rgba(201,168,124,0.45)',paddingTop:20}}>
+          <div style={{textAlign:'center'}}>
+            <div style={{fontSize:8,letterSpacing:'0.24em',textTransform:'uppercase',color:'#8a7a6a',marginBottom:5,fontFamily:"var(--font-cert-inter,'Inter',sans-serif)"}}>Date</div>
+            <div style={{fontWeight:600,fontSize:13,color:'#16120e',fontFamily:"var(--font-cert-inter,'Inter',sans-serif)"}}>{issuedDate}</div>
+          </div>
+          <div style={{width:70,height:70,borderRadius:'50%',background:'#1E3A34',border:'2.5px solid #C9A87C',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:800,fontSize:20,color:'#C9A87C',flexShrink:0,fontFamily:"var(--font-cert-inter,'Inter',sans-serif)"}}>LC</div>
+          <div style={{textAlign:'center'}}>
+            <div style={{fontSize:8,letterSpacing:'0.24em',textTransform:'uppercase',color:'#8a7a6a',marginBottom:5,fontFamily:"var(--font-cert-inter,'Inter',sans-serif)"}}>Provided by</div>
+            <div style={{fontWeight:500,fontSize:12,color:'#1E3A34',fontFamily:"var(--font-cert-inter,'Inter',sans-serif)"}}>lightingmasterlc.com</div>
+          </div>
+        </div>
+      </div>
     </div>
   )
 
   return (
     <div style={{padding:'0 36px 48px'}}>
       <PageHead eyebrow="My progress - Course completion" title="Your" em="certificate."/>
-
       <section style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:40,margin:'32px 0 0',alignItems:'start'}}>
-
-        {/* LEFT: visible scaled cert + download */}
         <div>
-          <div ref={wrapperRef} style={{position:'relative',width:'100%',borderRadius:4,overflow:'hidden'}}>
-            {/* Aspect-ratio spacer */}
+          <div ref={wrapperRef} className={`${cormorant.variable} ${interCert.variable}`}
+            style={{position:'relative',width:'100%',borderRadius:4,overflow:'hidden'}}>
             <div style={{paddingBottom:`${(CERT_H/CERT_W)*100}%`,position:'relative',overflow:'hidden'}}>
-              <div style={{
-                position:'absolute',top:0,left:0,
-                width:CERT_W,height:CERT_H,
-                transformOrigin:'top left',
-                transform:`scale(${scale})`,
-              }}>
-                {certMarkup}
+              <div style={{position:'absolute',top:0,left:0,width:CERT_W,height:CERT_H,transformOrigin:'top left',transform:`scale(${scale})`}}>
+                {certPreview}
               </div>
             </div>
-
-            {/* Lock overlay */}
             {!isUnlocked && (
-              <div style={{
-                position:'absolute',inset:0,
-                background:'rgba(248,243,236,0.93)',
-                display:'flex',flexDirection:'column',
-                alignItems:'center',justifyContent:'center',gap:10,
-                backdropFilter:'blur(3px)',
-              }}>
+              <div style={{position:'absolute',inset:0,background:'rgba(248,243,236,0.93)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:10,backdropFilter:'blur(3px)'}}>
                 <div style={{fontSize:28}}>&#128274;</div>
-                <div style={{fontFamily:"'Space Grotesk',sans-serif",fontWeight:700,fontSize:16,color:'#16120e'}}>
-                  Not unlocked yet
-                </div>
-                <div style={{fontFamily:"'Inter',sans-serif",fontSize:13,color:'#8a7a6a',textAlign:'center',maxWidth:240}}>
-                  Complete all {TOTAL} lessons to unlock and download your certificate.
-                </div>
+                <div style={{fontWeight:700,fontSize:16,color:'#16120e',fontFamily:'sans-serif'}}>Not unlocked yet</div>
+                <div style={{fontSize:13,color:'#8a7a6a',textAlign:'center',maxWidth:240,fontFamily:'sans-serif'}}>Complete all {TOTAL} lessons to unlock and download your certificate.</div>
               </div>
             )}
           </div>
-
           {isUnlocked && (
-            <button
-              onClick={handleDownload}
-              disabled={downloading}
-              style={{
-                marginTop:12,width:'100%',padding:'13px 0',
-                background:downloading?'#8a7a6a':'#2a6048',
-                color:'#fff',border:'none',borderRadius:4,
-                fontFamily:"'Space Grotesk',sans-serif",fontWeight:700,fontSize:14,
-                letterSpacing:'0.04em',cursor:downloading?'default':'pointer',
-                transition:'background 200ms',
-              }}
-            >
-              {downloading ? 'Generating...' : 'Download Certificate'}
+            <button onClick={handleDownload} disabled={downloading}
+              style={{marginTop:12,width:'100%',padding:'13px 0',background:downloading?'#8a7a6a':'#2a6048',color:'#fff',border:'none',borderRadius:4,fontWeight:700,fontSize:14,letterSpacing:'0.04em',cursor:downloading?'default':'pointer',transition:'background 200ms',fontFamily:'sans-serif'}}>
+              {downloading?'Generating PDF…':'Download Certificate (PDF)'}
             </button>
           )}
         </div>
-
-        {/* RIGHT: readiness panel */}
         <div style={{background:'#16120e',borderRadius:6,padding:'28px 32px',color:'#fff'}}>
-          <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:9,letterSpacing:'0.22em',
-            textTransform:'uppercase',color:'#c9a87c',marginBottom:12}}>
-            Certificate readiness
-          </div>
-          <div style={{fontFamily:"'Space Grotesk',sans-serif",fontWeight:700,fontSize:52,
-            letterSpacing:'-0.03em',lineHeight:1,marginBottom:6}}>
+          <div style={{fontSize:9,letterSpacing:'0.22em',textTransform:'uppercase',color:'#c9a87c',marginBottom:12,fontFamily:'monospace'}}>Certificate readiness</div>
+          <div style={{fontWeight:700,fontSize:52,letterSpacing:'-0.03em',lineHeight:1,marginBottom:6,fontFamily:'sans-serif'}}>
             {pct}<em style={{fontStyle:'normal',fontSize:24,color:'#c9a87c'}}>%</em>
           </div>
-          <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,letterSpacing:'0.16em',
-            color:'rgba(255,255,255,0.5)',marginBottom:16}}>
+          <div style={{fontSize:10,letterSpacing:'0.16em',color:'rgba(255,255,255,0.5)',marginBottom:16,fontFamily:'monospace'}}>
             {completedCount} of {TOTAL} lessons completed
           </div>
           <div style={{height:4,background:'rgba(255,255,255,0.12)',borderRadius:99,overflow:'hidden',marginBottom:24}}>
-            <div style={{height:'100%',width:`${pct}%`,
-              background:isUnlocked?'#2a6048':'#b85835',
-              borderRadius:99,transition:'width 700ms cubic-bezier(.4,0,.2,1)'}}/>
+            <div style={{height:'100%',width:`${pct}%`,background:isUnlocked?'#2a6048':'#b85835',borderRadius:99,transition:'width 700ms cubic-bezier(.4,0,.2,1)'}}/>
           </div>
           {reqs.map((r,i)=>(
-            <div key={i} style={{display:'flex',alignItems:'flex-start',gap:12,padding:'10px 0',
-              borderBottom:i===0?'1px solid rgba(255,255,255,0.08)':'none'}}>
-              <span style={{
-                width:18,height:18,borderRadius:'50%',flexShrink:0,marginTop:2,
-                border:`1px solid ${r.done?'transparent':'rgba(255,255,255,0.3)'}`,
-                background:r.done?'#2a6048':'transparent',
-                display:'flex',alignItems:'center',justifyContent:'center',
-                fontSize:9,color:'#fff',
-              }}>{r.done?'v':''}</span>
+            <div key={i} style={{display:'flex',alignItems:'flex-start',gap:12,padding:'10px 0',borderBottom:i===0?'1px solid rgba(255,255,255,0.08)':'none'}}>
+              <span style={{width:18,height:18,borderRadius:'50%',flexShrink:0,marginTop:2,border:`1px solid ${r.done?'transparent':'rgba(255,255,255,0.3)'}`,background:r.done?'#2a6048':'transparent',display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,color:'#fff'}}>
+                {r.done?'✓':''}
+              </span>
               <div>
-                <div style={{fontFamily:"'Space Grotesk',sans-serif",fontWeight:600,fontSize:13,
-                  color:r.done?'#fff':'rgba(255,255,255,0.7)',marginBottom:3}}>{r.label}</div>
-                <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:9,
-                  letterSpacing:'0.1em',color:'rgba(255,255,255,0.38)'}}>{r.detail}</div>
+                <div style={{fontWeight:600,fontSize:13,color:r.done?'#fff':'rgba(255,255,255,0.7)',marginBottom:3,fontFamily:'sans-serif'}}>{r.label}</div>
+                <div style={{fontSize:9,letterSpacing:'0.1em',color:'rgba(255,255,255,0.38)',fontFamily:'monospace'}}>{r.detail}</div>
               </div>
             </div>
           ))}
           {isUnlocked && (
-            <div style={{marginTop:20,padding:'14px 16px',background:'#2a6048',borderRadius:4,
-              display:'flex',alignItems:'center',gap:10}}>
+            <div style={{marginTop:20,padding:'14px 16px',background:'#2a6048',borderRadius:4,display:'flex',alignItems:'center',gap:10}}>
               <span style={{fontSize:18}}>&#127891;</span>
               <div>
-                <div style={{fontFamily:"'Space Grotesk',sans-serif",fontWeight:700,fontSize:13,color:'#fff'}}>
-                  Certificate unlocked!
-                </div>
-                <div style={{fontFamily:"'Inter',sans-serif",fontSize:11,
-                  color:'rgba(255,255,255,0.7)',marginTop:2}}>Issued {issuedDate}</div>
+                <div style={{fontWeight:700,fontSize:13,color:'#fff',fontFamily:'sans-serif'}}>Certificate unlocked!</div>
+                <div style={{fontSize:11,color:'rgba(255,255,255,0.7)',marginTop:2,fontFamily:'sans-serif'}}>Issued {issuedDate}</div>
               </div>
             </div>
           )}
         </div>
       </section>
-
-      {/* HIDDEN full-size cert for download capture only */}
-      <div style={{position:'fixed',top:0,left:0,
-        transform:'translateX(-200vw)',
-        pointerEvents:'none',zIndex:-1}}>
-        <div ref={certRef}>
-          {certMarkup}
-        </div>
-      </div>
     </div>
   )
 }
