@@ -20,8 +20,8 @@ interface CertificateProps {
 const CERT_BG =
   'https://res.cloudinary.com/dreuglb2j/image/upload/v1781724634/certificate_bx5krp.png'
 
-// Vertical center of the name: 70% down (center 50% + 20%)
-const NAME_Y = 0.70
+// Vertical center of the name: 65% down
+const NAME_Y = 0.65
 // On-screen font size as % of image width (was 5vw → now 2.5vw, 50% smaller)
 const NAME_VW = 2.5
 // Canvas font size as fraction of image width (was 0.05 → now 0.025)

@@ -2099,9 +2099,7 @@ function CertPage() {
   const isUnlocked = completedCount >= TOTAL
   const pct = Math.min(100, Math.round((completedCount / TOTAL) * 100))
   const m = authUser?.user_metadata || {}
-  const firstName  = m.first_name || m.full_name?.trim().split(' ')[0] || authUser?.email?.split('@')[0] || 'First'
-  const lastName   = m.last_name  || m.full_name?.trim().split(' ').slice(1).join(' ') || ''
-  const studentName = [firstName, lastName].filter(Boolean).join(' ')
+  const studentName = m.name || m.full_name || authUser?.email?.split('@')[0] || ''
   const issuedDate = (isUnlocked && completionDate)
     ? completionDate.toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' })
     : new Date().toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' })
