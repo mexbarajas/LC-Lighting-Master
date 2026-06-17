@@ -78,17 +78,17 @@ export async function POST(req) {
       )
     }
 
-    // Validate question matches
+    // Validate client qid matches the session's current question (type-safe string comparison)
     console.log('[answer] qid check:', {
-      from_db:     questionRow.id,
+      currentQId:  currentQId,
       from_client: qid,
-      match:       questionRow.id === qid,
+      match:       String(currentQId) === String(qid),
     })
 
-    if (questionRow.id !== qid) {
+    if (String(currentQId) !== String(qid)) {
       return NextResponse.json({
         error:    'Question mismatch',
-        expected: questionRow.id,
+        expected: currentQId,
         received: qid,
         hint:     'Client may be out of sync with server session',
       }, { status: 400 })
@@ -149,15 +149,20 @@ export async function POST(req) {
         .rpc('get_question_by_id', { p_id: nextQId })
       const nextQ = nextQArr?.[0] || null
       console.log('[answer] next question:', { nextQId, found: !!nextQ, error: nextErr?.message })
-      if (nextQ) {
-        nextQuestion = {
-          qid:     nextQ.id,
-          topic:   nextQ.topic,
-          prompt:  nextQ.prompt,
-          choices: typeof nextQ.choices === 'string'
-            ? JSON.parse(nextQ.choices)
-            : nextQ.choices,
-        }
+      if (!nextQ) {
+        console.error('[answer] failed to fetch next question:', nextQId, nextErr?.message)
+        return NextResponse.json(
+          { error: 'Failed to load next question', nextQId, detail: nextErr?.message },
+          { status: 500 }
+        )
+      }
+      nextQuestion = {
+        qid:     nextQ.id,
+        topic:   nextQ.topic,
+        prompt:  nextQ.prompt,
+        choices: typeof nextQ.choices === 'string'
+          ? JSON.parse(nextQ.choices)
+          : nextQ.choices,
       }
     }
 

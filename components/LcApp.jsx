@@ -2501,6 +2501,10 @@ function ExamPage({setRoute, user, userSubscription, isMobile=false}) {
 
   async function handleAnswer(choice, timedOut = false) {
     if (!sessionId || feedback) return
+    if (!question?.qid) {
+      setError('Question data missing — please refresh and try again')
+      return
+    }
     setTimerActive(false)
     const answer = timedOut ? '' : choice
     setSelected(answer)
@@ -2767,6 +2771,12 @@ function ExamPage({setRoute, user, userSubscription, isMobile=false}) {
               {feedback.speedBonus>0&&<span style={mono({fontSize:10,letterSpacing:'0.1em',marginLeft:12,color:C.forest})}>+{feedback.speedBonus} pts</span>}
             </div>
             <p style={{fontFamily:F.body,fontSize:13,lineHeight:1.6,color:C.inkSoft,margin:0}}>{feedback.explanation}</p>
+          </div>
+        )}
+        {error && !feedback && !loading && (
+          <div style={{marginTop:14,background:'rgba(198,90,58,0.08)',border:`1px solid ${C.accent}`,borderRadius:4,padding:'12px 16px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}>
+            <span style={{fontFamily:F.body,fontSize:13,color:C.accent}}>⚠ {error}</span>
+            <button onClick={()=>setError(null)} style={{fontFamily:F.display,fontWeight:600,fontSize:12,background:'transparent',border:`1px solid ${C.accent}`,borderRadius:4,padding:'4px 10px',cursor:'pointer',color:C.accent,flexShrink:0}}>Dismiss</button>
           </div>
         )}
       </div>
