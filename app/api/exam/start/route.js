@@ -82,10 +82,11 @@ export async function POST(req) {
 
     const orderedQids = questions.map(q => q.qid)
 
-    // Delete any existing active sessions to prevent stale state
+    // Mark any existing active sessions as abandoned
+    // (user chose to start fresh instead of resuming)
     await SERVICE
       .from('exam_sessions')
-      .delete()
+      .update({ status: 'abandoned' })
       .eq('user_id', userId)
       .eq('status', 'active')
 
