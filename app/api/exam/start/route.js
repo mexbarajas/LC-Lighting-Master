@@ -67,15 +67,20 @@ export async function POST(req) {
       ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
     }
     const selected    = shuffled.slice(0, Math.min(count, shuffled.length))
-    const questionIds = selected.map(q => parseInt(q.id, 10))
-    console.log('[start] questionIds stored:', questionIds.slice(0, 3))
+    const questionIds = selected.map(q => Number(q.id))
+    console.log('[start] questionIds:', questionIds.slice(0, 5))
+
+    if (questionIds.some(id => !id || isNaN(id))) {
+      console.error('[start] Invalid question IDs:', questionIds.slice(0, 5))
+      return NextResponse.json({ error: 'Invalid question data' }, { status: 500 })
+    }
 
     const { data: session_row, error: sessionErr } = await SERVICE
       .from('exam_sessions')
       .insert({
         user_id:             userId,
         mode,
-        question_ids:        questionIds,
+        question_ids:        JSON.parse(JSON.stringify(questionIds)),
         answers:             {},
         current_idx:         0,
         started_at:          new Date().toISOString(),
@@ -85,10 +90,22 @@ export async function POST(req) {
       .select('id')
       .single()
 
-    if (sessionErr || !session_row) {
-      console.error('[exam/start] session insert error:', sessionErr)
-      return NextResponse.json({ error: 'Failed to create session' }, { status: 500 })
+    if (sessionErr) {
+      console.error('[start] session insert error:', sessionErr)
+      return NextResponse.json(
+        { error: 'Failed to create session: ' + sessionErr.message },
+        { status: 500 }
+      )
     }
+    console.log('[start] session created:', session_row.id)
+
+    // Verify question_ids stored correctly
+    const { data: verify } = await SERVICE
+      .from('exam_sessions')
+      .select('question_ids')
+      .eq('id', session_row.id)
+      .single()
+    console.log('[start] stored question_ids sample:', verify?.question_ids?.slice(0, 3))
 
     const { data: firstQArr, error: firstQErr } = await SERVICE
       .rpc('get_question_by_id', { p_id: parseInt(questionIds[0], 10) })
