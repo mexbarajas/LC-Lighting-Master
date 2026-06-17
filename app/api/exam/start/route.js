@@ -8,9 +8,7 @@ export async function POST(req) {
   try {
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const userId = user.id
 
     const SERVICE = createSupabaseClient(
@@ -19,19 +17,20 @@ export async function POST(req) {
       { auth: { autoRefreshToken: false, persistSession: false } }
     )
 
+    // Subscription check
     const { data: sub } = await SERVICE
       .from('subscriptions')
       .select('plan, status, exam_addon')
       .eq('user_id', userId)
       .single()
 
-    const hasPlan    = sub && ['t2','t3'].includes(sub.plan) && sub.status === 'active'
-    const hasAddon   = sub && sub.exam_addon === true && sub.status === 'active'
-    const hasT1Addon = sub && sub.plan === 't1' && sub.exam_addon === true && sub.status === 'active'
-    if (!hasPlan && !hasAddon && !hasT1Addon) {
+    const hasPlan  = sub && ['t2', 't3'].includes(sub.plan) && sub.status === 'active'
+    const hasAddon = sub && sub.exam_addon === true && sub.status === 'active'
+    if (!hasPlan && !hasAddon) {
       return NextResponse.json({ error: 'Exam access required' }, { status: 403 })
     }
 
+    // Max attempts check
     const { count: completedCount } = await SERVICE
       .from('exam_sessions')
       .select('id', { count: 'exact', head: true })
@@ -44,23 +43,18 @@ export async function POST(req) {
 
     let body
     try { body = await req.json() } catch { body = {} }
-    const mode  = ['quick','mid','full'].includes(body.mode) ? body.mode : 'full'
+    const mode  = ['quick', 'mid', 'full'].includes(body.mode) ? body.mode : 'full'
     const count = MODE_COUNTS[mode]
 
+    // Get all question IDs
     const { data: allQs, error: qErr } = await SERVICE
       .rpc('get_question_ids')
 
-    console.log('[start] sample IDs from DB:',
-      allQs?.slice(0, 3).map(q => ({ id: q.id, type: typeof q.id })))
-
-    if (qErr) {
-      return NextResponse.json({ error: 'DB error: ' + qErr.message }, { status: 500 })
-    }
-    if (!allQs || allQs.length === 0) {
+    if (qErr || !allQs?.length) {
       return NextResponse.json({ error: 'Questions unavailable' }, { status: 500 })
     }
 
-    // Fisher-Yates shuffle — correct answers never leave the server until answer submitted
+    // Fisher-Yates shuffle
     const shuffled = [...allQs]
     for (let i = shuffled.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1))
@@ -68,71 +62,72 @@ export async function POST(req) {
     }
     const selected    = shuffled.slice(0, Math.min(count, shuffled.length))
     const questionIds = selected.map(q => Number(q.id))
-    console.log('[start] questionIds:', questionIds.slice(0, 5))
 
-    if (questionIds.some(id => !id || isNaN(id))) {
-      console.error('[start] Invalid question IDs:', questionIds.slice(0, 5))
-      return NextResponse.json({ error: 'Invalid question data' }, { status: 500 })
+    if (questionIds.some(id => !Number.isInteger(id) || id <= 0)) {
+      return NextResponse.json({ error: 'Invalid question IDs' }, { status: 500 })
     }
 
-    const { data: session_row, error: sessionErr } = await SERVICE
+    // Delete any existing active sessions to prevent stale state
+    await SERVICE
+      .from('exam_sessions')
+      .delete()
+      .eq('user_id', userId)
+      .eq('status', 'active')
+
+    // Create session
+    const { data: newSession, error: sessErr } = await SERVICE
       .from('exam_sessions')
       .insert({
         user_id:             userId,
         mode,
-        question_ids:        JSON.parse(JSON.stringify(questionIds)),
+        question_ids:        questionIds,
         answers:             {},
         current_idx:         0,
         started_at:          new Date().toISOString(),
         status:              'active',
-        questions_attempted: questionIds.length,
+        questions_attempted: count,
       })
-      .select('id')
+      .select('id, question_ids')
       .single()
 
-    if (sessionErr) {
-      console.error('[start] session insert error:', sessionErr)
+    if (sessErr || !newSession) {
       return NextResponse.json(
-        { error: 'Failed to create session: ' + sessionErr.message },
+        { error: 'Failed to create session: ' + sessErr?.message },
         { status: 500 }
       )
     }
-    console.log('[start] session created:', session_row.id)
 
-    // Verify question_ids stored correctly
-    const { data: verify } = await SERVICE
-      .from('exam_sessions')
-      .select('question_ids')
-      .eq('id', session_row.id)
-      .single()
-    console.log('[start] stored question_ids sample:', verify?.question_ids?.slice(0, 3))
+    const storedIds = newSession.question_ids
+    if (!storedIds?.[0]) {
+      return NextResponse.json({ error: 'Session storage failed' }, { status: 500 })
+    }
 
-    const { data: firstQArr, error: firstQErr } = await SERVICE
-      .rpc('get_question_by_id', { p_id: parseInt(questionIds[0], 10) })
+    // Fetch first question using the verified stored ID
+    const firstId = Number(storedIds[0])
+    const { data: firstQArr } = await SERVICE
+      .rpc('get_question_by_id', { p_id: firstId })
+
     const firstQ = firstQArr?.[0]
-
-    if (firstQErr || !firstQ) {
-      return NextResponse.json({ error: 'Failed to load first question' }, { status: 500 })
+    if (!firstQ) {
+      return NextResponse.json({ error: 'Could not load first question' }, { status: 500 })
     }
 
     return NextResponse.json({
-      sessionId:    session_row.id,
+      sessionId:    newSession.id,
       mode,
-      totalCount:   questionIds.length,
+      totalCount:   count,
       idx:          0,
       attemptsUsed: completedCount || 0,
       question: {
         qid:     firstQ.qid,
         topic:   firstQ.topic,
         prompt:  firstQ.prompt,
-        choices: typeof firstQ.choices === 'string'
-          ? JSON.parse(firstQ.choices)
-          : firstQ.choices,
+        choices: firstQ.choices,
       },
     })
 
   } catch (err) {
     console.error('[exam/start] error:', err)
-    return NextResponse.json({ error: 'Server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Server error: ' + err.message }, { status: 500 })
   }
 }
