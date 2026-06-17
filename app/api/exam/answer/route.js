@@ -7,26 +7,11 @@ export async function POST(req) {
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
+      console.log('[answer] no session:', authError?.message)
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
     const userId = user.id
-
-    let body
-    try { body = await req.json() } catch {
-      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
-    }
-    const { sessionId, qid, answer, timeMs } = body
-
-    console.log('[answer] incoming:', {
-      sessionId,
-      qid,
-      answer: typeof answer === 'string' ? answer.slice(0, 20) : answer,
-      timeMs,
-    })
-
-    if (!sessionId || !qid) {
-      return NextResponse.json({ error: 'Missing sessionId or qid' }, { status: 400 })
-    }
+    console.log('[answer] userId:', userId)
 
     const SERVICE = createSupabaseClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -34,59 +19,88 @@ export async function POST(req) {
       { auth: { autoRefreshToken: false, persistSession: false } }
     )
 
-    const { data: examSession, error: sessionErr } = await SERVICE
+    let body
+    try { body = await req.json() } catch {
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+    }
+    const { sessionId, qid, answer, timeMs } = body
+    console.log('[answer] body:', { sessionId, qid, answer: typeof answer === 'string' ? answer.slice(0, 30) : answer, timeMs })
+
+    // Load exam session
+    const { data: examSession, error: sessErr } = await SERVICE
       .from('exam_sessions')
       .select('*')
       .eq('id', sessionId)
       .eq('user_id', userId)
       .single()
 
-    if (sessionErr || !examSession) {
-      return NextResponse.json({ error: 'Session not found' }, { status: 404 })
+    console.log('[answer] examSession:', {
+      found:        !!examSession,
+      error:        sessErr?.message,
+      status:       examSession?.status,
+      current_idx:  examSession?.current_idx,
+      q_ids_length: examSession?.question_ids?.length,
+    })
+
+    if (!examSession) {
+      return NextResponse.json(
+        { error: 'Session not found', sessErr: sessErr?.message },
+        { status: 404 }
+      )
     }
     if (examSession.status === 'completed') {
       console.log('[answer] session already completed:', sessionId)
-      return NextResponse.json({
-        error: 'Session already completed',
-        sessionId,
-        status: examSession.status,
-      }, { status: 400 })
+      return NextResponse.json({ error: 'Session already completed' }, { status: 400 })
     }
 
     const idx         = examSession.current_idx
     const questionIds = examSession.question_ids
-    if (idx >= questionIds.length) {
-      return NextResponse.json({ error: 'Session already complete' }, { status: 400 })
-    }
-    if (questionIds[idx] !== qid) {
-      console.log('[answer] question mismatch:', {
-        expected: questionIds[idx],
-        received: qid,
-        currentIdx: idx,
-      })
-      return NextResponse.json({
-        error: 'Question mismatch',
-        expected: questionIds[idx],
-        received: qid,
-      }, { status: 400 })
-    }
+    const currentQId  = questionIds[idx]
+    console.log('[answer] idx:', idx, 'currentQId:', currentQId, 'qid sent:', qid)
 
+    // Fetch correct answer via RPC
     const { data: qArr, error: qErr } = await SERVICE
-      .rpc('get_question_answer', { p_id: qid })
+      .rpc('get_question_answer', { p_id: currentQId })
 
-    console.log('[answer] question fetch:', { qid, found: qArr?.length, error: qErr?.message })
+    console.log('[answer] question fetch:', {
+      currentQId,
+      found:       qArr?.length,
+      id_from_db:  qArr?.[0]?.id,
+      error:       qErr?.message,
+    })
 
     const questionRow = qArr?.[0]
     if (!questionRow) {
-      return NextResponse.json({ error: 'Question not found: ' + qid }, { status: 404 })
+      return NextResponse.json(
+        { error: 'Question not found', currentQId, qErr: qErr?.message },
+        { status: 404 }
+      )
     }
 
+    // Validate question matches
+    console.log('[answer] qid check:', {
+      from_db:     questionRow.id,
+      from_client: qid,
+      match:       questionRow.id === qid,
+    })
+
+    if (questionRow.id !== qid) {
+      return NextResponse.json({
+        error:    'Question mismatch',
+        expected: questionRow.id,
+        received: qid,
+        hint:     'Client may be out of sync with server session',
+      }, { status: 400 })
+    }
+
+    // Grade answer
     const isCorrect  = answer === questionRow.correct
     const elapsed    = typeof timeMs === 'number' ? timeMs : 30000
     const speedBonus = isCorrect && elapsed < 30000
       ? Math.round(Math.max(0, (30000 - elapsed) / 30000) * 250)
       : 0
 
+    // Update answers map
     const updatedAnswers = {
       ...(examSession.answers || {}),
       [qid]: { answer, correct: isCorrect, timeMs: elapsed, speedBonus },
@@ -95,25 +109,28 @@ export async function POST(req) {
     const nextIdx = idx + 1
     const isLast  = nextIdx >= questionIds.length
 
-    const topic     = questionRow.topic
-    const breakdown = { ...(examSession.topic_breakdown || {}) }
-    if (!breakdown[topic]) breakdown[topic] = { correct: 0, total: 0 }
-    breakdown[topic].total++
-    if (isCorrect) breakdown[topic].correct++
+    // Topic breakdown
+    const topicBreakdown = { ...(examSession.topic_breakdown || {}) }
+    const topic = questionRow.topic
+    if (!topicBreakdown[topic]) topicBreakdown[topic] = { correct: 0, total: 0 }
+    topicBreakdown[topic].total++
+    if (isCorrect) topicBreakdown[topic].correct++
 
+    // Final score if last question
     let finalScore   = null
-    let correctCount = null
+    let correctCount = 0
     if (isLast) {
-      correctCount = Object.values(updatedAnswers).filter(a => a.correct).length
-      finalScore   = Math.round((correctCount / questionIds.length) * 100)
+      Object.values(updatedAnswers).forEach(a => { if (a.correct) correctCount++ })
+      finalScore = Math.round((correctCount / questionIds.length) * 100)
     }
 
+    // Update session
     const { error: updateErr } = await SERVICE
       .from('exam_sessions')
       .update({
         answers:         updatedAnswers,
         current_idx:     nextIdx,
-        topic_breakdown: breakdown,
+        topic_breakdown: topicBreakdown,
         status:          isLast ? 'completed' : 'active',
         completed_at:    isLast ? new Date().toISOString() : null,
         correct_count:   isLast ? correctCount : null,
@@ -121,20 +138,16 @@ export async function POST(req) {
       })
       .eq('id', sessionId)
 
-    if (updateErr) {
-      console.error('[exam/answer] update error:', updateErr)
-    }
+    console.log('[answer] update result:', { error: updateErr?.message })
 
+    // Fetch next question
     let nextQuestion = null
     if (!isLast) {
       const nextQId = questionIds[nextIdx]
       const { data: nextQArr, error: nextErr } = await SERVICE
         .rpc('get_question_by_id', { p_id: nextQId })
-      const nextQ = nextQArr?.[0]
-      if (!nextQ) {
-        console.error('[answer] next question not found:', nextQId, nextErr?.message)
-      }
-
+      const nextQ = nextQArr?.[0] || null
+      console.log('[answer] next question:', { nextQId, found: !!nextQ, error: nextErr?.message })
       if (nextQ) {
         nextQuestion = {
           qid:     nextQ.id,
@@ -147,6 +160,8 @@ export async function POST(req) {
       }
     }
 
+    console.log('[answer] success, isCorrect:', isCorrect, 'isLast:', isLast)
+
     return NextResponse.json({
       correct:        isCorrect,
       correctAnswer:  questionRow.correct,
@@ -158,11 +173,14 @@ export async function POST(req) {
       finalScore:     isLast ? finalScore : null,
       correctCount:   isLast ? correctCount : null,
       totalCount:     questionIds.length,
-      topicBreakdown: isLast ? breakdown : null,
+      topicBreakdown: isLast ? topicBreakdown : null,
     })
 
   } catch (err) {
-    console.error('[exam/answer] error:', err)
-    return NextResponse.json({ error: 'Server error' }, { status: 500 })
+    console.error('[answer] uncaught error:', err.message, err.stack)
+    return NextResponse.json(
+      { error: 'Server error: ' + err.message },
+      { status: 500 }
+    )
   }
 }
