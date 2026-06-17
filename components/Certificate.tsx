@@ -52,7 +52,8 @@ export default function Certificate({ studentName }: CertificateProps) {
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
       ctx.font = `700 ${img.naturalWidth * NAME_SCALE}px "Cormorant Garamond", Georgia, serif`
-      ctx.fillText(studentName, canvas.width / 2, canvas.height * NAME_Y)
+      const fontPx = img.naturalWidth * NAME_SCALE
+      ctx.fillText(studentName, canvas.width / 2, canvas.height * NAME_Y - fontPx)
 
       const link = document.createElement('a')
       link.download = `LC_Certificate_${studentName.replace(/\s+/g, '_')}.png`
@@ -81,7 +82,7 @@ export default function Certificate({ studentName }: CertificateProps) {
           style={{
             top: `${NAME_Y * 100}%`,
             left: '50%',
-            transform: 'translate(-50%, -50%)',
+            transform: 'translate(-50%, calc(-50% - 1em))',
             whiteSpace: 'nowrap',
             fontFamily: '"Cormorant Garamond", Georgia, serif',
             fontWeight: 700,
