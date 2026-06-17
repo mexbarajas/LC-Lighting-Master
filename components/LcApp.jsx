@@ -2417,7 +2417,7 @@ function ExamPage({ setRoute, user, userSubscription }) {
     <div style={{padding:'60px 36px',maxWidth:520}}>
       <div style={mono({fontSize:9,letterSpacing:'0.18em',textTransform:'uppercase',color:C.accent,marginBottom:12})}>Practice Exam</div>
       <h2 style={{fontFamily:F.display,fontWeight:700,fontSize:28,color:C.ink,margin:'0 0 16px'}}>Unlock the Practice Exam</h2>
-      <p style={{fontFamily:F.body,fontSize:15,color:C.inkMute,lineHeight:1.75,margin:'0 0 28px'}}>180 questions across 18 NCQLP topic areas. Available with Full Course + Exam, or as a $200 add-on.</p>
+      <p style={{fontFamily:F.body,fontSize:15,color:C.inkMute,lineHeight:1.75,margin:'0 0 28px'}}>{TOTAL_QUESTIONS} questions across 18 NCQLP topic areas. Available with Full Course + Exam, or as a $200 add-on.</p>
       <button onClick={async () => {
         const res = await fetch('/api/stripe/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({plan:'exam_addon'})})
         const d = await res.json(); if (d.url) window.location.href = d.url
@@ -2466,7 +2466,7 @@ function ExamPage({ setRoute, user, userSubscription }) {
       <div style={{marginBottom:24}}>
         <div style={mono({fontSize:9,letterSpacing:'0.16em',textTransform:'uppercase',color:C.inkMute,marginBottom:12})}>Exam length</div>
         <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
-          {[{id:'quick',label:'Quick',desc:'20 questions'},{id:'mid',label:'Mid',desc:'50 questions'},{id:'full',label:'Full',desc:'All 180'}].map(m=>(
+          {[{id:'quick',label:'Quick',desc:'20 questions'},{id:'mid',label:'Mid',desc:'50 questions'},{id:'full',label:'Full',desc:`All ${TOTAL_QUESTIONS}`}].map(m=>(
             <button key={m.id} onClick={()=>setMode(m.id)} style={{fontFamily:F.display,fontWeight:mode===m.id?700:500,fontSize:13,background:mode===m.id?C.ink:C.paper,color:mode===m.id?C.cream:C.inkMute,border:`1px solid ${mode===m.id?C.ink:C.rule}`,borderRadius:8,padding:'12px 20px',cursor:'pointer'}}>
               <div>{m.label}</div>
               <div style={{fontFamily:F.mono,fontSize:9,marginTop:3,color:mode===m.id?'rgba(242,230,218,0.6)':C.inkMute}}>{m.desc}</div>
@@ -2476,7 +2476,7 @@ function ExamPage({ setRoute, user, userSubscription }) {
       </div>
       {error && <div style={{color:C.accent,fontFamily:F.mono,fontSize:11,marginBottom:16}}>❌ {error}</div>}
       <button onClick={startSession} disabled={loading} style={{fontFamily:F.display,fontWeight:700,fontSize:15,background:resumeData?'transparent':C.accent,color:resumeData?C.inkMute:'#fff',border:resumeData?`1px solid ${C.rule}`:'none',borderRadius:99,padding:'14px 36px',cursor:'pointer',opacity:loading?0.7:1}}>
-        {loading ? 'Loading questions...' : resumeData ? 'Start a new exam instead' : `Begin ${mode==='quick'?'20':mode==='mid'?'50':'180'}-question exam →`}
+        {loading ? 'Loading questions...' : resumeData ? 'Start a new exam instead' : `Begin ${mode==='quick'?'20':mode==='mid'?'50':String(TOTAL_QUESTIONS)}-question exam →`}
       </button>
     </div>
   )
@@ -4187,7 +4187,7 @@ function Dashboard({ setRoute, completedLessons = new Set(), user, userSubscript
               Put it all to the test — <em style={{ fontStyle: 'normal', color: C.accent }}>NCQLP Practice Exam.</em>
             </h2>
             <p style={{ fontFamily: F.body, fontSize: 14, lineHeight: 1.6, color: 'rgba(248,243,236,0.72)', margin: '0 0 20px', maxWidth: 400 }}>
-              50 timed questions across 13 topics, scored for accuracy and speed.
+              {TOTAL_QUESTIONS} timed questions across 13 topics, scored for accuracy and speed.
             </p>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10, fontFamily: F.display, fontWeight: 700, fontSize: 14, color: C.cream, background: C.accent, borderRadius: 99, padding: '11px 20px' }}>
               Go to the exam →
