@@ -2387,47 +2387,44 @@ function CertPage({ setRoute, user, completedLessons = new Set(), userSubscripti
 
 /* ── EXAM PAGE ───────────────────────────────────────────────── */
 
-function ExamPage({setRoute, user, userSubscription, isMobile=false}) {
-  // Session
-  const [screen, setScreen]           = useState('start')
-  const [mode, setMode]               = useState('full')
-  const [sessionId, setSessionId]     = useState(null)
-  const [totalCount, setTotalCount]   = useState(180)
+function ExamPage({ setRoute, user, userSubscription }) {
+  const supabase = createClient()
+
+  const [screen, setScreen] = useState('start')   // start | exam | results | max_attempts
+  const [mode, setMode] = useState('full')
+  const [sessionId, setSessionId] = useState(null)
   const [attemptsUsed, setAttemptsUsed] = useState(0)
 
-  // Question
-  const [question, setQuestion]             = useState(null)
-  const [idx, setIdx]                       = useState(0)
-  const [timeLeft, setTimeLeft]             = useState(30)
-  const [timerActive, setTimerActive]       = useState(false)
-  const [questionStartMs, setQuestionStartMs] = useState(null)
+  // The full question set, loaded once
+  const [questions, setQuestions] = useState([])
+  const [idx, setIdx] = useState(0)
 
-  // Answer
-  const [selected, setSelected]           = useState(null)
-  const [feedback, setFeedback]           = useState(null)
-  const [correctCount, setCorrectCount]   = useState(0)
-  const [topicBreakdown, setTopicBreakdown] = useState({})
-  const [floatPts, setFloatPts]           = useState(null)
+  // Per-question UI state
+  const [selected, setSelected] = useState(null)
+  const [feedback, setFeedback] = useState(null)
+  const [timeLeft, setTimeLeft] = useState(30)
+  const [timerOn, setTimerOn] = useState(false)
+  const [qStartMs, setQStartMs] = useState(null)
+
+  // Accumulated answers — { qid: { answer, correct, timeMs, speedBonus } }
+  const [answers, setAnswers] = useState({})
 
   // Results
-  const [finalScore, setFinalScore] = useState(null)
+  const [results, setResults] = useState(null)
 
-  // Retake request
-  const [retakeReason, setRetakeReason]       = useState('')
+  // Retake
+  const [retakeReason, setRetakeReason] = useState('')
   const [retakeSubmitted, setRetakeSubmitted] = useState(false)
 
-  // UI
   const [loading, setLoading] = useState(false)
-  const [error, setError]     = useState(null)
+  const [error, setError] = useState(null)
 
-  const TOPIC_COLORS = {"Light Sources & Lamps":"#A06A38","Photometry & Calculations":"#2F4A3F","Color & Vision":"#C67A38","Energy & Controls":"#B84030","Luminaire Design & Optics":"#2D7A8A","Codes, Standards & Sustainability":"#6B4E8A","Daylighting":"#2D7A8A","Interior Lighting Design":"#4A7A52","Emergency & Exit Lighting":"#C65A3A","Exterior & Outdoor Lighting":"#3A7A5A","Lighting Design Process":"#7E9B86","Human Factors & Health":"#4A6A2F","Technology & Innovation":"#7A4A9A","Commissioning & Maintenance":"#8A4A2F","Electrical & Installation":"#5A5A8A","Sports & Special Applications":"#8A6A3A"}
+  const plan = userSubscription?.plan || 'free'
+  const canAccess =
+    (['t2','t3'].includes(plan) && userSubscription?.status === 'active') ||
+    (userSubscription?.exam_addon === true && userSubscription?.status === 'active')
 
-  // Access check — server enforces it; this is just for UI
-  const plan        = userSubscription?.plan || user?.plan || 'free'
-  const examAddon   = userSubscription?.exam_addon || user?.examAddon || false
-  const canAccess   = examAccess(plan, examAddon)
-
-  // Load completed attempt count from server on mount
+  // Load attempt count
   useEffect(() => {
     if (!user?.id) return
     supabase
@@ -2438,32 +2435,35 @@ function ExamPage({setRoute, user, userSubscription, isMobile=false}) {
       .then(({ count }) => setAttemptsUsed(count || 0))
   }, [user])
 
-  // 30-second countdown — auto-submits on timeout
+  const current = questions[idx] || null
+
+  // Timer — keyed on idx so it resets each question
   useEffect(() => {
-    if (!timerActive) return
+    if (!timerOn) return
     setTimeLeft(30)
-    const interval = setInterval(() => {
+    const t = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) {
-          clearInterval(interval)
-          handleAnswer(null, true)
+          clearInterval(t)
+          submitAnswer(null, true)
           return 0
         }
         return prev - 1
       })
     }, 1000)
-    return () => clearInterval(interval)
-  }, [timerActive, question?.qid])
+    return () => clearInterval(t)
+  }, [timerOn, idx])
 
   async function startSession() {
     if (!canAccess) return
+    if (attemptsUsed >= 5) { setScreen('max_attempts'); return }
     setLoading(true)
     setError(null)
     try {
-      const res  = await fetch('/api/exam/start', {
-        method:  'POST',
+      const res = await fetch('/api/exam/start', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ mode }),
+        body: JSON.stringify({ mode }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -2471,18 +2471,15 @@ function ExamPage({setRoute, user, userSubscription, isMobile=false}) {
         throw new Error(data.error || 'Failed to start')
       }
       setSessionId(data.sessionId)
-      setTotalCount(data.totalCount)
-      setAttemptsUsed(data.attemptsUsed || 0)
-      setQuestion(data.question)
+      setQuestions(data.questions)
       setIdx(0)
-      setCorrectCount(0)
+      setAnswers({})
       setSelected(null)
       setFeedback(null)
-      setTopicBreakdown({})
-      setFinalScore(null)
-      setScreen('question')
-      setTimerActive(true)
-      setQuestionStartMs(Date.now())
+      setResults(null)
+      setScreen('exam')
+      setQStartMs(Date.now())
+      setTimerOn(true)
     } catch (e) {
       setError(e.message)
     } finally {
@@ -2490,333 +2487,234 @@ function ExamPage({setRoute, user, userSubscription, isMobile=false}) {
     }
   }
 
-  async function handleAnswer(choice, timedOut = false) {
-    // Hard guard — prevents double-submission from stale timer callbacks
-    if (loading || feedback || !sessionId || !question) return
-
-    setTimerActive(false)
+  async function submitAnswer(choice, timedOut = false) {
+    if (loading || feedback || !current) return
+    setTimerOn(false)
     setLoading(true)
-    setError(null)
-
     const answer = timedOut ? '' : choice
-    const submittedTimeMs = Date.now() - (questionStartMs || Date.now())
+    const timeMs = Date.now() - (qStartMs || Date.now())
     setSelected(answer)
 
     try {
-      const res = await fetch('/api/exam/answer', {
+      const res = await fetch('/api/exam/check', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId, answer, timeMs: submittedTimeMs }),
+        body: JSON.stringify({ qid: current.qid, answer }),
       })
-
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || `Server error ${res.status}`)
+      if (!res.ok) throw new Error(data.error || 'Check failed')
+
+      const speedBonus = data.correct && timeMs < 30000
+        ? Math.round(Math.max(0, (30000 - timeMs) / 30000) * 250)
+        : 0
 
       setFeedback({
         correct: data.correct,
         correctAnswer: data.correctAnswer,
         explanation: data.explanation,
-        speedBonus: data.speedBonus || 0,
+        speedBonus,
       })
 
-      if (data.correct) setCorrectCount(prev => prev + 1)
-      if ((data.speedBonus || 0) > 0) {
-        setFloatPts('+' + data.speedBonus)
-        setTimeout(() => setFloatPts(null), 1200)
-      }
+      setAnswers(prev => ({
+        ...prev,
+        [current.qid]: { answer, correct: data.correct, timeMs, speedBonus }
+      }))
 
-      setTimeout(() => {
-        if (data.isLast) {
-          setFinalScore(data.finalScore)
-          setTopicBreakdown(data.topicBreakdown || {})
-          setAttemptsUsed(prev => prev + 1)
-          setScreen('results')
-        } else {
-          // Clear per-question state BEFORE setting new question to avoid stale render
-          setSelected(null)
-          setFeedback(null)
-          setLoading(false)
-          setQuestion(data.nextQuestion)
-          setIdx(data.nextIdx)
-          setQuestionStartMs(Date.now())
-          setTimerActive(true)
-        }
-      }, 1800)
-
+      setLoading(false)
     } catch (e) {
-      console.error('handleAnswer error:', e.message)
-      setError(`Failed to submit answer: ${e.message}`)
+      console.error('submitAnswer error:', e.message)
+      setError(`Failed: ${e.message}`)
       setSelected(null)
       setFeedback(null)
       setLoading(false)
-      setTimerActive(true)
-      setQuestionStartMs(Date.now())
+      setTimerOn(true)
+      setQStartMs(Date.now())
+    }
+  }
+
+  function nextQuestion() {
+    const isLast = idx + 1 >= questions.length
+    if (isLast) {
+      finishExam()
+    } else {
+      setIdx(idx + 1)
+      setSelected(null)
+      setFeedback(null)
+      setQStartMs(Date.now())
+      setTimerOn(true)
+    }
+  }
+
+  async function finishExam() {
+    setLoading(true)
+    try {
+      const res = await fetch('/api/exam/finish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId, answers }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Finish failed')
+      setResults(data)
+      setAttemptsUsed(prev => prev + 1)
+      setScreen('results')
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setLoading(false)
     }
   }
 
   async function submitRetake() {
     try {
       const res = await fetch('/api/exam/retake', {
-        method:  'POST',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ reason: retakeReason }),
+        body: JSON.stringify({ reason: retakeReason }),
       })
       if (res.ok) setRetakeSubmitted(true)
-    } catch (e) {
-      console.error('Retake request failed:', e)
-    }
+    } catch (e) { console.error(e) }
   }
 
-  // ── PAYWALL ────────────────────────────────────────────────────
-  if (!canAccess) {
-    return (
-      <div style={{padding:'60px 36px',maxWidth:560}}>
-        <div style={mono({fontSize:9,letterSpacing:'0.18em',textTransform:'uppercase',color:C.accent,marginBottom:12})}>Practice Exam</div>
-        <h2 style={{fontFamily:F.display,fontWeight:700,fontSize:28,color:C.ink,margin:'0 0 16px',letterSpacing:'-0.015em'}}>Unlock the Practice Exam</h2>
-        <p style={{fontFamily:F.body,fontSize:15,color:C.inkMute,lineHeight:1.75,margin:'0 0 28px'}}>
-          Questions served one at a time from our secure bank — answers never touch your browser until you submit.
-          Available as a standalone add-on or included in the Course + Exam plan.
-        </p>
-        <div style={{display:'flex',flexDirection:'column',gap:12,maxWidth:380}}>
-          <button
-            onClick={async()=>{
-              const res  = await fetch('/api/stripe/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({plan:'exam_addon'})})
-              const d    = await res.json()
-              if (d.url) window.location.href = d.url
-              else alert(d.error||'Checkout failed.')
-            }}
-            style={{fontFamily:F.display,fontWeight:700,fontSize:14,background:C.accent,color:'#fff',border:'none',borderRadius:99,padding:'13px 28px',cursor:'pointer'}}>
-            Add Practice Exam — $200 →
-          </button>
-          <button onClick={()=>setRoute('account')} style={{fontFamily:F.display,fontWeight:600,fontSize:13,background:'transparent',color:C.inkMute,border:`1px solid ${C.rule}`,borderRadius:99,padding:'11px 24px',cursor:'pointer'}}>
-            View all plans →
-          </button>
-        </div>
-      </div>
-    )
-  }
-
-  // ── MAX ATTEMPTS ───────────────────────────────────────────────
-  if (screen === 'max_attempts') return (
+  // ── PAYWALL ──
+  if (!canAccess) return (
     <div style={{padding:'60px 36px',maxWidth:520}}>
       <div style={mono({fontSize:9,letterSpacing:'0.18em',textTransform:'uppercase',color:C.accent,marginBottom:12})}>Practice Exam</div>
+      <h2 style={{fontFamily:F.display,fontWeight:700,fontSize:28,color:C.ink,margin:'0 0 16px'}}>Unlock the Practice Exam</h2>
+      <p style={{fontFamily:F.body,fontSize:15,color:C.inkMute,lineHeight:1.75,margin:'0 0 28px'}}>180 questions across 18 NCQLP topic areas. Available with Full Course + Exam, or as a $200 add-on.</p>
+      <button onClick={async () => {
+        const res = await fetch('/api/stripe/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({plan:'exam_addon'})})
+        const d = await res.json(); if (d.url) window.location.href = d.url
+      }} style={{fontFamily:F.display,fontWeight:700,fontSize:14,background:C.accent,color:'#fff',border:'none',borderRadius:99,padding:'13px 28px',cursor:'pointer'}}>Add Practice Exam — $200 →</button>
+    </div>
+  )
+
+  // ── MAX ATTEMPTS ──
+  if (screen === 'max_attempts') return (
+    <div style={{padding:'60px 36px',maxWidth:520}}>
       <h2 style={{fontFamily:F.display,fontWeight:700,fontSize:26,color:C.ink,margin:'0 0 12px'}}>5 attempts used</h2>
-      <p style={{fontFamily:F.body,fontSize:14,color:C.inkMute,lineHeight:1.75,margin:'0 0 24px'}}>
-        You have used all 5 exam attempts. Request additional attempts below — our team reviews requests within 1 business day.
-      </p>
+      <p style={{fontFamily:F.body,fontSize:14,color:C.inkMute,lineHeight:1.75,margin:'0 0 24px'}}>You have used all 5 exam attempts. Request more below — reviewed within 1 business day.</p>
       {retakeSubmitted ? (
-        <div style={{background:`${C.forest}15`,border:`1px solid ${C.forest}`,borderRadius:8,padding:'20px 24px'}}>
+        <div style={{background:`${C.forest}12`,border:`1px solid ${C.forest}`,borderRadius:8,padding:'20px 24px'}}>
           <div style={{fontFamily:F.display,fontWeight:700,fontSize:15,color:C.forest,marginBottom:6}}>✓ Request submitted</div>
-          <div style={{fontFamily:F.body,fontSize:13,color:C.inkMute}}>We will review your request and email you at {user?.email}.</div>
+          <div style={{fontFamily:F.body,fontSize:13,color:C.inkMute}}>We will email you at {user?.email}</div>
         </div>
       ) : (
         <div style={{display:'flex',flexDirection:'column',gap:12}}>
-          <textarea value={retakeReason} onChange={e=>setRetakeReason(e.target.value)}
-            placeholder="Optional: briefly explain why you need additional attempts" rows={4}
-            style={{fontFamily:F.body,fontSize:13,color:C.ink,background:C.paper,border:`1px solid ${C.rule}`,borderRadius:6,padding:'12px 14px',resize:'vertical',outline:'none'}}/>
-          <button onClick={submitRetake} style={{fontFamily:F.display,fontWeight:700,fontSize:14,background:C.accent,color:'#fff',border:'none',borderRadius:99,padding:'12px 24px',cursor:'pointer'}}>
-            Request more attempts →
-          </button>
+          <textarea value={retakeReason} onChange={e=>setRetakeReason(e.target.value)} placeholder="Optional reason" rows={4} style={{fontFamily:F.body,fontSize:13,color:C.ink,background:C.paper,border:`1px solid ${C.rule}`,borderRadius:6,padding:'12px 14px',resize:'vertical'}}/>
+          <button onClick={submitRetake} style={{fontFamily:F.display,fontWeight:700,fontSize:14,background:C.accent,color:'#fff',border:'none',borderRadius:99,padding:'12px 24px',cursor:'pointer'}}>Request more attempts →</button>
         </div>
       )}
     </div>
   )
 
-  // ── START SCREEN ───────────────────────────────────────────────
-  if (screen === 'start') {
-    const modeOpts = [
-      {id:'quick',label:'Quick',  count:20,  desc:'20 random questions'},
-      {id:'mid',  label:'Mid',    count:50,  desc:'50 questions'},
-      {id:'full', label:'Full',   count:180, desc:'All 180 questions'},
-    ]
-    return (
-      <div style={{padding:'28px 36px 48px',maxWidth:640}}>
-        <PageHead eyebrow={`Practice exam · ${attemptsUsed}/5 attempts used`} title="NCQLP Practice" em="Exam."/>
-        <div style={{margin:'28px 0 0'}}>
-          <div style={mono({fontSize:9,letterSpacing:'0.22em',textTransform:'uppercase',color:C.inkMute,marginBottom:14})}>Exam length</div>
-          <div style={{display:'flex',gap:12,flexWrap:'wrap',marginBottom:28}}>
-            {modeOpts.map(m=>(
-              <button key={m.id} onClick={()=>setMode(m.id)}
-                style={{fontFamily:F.display,fontWeight:mode===m.id?700:600,fontSize:14,
-                  background:mode===m.id?C.ink:C.paper,
-                  color:mode===m.id?C.cream:C.inkMute,
-                  border:`1px solid ${mode===m.id?C.ink:C.rule}`,
-                  borderRadius:4,padding:'14px 22px',cursor:'pointer',transition:'all 140ms',textAlign:'left'}}>
-                <div style={{marginBottom:3}}>{m.label}</div>
-                <div style={mono({fontSize:9,letterSpacing:'0.1em',color:mode===m.id?'rgba(242,230,218,0.6)':C.inkMute})}>{m.desc}</div>
-              </button>
-            ))}
-          </div>
-          {error && <div style={{color:C.accent,fontFamily:F.mono,fontSize:11,marginBottom:14}}>⚠ {error}</div>}
-          <button onClick={startSession} disabled={loading}
-            style={{fontFamily:F.display,fontWeight:700,fontSize:15,background:C.accent,color:'#fff',border:'none',borderRadius:99,padding:'14px 32px',cursor:loading?'not-allowed':'pointer',opacity:loading?0.7:1}}>
-            {loading ? 'Starting…' : `Begin ${mode==='quick'?'20':mode==='mid'?'50':'180'}-question exam →`}
-          </button>
-        </div>
-        <div style={{marginTop:32,background:C.paper,border:`1px solid ${C.rule}`,borderRadius:4,padding:'22px 26px'}}>
-          <div style={mono({fontSize:9,letterSpacing:'0.22em',textTransform:'uppercase',color:C.inkMute,marginBottom:12})}>At a glance</div>
-          {[['Questions','180'],['Timer','30 sec / question'],['Speed bonus','up to +250 pts'],['Pass threshold','85% accuracy'],['Max attempts','5 total']].map(([k,v])=>(
-            <div key={k} style={{display:'flex',justifyContent:'space-between',fontFamily:F.body,fontSize:13,color:C.inkMute,padding:'5px 0',borderBottom:`1px dashed ${C.rule}`}}>
-              <span>{k}</span><span style={{fontFamily:F.display,fontWeight:600,color:C.ink}}>{v}</span>
-            </div>
+  // ── START ──
+  if (screen === 'start') return (
+    <div style={{padding:'48px 36px',maxWidth:600}}>
+      <div style={mono({fontSize:9,letterSpacing:'0.18em',textTransform:'uppercase',color:C.accent,marginBottom:12})}>Practice Exam · {attemptsUsed}/5 attempts used</div>
+      <h2 style={{fontFamily:F.display,fontWeight:700,fontSize:28,color:C.ink,margin:'0 0 8px'}}>NCQLP Practice Exam</h2>
+      <p style={{fontFamily:F.body,fontSize:14,color:C.inkMute,lineHeight:1.75,margin:'0 0 28px'}}>30-second timer per question with speed bonus up to +250. Immediate feedback after each answer.</p>
+      <div style={{marginBottom:24}}>
+        <div style={mono({fontSize:9,letterSpacing:'0.16em',textTransform:'uppercase',color:C.inkMute,marginBottom:12})}>Exam length</div>
+        <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
+          {[{id:'quick',label:'Quick',desc:'20 questions'},{id:'mid',label:'Mid',desc:'50 questions'},{id:'full',label:'Full',desc:'All 180'}].map(m=>(
+            <button key={m.id} onClick={()=>setMode(m.id)} style={{fontFamily:F.display,fontWeight:mode===m.id?700:500,fontSize:13,background:mode===m.id?C.ink:C.paper,color:mode===m.id?C.cream:C.inkMute,border:`1px solid ${mode===m.id?C.ink:C.rule}`,borderRadius:8,padding:'12px 20px',cursor:'pointer'}}>
+              <div>{m.label}</div>
+              <div style={{fontFamily:F.mono,fontSize:9,marginTop:3,color:mode===m.id?'rgba(242,230,218,0.6)':C.inkMute}}>{m.desc}</div>
+            </button>
           ))}
         </div>
       </div>
-    )
-  }
+      {error && <div style={{color:C.accent,fontFamily:F.mono,fontSize:11,marginBottom:16}}>❌ {error}</div>}
+      <button onClick={startSession} disabled={loading} style={{fontFamily:F.display,fontWeight:700,fontSize:15,background:C.accent,color:'#fff',border:'none',borderRadius:99,padding:'14px 36px',cursor:'pointer',opacity:loading?0.7:1}}>
+        {loading ? 'Loading questions...' : `Begin ${mode==='quick'?'20':mode==='mid'?'50':'180'}-question exam →`}
+      </button>
+    </div>
+  )
 
-  // ── QUESTION SCREEN ────────────────────────────────────────────
-  if (screen === 'question' && question) {
-    const pct         = Math.round((idx / totalCount) * 100)
-    const accuracy    = idx > 0 ? Math.round((correctCount / idx) * 100) : null
-    const timerColor  = timeLeft > 14 ? C.forest : timeLeft > 7 ? C.amber : C.accent
-    const circumference = 2 * Math.PI * 22
-    const dashOffset  = circumference * (1 - (timeLeft / 30))
-
+  // ── EXAM ──
+  if (screen === 'exam' && current) {
+    const pct = Math.round((idx / questions.length) * 100)
     return (
-      <div key={question.qid || `q-${idx}`} style={{padding:'28px 36px 48px'}}>
-        <style>{`@keyframes floatUp{0%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-40px)}}`}</style>
-        {/* Header */}
+      <div key={current.qid} style={{padding:'32px 36px',maxWidth:680}}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
-          <div style={mono({fontSize:9,letterSpacing:'0.22em',textTransform:'uppercase',color:C.accent})}>
-            Q{idx+1}/{totalCount} · {question.topic}
-          </div>
-          <div style={{display:'flex',alignItems:'center',gap:16}}>
-            {accuracy !== null && (
-              <div style={mono({fontSize:10,color:C.inkMute})}>{accuracy}% acc</div>
-            )}
-            {/* Timer ring */}
-            <div style={{position:'relative',width:52,height:52,flexShrink:0}}>
-              <svg width="52" height="52" viewBox="0 0 52 52" style={{transform:'rotate(-90deg)'}}>
-                <circle cx="26" cy="26" r="22" fill="none" stroke={C.rule} strokeWidth="4"/>
-                <circle cx="26" cy="26" r="22" fill="none" stroke={timerColor} strokeWidth="4" strokeLinecap="round"
-                  strokeDasharray={circumference} strokeDashoffset={dashOffset}
-                  style={{transition:'stroke-dashoffset 0.1s,stroke 0.3s'}}/>
-              </svg>
-              <div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',fontFamily:F.display,fontWeight:700,fontSize:16,color:timerColor}}>{timeLeft}</div>
-              {floatPts && <div style={{position:'absolute',top:-8,right:-8,fontFamily:F.display,fontWeight:700,fontSize:14,color:C.forest,animation:'floatUp 1.2s ease-out forwards',pointerEvents:'none',whiteSpace:'nowrap'}}>{floatPts}</div>}
-            </div>
-          </div>
+          <div style={mono({fontSize:9,letterSpacing:'0.16em',textTransform:'uppercase',color:C.inkMute})}>Q{idx+1} of {questions.length} · {current.topic}</div>
+          <div style={{width:40,height:40,borderRadius:'50%',background:timeLeft>10?C.forest:C.accent,display:'flex',alignItems:'center',justifyContent:'center',fontFamily:F.display,fontWeight:700,fontSize:14,color:'#fff'}}>{timeLeft}</div>
         </div>
-
-        {/* Progress rail */}
         <div style={{height:3,background:C.rule,borderRadius:99,overflow:'hidden',marginBottom:24}}>
           <div style={{height:'100%',width:`${pct}%`,background:C.accent,transition:'width 400ms ease'}}/>
         </div>
-
-        {/* Question card */}
-        <div style={{background:C.paper,border:`1px solid ${C.rule}`,borderRadius:6,padding:'28px 32px',marginBottom:20}}>
-          <div style={mono({fontSize:9,letterSpacing:'0.16em',textTransform:'uppercase',color:TOPIC_COLORS[question.topic]||C.inkMute,marginBottom:14})}>{question.topic}</div>
-          <p style={{fontFamily:F.display,fontWeight:700,fontSize:20,lineHeight:1.3,color:C.ink,margin:0}}>{question.prompt}</p>
-        </div>
-
-        {/* Choices */}
-        <div style={{display:'grid',gap:10}}>
-          {(question.choices||[]).map((c,i)=>{
-            const label = 'ABCDE'[i]
-            const ca    = feedback?.correctAnswer
-            let bg=C.paper, border=`1px solid ${C.rule}`, color=C.ink
+        <h3 style={{fontFamily:F.display,fontWeight:700,fontSize:18,color:C.ink,lineHeight:1.5,margin:'0 0 24px'}}>{current.prompt}</h3>
+        <div style={{display:'flex',flexDirection:'column',gap:10}}>
+          {(current.choices||[]).map((choice,ci)=>{
+            const label='ABCDE'[ci]
+            let bg=C.paper,border=C.rule,color=C.ink
             if (feedback) {
-              if (c===ca)              { bg=C.forestLight; border=`1px solid ${C.forest}`; color=C.forest }
-              else if (c===selected)   { bg='rgba(198,90,58,0.08)'; border=`1px solid ${C.accent}`; color=C.accent }
-            }
+              if (choice===feedback.correctAnswer){bg=`${C.forest}15`;border=C.forest;color=C.forest}
+              else if (choice===selected&&!feedback.correct){bg=`${C.accent}12`;border=C.accent;color=C.accent}
+            } else if (selected===choice){bg=`${C.ink}08`;border=C.ink}
             return (
-              <button key={i} onClick={()=>!feedback&&!loading&&handleAnswer(c)} disabled={!!feedback||loading}
-                style={{display:'flex',alignItems:'center',gap:14,padding:'14px 18px',background:bg,border,borderRadius:4,cursor:feedback||loading?'default':'pointer',fontFamily:F.display,fontWeight:600,fontSize:14,color,textAlign:'left',transition:'all 140ms',width:'100%'}}>
-                <span style={mono({fontSize:11,color:'inherit',flexShrink:0})}>{label}</span>
-                <span style={{lineHeight:1.55,flex:1}}>{c}</span>
-                {feedback&&c===ca&&<span style={{marginLeft:'auto',color:C.forest,flexShrink:0}}>✓</span>}
-                {feedback&&c===selected&&c!==ca&&<span style={{marginLeft:'auto',color:C.accent,flexShrink:0}}>✗</span>}
+              <button key={ci} onClick={()=>!feedback&&!loading&&submitAnswer(choice)} disabled={!!feedback||loading} style={{display:'flex',alignItems:'flex-start',gap:14,textAlign:'left',fontFamily:F.display,fontSize:14,fontWeight:500,background:bg,border:`1.5px solid ${border}`,color,borderRadius:8,padding:'14px 18px',cursor:feedback?'default':'pointer'}}>
+                <span style={{fontFamily:F.mono,fontSize:11,fontWeight:700,minWidth:20,flexShrink:0,marginTop:2}}>{label}</span>
+                <span style={{lineHeight:1.6}}>{choice}</span>
               </button>
             )
           })}
         </div>
-
-        {/* Feedback */}
-        {loading && !feedback && (
-          <div style={{marginTop:14,fontFamily:F.body,fontSize:13,color:C.inkMute}}>Checking…</div>
-        )}
         {feedback && (
-          <div style={{marginTop:16,background:feedback.correct?C.forestLight:'rgba(198,90,58,0.08)',border:`1px solid ${feedback.correct?C.forest:C.accent}`,borderRadius:4,padding:'16px 20px'}}>
-            <div style={{fontFamily:F.display,fontWeight:700,fontSize:16,color:feedback.correct?C.forest:C.accent,marginBottom:6}}>
-              {selected===''?'Time\'s up ⏱':feedback.correct?'Correct ✓':'Not quite ✗'}
-              {feedback.speedBonus>0&&<span style={mono({fontSize:10,letterSpacing:'0.1em',marginLeft:12,color:C.forest})}>+{feedback.speedBonus} pts</span>}
+          <div style={{marginTop:20,padding:'16px 20px',background:feedback.correct?`${C.forest}12`:`${C.accent}10`,border:`1px solid ${feedback.correct?C.forest:C.accent}`,borderRadius:8}}>
+            <div style={{fontFamily:F.display,fontWeight:700,fontSize:14,color:feedback.correct?C.forest:C.accent,marginBottom:6}}>
+              {feedback.correct?'✓ Correct':'✗ Incorrect'}
+              {feedback.speedBonus>0 && <span style={{fontFamily:F.mono,fontSize:11,marginLeft:12,color:C.forest}}>+{feedback.speedBonus} speed bonus</span>}
             </div>
-            <p style={{fontFamily:F.body,fontSize:13,lineHeight:1.6,color:C.inkSoft,margin:0}}>{feedback.explanation}</p>
-          </div>
-        )}
-        {error && !feedback && !loading && (
-          <div style={{marginTop:14,background:'rgba(198,90,58,0.08)',border:`1px solid ${C.accent}`,borderRadius:4,padding:'12px 16px',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}>
-            <span style={{fontFamily:F.body,fontSize:13,color:C.accent}}>⚠ {error}</span>
-            <button onClick={()=>setError(null)} style={{fontFamily:F.display,fontWeight:600,fontSize:12,background:'transparent',border:`1px solid ${C.accent}`,borderRadius:4,padding:'4px 10px',cursor:'pointer',color:C.accent,flexShrink:0}}>Dismiss</button>
+            <div style={{fontFamily:F.body,fontSize:13,color:C.inkMute,lineHeight:1.7,marginBottom:14}}>{feedback.explanation}</div>
+            <button onClick={nextQuestion} disabled={loading} style={{fontFamily:F.display,fontWeight:700,fontSize:13,background:C.ink,color:C.cream,border:'none',borderRadius:99,padding:'10px 24px',cursor:'pointer'}}>
+              {idx+1>=questions.length ? (loading?'Scoring...':'Finish exam →') : 'Next question →'}
+            </button>
           </div>
         )}
       </div>
     )
   }
 
-  // ── RESULTS SCREEN ─────────────────────────────────────────────
-  if (screen === 'results') {
-    const passed   = (finalScore||0) >= 85
-    const grade    = passed?'Exam ready 🎉':finalScore>=70?'On track ✓':finalScore>=50?'Keep studying':'Review fundamentals'
-    const gradeClr = passed?C.forest:finalScore>=70?C.amber:C.accent
-    const topics   = Object.entries(topicBreakdown)
-      .map(([t,v])=>({topic:t,pct:Math.round(v.correct/v.total*100),...v}))
-      .sort((a,b)=>a.pct-b.pct)
-
+  // ── RESULTS ──
+  if (screen === 'results' && results) {
+    const passed = results.finalScore >= 85
+    const topics = Object.entries(results.topicBreakdown||{}).map(([t,v])=>({topic:t,pct:Math.round(v.correct/v.total*100),...v})).sort((a,b)=>a.pct-b.pct)
     return (
-      <div style={{padding:'28px 36px 48px'}}>
-        <div style={mono({fontSize:9,letterSpacing:'0.22em',textTransform:'uppercase',color:C.accent,marginBottom:12})}>Exam results</div>
-        <h1 style={{fontFamily:F.display,fontWeight:700,fontSize:'clamp(36px,5vw,56px)',letterSpacing:'-0.025em',lineHeight:1,color:C.ink,margin:'0 0 6px'}}>{finalScore}<em style={{fontStyle:'normal',color:C.accent,fontSize:'0.4em'}}> %</em></h1>
-        <div style={{fontFamily:F.display,fontWeight:700,fontSize:20,color:gradeClr,marginBottom:24}}>{grade}</div>
-
-        <div style={{display:'grid',gridTemplateColumns:isMobile?'repeat(2,1fr)':'repeat(3,1fr)',gap:0,border:`1px solid ${C.rule}`,borderRadius:4,overflow:'hidden',marginBottom:32}}>
-          {[['Score',`${finalScore}%`],['Correct',`${correctCount}/${totalCount}`],['Attempts',`${attemptsUsed}/5`]].map(([k,v],i,arr)=>(
-            <div key={k} style={{padding:'18px 22px',borderRight:i<arr.length-1?`1px solid ${C.rule}`:'none',background:C.paper}}>
-              <div style={mono({fontSize:9,letterSpacing:'0.18em',textTransform:'uppercase',color:C.inkMute,marginBottom:6})}>{k}</div>
-              <div style={{fontFamily:F.display,fontWeight:700,fontSize:24,letterSpacing:'-0.02em',color:C.ink}}>{v}</div>
+      <div style={{padding:'40px 36px',maxWidth:640}}>
+        <div style={mono({fontSize:9,letterSpacing:'0.18em',textTransform:'uppercase',color:C.accent,marginBottom:12})}>Exam Complete</div>
+        <h2 style={{fontFamily:F.display,fontWeight:700,fontSize:36,color:passed?C.forest:C.accent,margin:'0 0 4px'}}>{results.finalScore}%</h2>
+        <div style={{fontFamily:F.display,fontWeight:600,fontSize:16,color:C.inkMute,marginBottom:24}}>{passed?'🎉 Passed — you are ready!':'Keep studying — 85% required to pass'}</div>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',border:`1px solid ${C.rule}`,borderRadius:6,overflow:'hidden',marginBottom:32}}>
+          {[['Score',`${results.finalScore}%`],['Correct',`${results.correctCount}/${results.total}`],['Attempts',`${attemptsUsed}/5`]].map(([k,v],i)=>(
+            <div key={k} style={{padding:'18px 20px',borderRight:i<2?`1px solid ${C.rule}`:'none',background:C.paper}}>
+              <div style={mono({fontSize:9,letterSpacing:'0.16em',textTransform:'uppercase',color:C.inkMute,marginBottom:6})}>{k}</div>
+              <div style={{fontFamily:F.display,fontWeight:700,fontSize:22,color:C.ink}}>{v}</div>
             </div>
           ))}
         </div>
-
-        {topics.length > 0 && (
-          <>
-            <div style={mono({fontSize:9,letterSpacing:'0.22em',textTransform:'uppercase',color:C.inkMute,marginBottom:14})}>Per-topic accuracy</div>
-            <div style={{display:'grid',gap:10,marginBottom:28}}>
-              {topics.map(t=>(
-                <div key={t.topic} style={{display:'grid',gridTemplateColumns:'1fr 80px 52px',gap:12,alignItems:'center'}}>
-                  <div style={{display:'flex',alignItems:'center',gap:8}}>
-                    <span style={{width:8,height:8,borderRadius:'50%',background:TOPIC_COLORS[t.topic]||C.inkMute,flexShrink:0}}/>
-                    <span style={{fontFamily:F.body,fontSize:13,color:C.ink}}>{t.topic}</span>
-                  </div>
-                  <div style={{height:4,background:C.rule,borderRadius:99,overflow:'hidden'}}>
-                    <div style={{height:'100%',width:`${t.pct}%`,background:t.pct>=85?C.forest:C.accent,borderRadius:99}}/>
-                  </div>
-                  <span style={mono({fontSize:10,color:C.inkMute,textAlign:'right'})}>{t.correct}/{t.total}</span>
-                </div>
-              ))}
+        <div style={{marginBottom:28}}>
+          <div style={mono({fontSize:9,letterSpacing:'0.16em',textTransform:'uppercase',color:C.inkMute,marginBottom:14})}>Performance by topic</div>
+          {topics.map(t=>(
+            <div key={t.topic} style={{marginBottom:10}}>
+              <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}>
+                <span style={{fontFamily:F.display,fontWeight:500,fontSize:12,color:C.ink}}>{t.topic}</span>
+                <span style={mono({fontSize:10,color:t.pct>=85?C.forest:C.accent})}>{t.pct}% ({t.correct}/{t.total})</span>
+              </div>
+              <div style={{height:4,background:C.rule,borderRadius:99,overflow:'hidden'}}>
+                <div style={{height:'100%',width:`${t.pct}%`,background:t.pct>=85?C.forest:C.accent}}/>
+              </div>
             </div>
-          </>
-        )}
-
-        <div style={{display:'flex',gap:12,flexWrap:'wrap'}}>
-          {attemptsUsed < 5 ? (
-            <button onClick={()=>{
-              setScreen('start'); setFinalScore(null); setQuestion(null);
-              setSessionId(null); setFeedback(null); setSelected(null);
-              setCorrectCount(0); setTopicBreakdown({});
-            }} style={{fontFamily:F.display,fontWeight:700,fontSize:14,background:C.accent,color:'#fff',border:'none',borderRadius:99,padding:'12px 24px',cursor:'pointer'}}>
-              Retake exam →
-            </button>
+          ))}
+        </div>
+        <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
+          {attemptsUsed<5 ? (
+            <button onClick={()=>{setScreen('start');setResults(null);setQuestions([]);setAnswers({});setIdx(0)}} style={{fontFamily:F.display,fontWeight:700,fontSize:14,background:C.accent,color:'#fff',border:'none',borderRadius:99,padding:'12px 24px',cursor:'pointer'}}>Retake exam →</button>
           ) : (
-            <button onClick={()=>setScreen('max_attempts')}
-              style={{fontFamily:F.display,fontWeight:600,fontSize:13,background:'transparent',color:C.inkMute,border:`1px solid ${C.rule}`,borderRadius:99,padding:'11px 22px',cursor:'pointer'}}>
-              Request more attempts
-            </button>
+            <button onClick={()=>setScreen('max_attempts')} style={{fontFamily:F.display,fontWeight:600,fontSize:13,background:'transparent',color:C.inkMute,border:`1px solid ${C.rule}`,borderRadius:99,padding:'11px 22px',cursor:'pointer'}}>Request more attempts</button>
           )}
-          <button onClick={()=>setRoute('cert')} style={{fontFamily:F.display,fontWeight:600,fontSize:13,background:'transparent',color:C.inkMute,border:`1px solid ${C.rule}`,borderRadius:99,padding:'11px 22px',cursor:'pointer'}}>
-            View certificate →
-          </button>
+          <button onClick={()=>setRoute('cert')} style={{fontFamily:F.display,fontWeight:600,fontSize:13,background:'transparent',color:C.inkMute,border:`1px solid ${C.rule}`,borderRadius:99,padding:'11px 22px',cursor:'pointer'}}>View certificate →</button>
         </div>
       </div>
     )

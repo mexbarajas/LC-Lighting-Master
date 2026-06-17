@@ -30,7 +30,7 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Exam access required' }, { status: 403 })
     }
 
-    // Max attempts check
+    // Max attempts
     const { count: completedCount } = await SERVICE
       .from('exam_sessions')
       .select('id', { count: 'exact', head: true })
@@ -47,15 +47,13 @@ export async function POST(req) {
     const count = MODE_COUNTS[mode]
 
     // Get all question IDs
-    const { data: allQs, error: qErr } = await SERVICE
-      .rpc('get_question_ids')
-
-    if (qErr || !allQs?.length) {
+    const { data: allIds, error: idErr } = await SERVICE.rpc('get_question_ids')
+    if (idErr || !allIds?.length) {
       return NextResponse.json({ error: 'Questions unavailable' }, { status: 500 })
     }
 
     // Fisher-Yates shuffle
-    const shuffled = [...allQs]
+    const shuffled = [...allIds]
     for (let i = shuffled.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1))
       ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
@@ -63,9 +61,26 @@ export async function POST(req) {
     const selected    = shuffled.slice(0, Math.min(count, shuffled.length))
     const questionIds = selected.map(q => Number(q.id))
 
-    if (questionIds.some(id => !Number.isInteger(id) || id <= 0)) {
-      return NextResponse.json({ error: 'Invalid question IDs' }, { status: 500 })
+    // Fetch ALL selected questions (no correct answers)
+    const questions = []
+    for (const dbId of questionIds) {
+      const { data: qArr } = await SERVICE.rpc('get_question_by_id', { p_id: dbId })
+      const raw = qArr?.[0]
+      if (raw) {
+        questions.push({
+          qid:     raw.qid,
+          topic:   raw.topic,
+          prompt:  raw.prompt,
+          choices: raw.choices,
+        })
+      }
     }
+
+    if (questions.length === 0) {
+      return NextResponse.json({ error: 'Could not load questions' }, { status: 500 })
+    }
+
+    const orderedQids = questions.map(q => q.qid)
 
     // Delete any existing active sessions to prevent stale state
     await SERVICE
@@ -85,49 +100,25 @@ export async function POST(req) {
         current_idx:         0,
         started_at:          new Date().toISOString(),
         status:              'active',
-        questions_attempted: count,
+        questions_attempted: questions.length,
       })
-      .select('id, question_ids')
+      .select('id')
       .single()
 
     if (sessErr || !newSession) {
-      return NextResponse.json(
-        { error: 'Failed to create session: ' + sessErr?.message },
-        { status: 500 }
-      )
-    }
-
-    const storedIds = newSession.question_ids
-    if (!storedIds?.[0]) {
-      return NextResponse.json({ error: 'Session storage failed' }, { status: 500 })
-    }
-
-    // Fetch first question using the verified stored ID
-    const firstId = Number(storedIds[0])
-    const { data: firstQArr } = await SERVICE
-      .rpc('get_question_by_id', { p_id: firstId })
-
-    const firstQ = firstQArr?.[0]
-    if (!firstQ) {
-      return NextResponse.json({ error: 'Could not load first question' }, { status: 500 })
+      return NextResponse.json({ error: 'Failed to create session' }, { status: 500 })
     }
 
     return NextResponse.json({
       sessionId:    newSession.id,
       mode,
-      totalCount:   count,
-      idx:          0,
       attemptsUsed: completedCount || 0,
-      question: {
-        qid:     firstQ.qid,
-        topic:   firstQ.topic,
-        prompt:  firstQ.prompt,
-        choices: firstQ.choices,
-      },
+      questions,
+      orderedQids,
     })
 
   } catch (err) {
     console.error('[exam/start] error:', err)
-    return NextResponse.json({ error: 'Server error: ' + err.message }, { status: 500 })
+    return NextResponse.json({ error: 'Server error' }, { status: 500 })
   }
 }
