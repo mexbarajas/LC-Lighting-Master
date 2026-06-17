@@ -2501,31 +2501,46 @@ function ExamPage({setRoute, user, userSubscription, isMobile=false}) {
 
   async function handleAnswer(choice, timedOut = false) {
     if (!sessionId || feedback) return
-    clearInterval(timerRef.current)
     setTimerActive(false)
-    const timeMs = timedOut ? 30000 : Math.min(30000, Date.now() - (questionStartMs || Date.now()))
     const answer = timedOut ? '' : choice
     setSelected(answer)
     setLoading(true)
-    try {
-      const res  = await fetch('/api/exam/answer', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ sessionId, qid: question.qid, answer, timeMs }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Answer failed')
+    setError(null)
 
-      const fb = {
-        correct:       data.correct,
-        correctAnswer: data.correctAnswer,
-        explanation:   data.explanation,
-        speedBonus:    data.speedBonus || 0,
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 10000)
+
+    try {
+      const res = await fetch('/api/exam/answer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId,
+          qid: question.qid,
+          answer,
+          timeMs: Date.now() - (questionStartMs || Date.now()),
+        }),
+        signal: controller.signal,
+      })
+      clearTimeout(timeout)
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData.error || `Server error ${res.status}`)
       }
-      setFeedback(fb)
+
+      const data = await res.json()
+
+      setFeedback({
+        correct: data.correct,
+        correctAnswer: data.correctAnswer,
+        explanation: data.explanation,
+        speedBonus: data.speedBonus || 0,
+      })
+
       if (data.correct) setCorrectCount(prev => prev + 1)
-      if (fb.speedBonus > 0) {
-        setFloatPts('+' + fb.speedBonus)
+      if ((data.speedBonus || 0) > 0) {
+        setFloatPts('+' + data.speedBonus)
         setTimeout(() => setFloatPts(null), 1200)
       }
 
@@ -2544,11 +2559,23 @@ function ExamPage({setRoute, user, userSubscription, isMobile=false}) {
           setQuestionStartMs(Date.now())
         }, 1800)
       }
+
     } catch (e) {
-      setError(e.message)
-    } finally {
-      setLoading(false)
+      clearTimeout(timeout)
+      console.error('handleAnswer error:', e.message)
+
+      if (e.name === 'AbortError') {
+        setError('Request timed out — check your connection and try again')
+      } else {
+        setError(`Failed to submit answer: ${e.message}`)
+      }
+
+      setSelected(null)
+      setFeedback(null)
+      setTimerActive(true)
+      setQuestionStartMs(Date.now())
     }
+    setLoading(false)
   }
 
   async function submitRetake() {

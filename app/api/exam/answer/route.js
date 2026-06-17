@@ -51,10 +51,12 @@ export async function POST(req) {
 
     const { data: qArr, error: qErr } = await SERVICE
       .rpc('get_question_answer', { p_id: qid })
-    const questionRow = qArr?.[0]
 
-    if (qErr || !questionRow) {
-      return NextResponse.json({ error: 'Question not found' }, { status: 404 })
+    console.log('[answer] question fetch:', { qid, found: qArr?.length, error: qErr?.message })
+
+    const questionRow = qArr?.[0]
+    if (!questionRow) {
+      return NextResponse.json({ error: 'Question not found: ' + qid }, { status: 404 })
     }
 
     const isCorrect  = answer === questionRow.correct
@@ -104,9 +106,12 @@ export async function POST(req) {
     let nextQuestion = null
     if (!isLast) {
       const nextQId = questionIds[nextIdx]
-      const { data: nextQArr } = await SERVICE
+      const { data: nextQArr, error: nextErr } = await SERVICE
         .rpc('get_question_by_id', { p_id: nextQId })
       const nextQ = nextQArr?.[0]
+      if (!nextQ) {
+        console.error('[answer] next question not found:', nextQId, nextErr?.message)
+      }
 
       if (nextQ) {
         nextQuestion = {
