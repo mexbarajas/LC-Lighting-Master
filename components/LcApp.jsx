@@ -3486,7 +3486,11 @@ function LessonPage({lessonRef,setRoute,user,setShowUpgrade,completedLessons=new
       {visual&&(
         <div style={{background:C.paper,border:`1px solid ${C.rule}`,borderRadius:6,padding:"16px 18px",marginBottom:14,overflow:"hidden"}}>
           <div style={{fontFamily:F.display,fontSize:13,fontWeight:700,color:C.ink,letterSpacing:'0.06em',textTransform:'uppercase',marginBottom:10}}>Visual overview</div>
-          <div dangerouslySetInnerHTML={{__html:DOMPurify.sanitize(visual)}}/>
+          <div dangerouslySetInnerHTML={{
+            __html: typeof window !== 'undefined'
+              ? require('dompurify').sanitize(visual, { USE_PROFILES: { svg: true, svgFilters: true } })
+              : visual
+          }}/>
         </div>
       )}
 
