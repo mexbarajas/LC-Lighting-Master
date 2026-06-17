@@ -120,7 +120,15 @@ export async function POST(req) {
       const nextDbId = Number(questionIds[nextIdx])
       const { data: nextQArr } = await SERVICE
         .rpc('get_question_by_id', { p_id: nextDbId })
-      nextQuestion = nextQArr?.[0] || null
+      const raw = nextQArr?.[0]
+      if (raw) {
+        nextQuestion = {
+          qid:     raw.qid,
+          topic:   raw.topic,
+          prompt:  raw.prompt,
+          choices: raw.choices,
+        }
+      }
     }
 
     return NextResponse.json({

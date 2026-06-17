@@ -2674,7 +2674,7 @@ function ExamPage({setRoute, user, userSubscription, isMobile=false}) {
     const dashOffset  = circumference * (1 - (timeLeft / 30))
 
     return (
-      <div key={question.qid} style={{padding:'28px 36px 48px'}}>
+      <div key={question.qid || `q-${idx}`} style={{padding:'28px 36px 48px'}}>
         <style>{`@keyframes floatUp{0%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-40px)}}`}</style>
         {/* Header */}
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
