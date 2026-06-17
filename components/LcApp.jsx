@@ -2116,28 +2116,25 @@ function CertPage() {
 
   /* Download: capture the hidden full-size certRef */
   async function handleDownload() {
-    if (!certRef.current) return
     setDownloading(true)
     try {
-      const html2canvas = (await import('html2canvas')).default
-      const canvas = await html2canvas(certRef.current, {
-        scale:           3,
-        useCORS:         true,
-        allowTaint:      false,
-        backgroundColor: '#F5EFE6',
-        logging:         false,
-        width:           CERT_W,
-        height:          CERT_H,
-        scrollX:         0,
-        scrollY:         0,
+      const params = new URLSearchParams({
+        fn:   firstName,
+        ln:   lastName,
+        date: issuedDate,
       })
-      const a = document.createElement('a')
+      const res = await fetch(`/api/cert?${params}`)
+      if (!res.ok) throw new Error(`Server error ${res.status}`)
+      const blob = await res.blob()
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement('a')
+      a.href     = url
       a.download = `LC_Certificate_${firstName}_${lastName}.png`
-      a.href     = canvas.toDataURL('image/png', 1.0)
       a.click()
+      URL.revokeObjectURL(url)
     } catch(e) {
       console.error('Certificate download error:', e)
-      window.alert('Download failed. Use Ctrl+P to print instead.')
+      window.alert('Download failed — please try again.')
     } finally {
       setDownloading(false)
     }

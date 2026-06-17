@@ -14,9 +14,11 @@
     "@supabase/supabase-js": "^2.107.0",
     "@types/dompurify": "^3.0.5",
     "dompurify": "^3.4.10",
+    "html-to-image": "^1.11.13",
     "next": "16.2.7",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "satori": "^0.26.0",
     "stripe": "^16.0.0"
   },
   "devDependencies": {
