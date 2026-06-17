@@ -16,6 +16,14 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
     }
     const { sessionId, qid, answer, timeMs } = body
+
+    console.log('[answer] incoming:', {
+      sessionId,
+      qid,
+      answer: typeof answer === 'string' ? answer.slice(0, 20) : answer,
+      timeMs,
+    })
+
     if (!sessionId || !qid) {
       return NextResponse.json({ error: 'Missing sessionId or qid' }, { status: 400 })
     }
@@ -37,7 +45,12 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Session not found' }, { status: 404 })
     }
     if (examSession.status === 'completed') {
-      return NextResponse.json({ error: 'Session already completed' }, { status: 400 })
+      console.log('[answer] session already completed:', sessionId)
+      return NextResponse.json({
+        error: 'Session already completed',
+        sessionId,
+        status: examSession.status,
+      }, { status: 400 })
     }
 
     const idx         = examSession.current_idx
@@ -46,7 +59,16 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Session already complete' }, { status: 400 })
     }
     if (questionIds[idx] !== qid) {
-      return NextResponse.json({ error: 'Question mismatch' }, { status: 400 })
+      console.log('[answer] question mismatch:', {
+        expected: questionIds[idx],
+        received: qid,
+        currentIdx: idx,
+      })
+      return NextResponse.json({
+        error: 'Question mismatch',
+        expected: questionIds[idx],
+        received: qid,
+      }, { status: 400 })
     }
 
     const { data: qArr, error: qErr } = await SERVICE
