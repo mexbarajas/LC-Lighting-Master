@@ -54,9 +54,9 @@ export async function POST(req) {
     }
 
     const idx         = examSession.current_idx
-    const questionIds = examSession.question_ids
+    const questionIds = (examSession.question_ids || []).map(id => parseInt(id, 10))
+    console.log('[answer] questionIds parsed:', questionIds.slice(0, 3))
     const currentQId  = parseInt(questionIds[idx], 10)
-    console.log('[answer] currentQId:', currentQId, 'type:', typeof currentQId)
     console.log('[answer] idx:', idx, 'currentQId:', currentQId, 'qid sent:', qid)
 
     // Fetch correct answer via RPC
@@ -145,14 +145,19 @@ export async function POST(req) {
     let nextQuestion = null
     if (!isLast) {
       const nextQId = parseInt(questionIds[nextIdx], 10)
+      console.log('[answer] fetching next question:', { nextIdx, nextQId })
       const { data: nextQArr, error: nextErr } = await SERVICE
         .rpc('get_question_by_id', { p_id: nextQId })
+      console.log('[answer] next question result:', {
+        found: nextQArr?.length,
+        error: nextErr?.message,
+        nextQId,
+      })
       const nextQ = nextQArr?.[0] || null
-      console.log('[answer] next question:', { nextQId, found: !!nextQ, error: nextErr?.message })
       if (!nextQ) {
         console.error('[answer] failed to fetch next question:', nextQId, nextErr?.message)
         return NextResponse.json(
-          { error: 'Failed to load next question', nextQId, detail: nextErr?.message },
+          { error: 'Next question not found', nextIdx, nextQId, detail: nextErr?.message },
           { status: 500 }
         )
       }

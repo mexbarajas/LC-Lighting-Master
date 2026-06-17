@@ -50,6 +50,9 @@ export async function POST(req) {
     const { data: allQs, error: qErr } = await SERVICE
       .rpc('get_question_ids')
 
+    console.log('[start] sample IDs from DB:',
+      allQs?.slice(0, 3).map(q => ({ id: q.id, type: typeof q.id })))
+
     if (qErr) {
       return NextResponse.json({ error: 'DB error: ' + qErr.message }, { status: 500 })
     }
@@ -64,9 +67,8 @@ export async function POST(req) {
       ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
     }
     const selected    = shuffled.slice(0, Math.min(count, shuffled.length))
-    const questionIds = selected.map(q => q.id)
-    console.log('[start] questionIds sample:', questionIds.slice(0, 3),
-      'types:', questionIds.slice(0, 3).map(id => typeof id))
+    const questionIds = selected.map(q => parseInt(q.id, 10))
+    console.log('[start] questionIds stored:', questionIds.slice(0, 3))
 
     const { data: session_row, error: sessionErr } = await SERVICE
       .from('exam_sessions')
