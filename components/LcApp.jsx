@@ -3600,7 +3600,7 @@ function ModuleRow({mod,oddCol,setRoute,completedLessons=new Set()}){
 
 
 
-function Sidebar({route, setRoute, user, onSignOut, bookmarks=new Set(), isMobile=false, sidebarOpen=false, setSidebarOpen=()=>{}, openQuestionCount=0}){
+function Sidebar({route, setRoute, user, onSignOut, bookmarks=new Set(), isMobile=false, sidebarOpen=false, setSidebarOpen=()=>{}, openQuestionCount=0, isAdmin=false, onAdminClick=()=>{}}){
   const nav = [
     {section:"Library", items:[
       {glyph:"▤",label:"Course home",route:"home"},
@@ -3622,6 +3622,9 @@ function Sidebar({route, setRoute, user, onSignOut, bookmarks=new Set(), isMobil
       {glyph:"○",label:"Settings",route:"account"},
       {glyph:"✉",label:"Feedback",route:"feedback"},
     ]},
+    ...(isAdmin ? [{section:"Admin", items:[
+      {glyph:"⚙",label:"Admin portal",route:"admin",action:onAdminClick},
+    ]}] : []),
   ]
   return (
     <aside style={{
@@ -3655,7 +3658,7 @@ function Sidebar({route, setRoute, user, onSignOut, bookmarks=new Set(), isMobil
           <div style={m({fontSize:8,letterSpacing:"0.26em",textTransform:"uppercase",
             color:"rgba(255,255,255,0.22)",padding:"0 16px 5px"})}>{section}</div>
           {items.map(item=>(
-            <button key={item.route} onClick={()=>{setRoute(item.route);if(isMobile)setSidebarOpen(false)}}
+            <button key={item.route} onClick={()=>{if(item.action){item.action();if(isMobile)setSidebarOpen(false)}else{setRoute(item.route);if(isMobile)setSidebarOpen(false)}}}
               style={{display:"flex",alignItems:"center",gap:10,width:"100%",padding:"9px 16px",
                 background:route===item.route?"rgba(198,90,58,0.18)":"none",border:"none",
                 borderLeft:route===item.route?`2px solid ${C.accent}`:"2px solid transparent",
@@ -4757,7 +4760,7 @@ function TrendsPage({ setRoute }) {
   )
 }
 
-function AppShell({user, setUser, onSignOut, completedLessons=new Set(), markLessonComplete=async()=>{}, bookmarks=new Set(), toggleBookmark=async()=>{}}){
+function AppShell({user, setUser, onSignOut, completedLessons=new Set(), markLessonComplete=async()=>{}, bookmarks=new Set(), toggleBookmark=async()=>{}, isAdmin=false, onAdminClick=()=>{}}){
   const [route, setRoute] = useState("home")
   const [showUpgrade, setShowUpgrade] = useState(false)
   const isMobile = useIsMobile()
@@ -4786,7 +4789,7 @@ function AppShell({user, setUser, onSignOut, completedLessons=new Set(), markLes
       fontFamily:F.body,background:C.cream}}>
       <style>{`@import url('${FONT_URL}');*{box-sizing:border-box}code{font-family:${F.mono};font-size:0.9em;background:rgba(0,0,0,0.06);padding:1px 5px;border-radius:3px}@keyframes bulbPulse{0%,100%{opacity:1;box-shadow:0 0 0 3px rgba(198,90,58,0.2),0 0 10px 2px rgba(198,90,58,0.4)}50%{opacity:0.7;box-shadow:0 0 0 5px rgba(198,90,58,0.1),0 0 16px 4px rgba(198,90,58,0.25)}}@keyframes wave{from{transform:scaleY(0.4)}to{transform:scaleY(1.2)}}`}</style>
       {showUpgrade && <UpgradeModal user={user} onClose={()=>setShowUpgrade(false)}/>}
-      <Sidebar route={route} setRoute={setRoute} user={user} onSignOut={onSignOut} bookmarks={bookmarks} isMobile={isMobile} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} openQuestionCount={openQuestionCount}/>
+      <Sidebar route={route} setRoute={setRoute} user={user} onSignOut={onSignOut} bookmarks={bookmarks} isMobile={isMobile} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} openQuestionCount={openQuestionCount} isAdmin={isAdmin} onAdminClick={onAdminClick}/>
       {isMobile && sidebarOpen && (
         <div onClick={()=>setSidebarOpen(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",zIndex:999,backdropFilter:"blur(2px)"}}/>
       )}
@@ -5243,7 +5246,7 @@ function LearnerRoot({isAdmin=false, onAdminClick=()=>{}}){
       )}
 
       {page==="app"&&(
-        <AppShell user={user} setUser={setUser} onSignOut={handleSignOut} completedLessons={completedLessons} markLessonComplete={markLessonComplete} bookmarks={bookmarks} toggleBookmark={toggleBookmark}/>
+        <AppShell user={user} setUser={setUser} onSignOut={handleSignOut} completedLessons={completedLessons} markLessonComplete={markLessonComplete} bookmarks={bookmarks} toggleBookmark={toggleBookmark} isAdmin={isAdmin} onAdminClick={onAdminClick}/>
       )}
     </>
   )
