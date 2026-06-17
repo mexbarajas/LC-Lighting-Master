@@ -65,9 +65,9 @@ export async function POST(req) {
 
     console.log('[answer] question fetch:', {
       currentQId,
-      found:       qArr?.length,
-      id_from_db:  qArr?.[0]?.id,
-      error:       qErr?.message,
+      found:        qArr?.length,
+      qid_from_db:  qArr?.[0]?.qid,
+      error:        qErr?.message,
     })
 
     const questionRow = qArr?.[0]
@@ -78,17 +78,17 @@ export async function POST(req) {
       )
     }
 
-    // Validate client qid matches the session's current question (type-safe string comparison)
+    // Validate client qid matches what the DB returned for this question
     console.log('[answer] qid check:', {
-      currentQId:  currentQId,
+      qid_from_db: questionRow.qid,
       from_client: qid,
-      match:       String(currentQId) === String(qid),
+      match:       questionRow.qid === qid,
     })
 
-    if (String(currentQId) !== String(qid)) {
+    if (questionRow.qid !== qid) {
       return NextResponse.json({
         error:    'Question mismatch',
-        expected: currentQId,
+        expected: questionRow.qid,
         received: qid,
         hint:     'Client may be out of sync with server session',
       }, { status: 400 })
@@ -162,7 +162,7 @@ export async function POST(req) {
         )
       }
       nextQuestion = {
-        qid:     nextQ.id,
+        qid:     nextQ.qid,
         topic:   nextQ.topic,
         prompt:  nextQ.prompt,
         choices: typeof nextQ.choices === 'string'

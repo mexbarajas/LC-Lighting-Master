@@ -122,7 +122,7 @@ export async function POST(req) {
       idx:          0,
       attemptsUsed: completedCount || 0,
       question: {
-        qid:     firstQ.id,
+        qid:     firstQ.qid,
         topic:   firstQ.topic,
         prompt:  firstQ.prompt,
         choices: typeof firstQ.choices === 'string'
