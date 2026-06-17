@@ -2051,342 +2051,297 @@ function NotesPage({setRoute, user}) {
 
 
 /* ── CERTIFICATE PAGE ────────────────────────────────────────── */
-function CertPage({ setRoute, user, completedLessons = new Set(), userSubscription }) {
-  const [bestExamScore, setBestExamScore] = useState(null)
-  const [examAttempts, setExamAttempts] = useState(0)
-  const [userName, setUserName] = useState('')
-  const [printing, setPrinting] = useState(false)
+function CertPage() {
+  const [authUser, setAuthUser]         = useState(null)
+  const [completedCount, setCompleted]  = useState(0)
+  const [completionDate, setCompDate]   = useState(null)
+  const [loading, setLoading]           = useState(true)
+  const [downloading, setDownloading]   = useState(false)
+  const certRef = useRef(null)
+
+  const TOTAL_LESSONS = 74
+  const isUnlocked = completedCount >= TOTAL_LESSONS
 
   useEffect(() => {
-    if (!user?.id) return
-    const meta = user.user_metadata
-    const name = meta?.full_name || meta?.name ||
-      (user.email ? user.email.split('@')[0].replace(/[._]/g,' ')
-        .replace(/\b\w/g, c => c.toUpperCase()) : 'Learner')
-    setUserName(name)
-    supabase
-      .from('exam_sessions')
-      .select('correct_count, questions_attempted, created_at')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .then(({ data }) => {
-        if (data?.length > 0) {
-          const withPct = data.map(s => ({
-            ...s,
-            pct: s.questions_attempted > 0
-              ? Math.round((s.correct_count / s.questions_attempted) * 100)
-              : 0
-          }))
-          const best = Math.max(...withPct.map(s => s.pct))
-          setBestExamScore(best)
-          setExamAttempts(data.length)
-        } else {
-          setBestExamScore(0)
-          setExamAttempts(0)
-        }
+    async function load() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { setLoading(false); return }
+      setAuthUser(user)
+
+      const { data: prog } = await supabase
+        .from('progress')
+        .select('completed_at')
+        .eq('user_id', user.id)
+
+      if (prog && prog.length > 0) {
+        setCompleted(prog.length)
+        const sorted = [...prog].sort(
+          (a, b) => new Date(b.completed_at) - new Date(a.completed_at)
+        )
+        setCompDate(new Date(sorted[0].completed_at))
+      }
+      setLoading(false)
+    }
+    load()
+  }, [])
+
+  // Derive display name — try full_name, then first+last, then email prefix
+  const userName = (() => {
+    if (!authUser) return 'Your Name'
+    const m = authUser.user_metadata || {}
+    if (m.full_name)  return m.full_name
+    const fl = [m.first_name, m.last_name].filter(Boolean).join(' ')
+    if (fl) return fl
+    return authUser.email?.split('@')[0] || 'Your Name'
+  })()
+
+  const issuedDate = isUnlocked && completionDate
+    ? completionDate.toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' })
+    : new Date().toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' })
+
+  const readinessPct = Math.min(100, Math.round((completedCount / TOTAL_LESSONS) * 100))
+
+  async function handleDownload() {
+    if (!certRef.current) return
+    setDownloading(true)
+    try {
+      const { toPng } = await import('html-to-image')
+      const dataUrl = await toPng(certRef.current, {
+        quality: 1,
+        pixelRatio: 3,
+        backgroundColor: '#F5EFE6',
       })
-  }, [user])
-
-  const totalDone = completedLessons.size
-  const totalLessons = 74
-  const ceuEarned = ((totalDone / totalLessons) * 24).toFixed(1)
-  const allLessonsDone = totalDone >= totalLessons
-  const examPassed = bestExamScore !== null && bestExamScore >= 85
-
-  const expiry = userSubscription?.current_period_end
-    ? new Date(userSubscription.current_period_end)
-    : new Date(new Date().getFullYear(), 11, 31)
-  const daysRemaining = Math.max(0, Math.ceil((expiry - new Date()) / (1000 * 60 * 60 * 24)))
-  const withinWindow = daysRemaining > 0
-
-  const reqs = [
-    {
-      label: 'Complete all 74 lessons',
-      detail: `${totalDone} of ${totalLessons} lessons done across all 12 modules`,
-      pct: Math.round((totalDone / totalLessons) * 100),
-      done: allLessonsDone,
-    },
-    {
-      label: 'Earn 24 CEU contact hours',
-      detail: `${ceuEarned} of 24 hours logged`,
-      pct: Math.round((parseFloat(ceuEarned) / 24) * 100),
-      done: parseFloat(ceuEarned) >= 24,
-    },
-    {
-      label: 'Pass practice exam (≥ 85%)',
-      detail: examAttempts > 0
-        ? `Best score: ${bestExamScore}% · ${examAttempts} attempt${examAttempts > 1 ? 's' : ''}`
-        : 'No attempts recorded yet',
-      pct: bestExamScore !== null ? Math.min(bestExamScore, 100) : 0,
-      done: examPassed,
-    },
-    {
-      label: 'Within access window',
-      detail: withinWindow
-        ? `${daysRemaining} days remaining · expires ${expiry.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`
-        : 'Access window expired',
-      pct: withinWindow ? 100 : 0,
-      done: withinWindow,
-    },
-  ]
-
-  const metCount = reqs.filter(r => r.done).length
-  const readinessPct = Math.round(reqs.reduce((s, r) => s + r.pct, 0) / reqs.length)
-  const isUnlocked = metCount === 4
-  const issueDate = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-
-  function downloadCertificate() {
-    setPrinting(true)
-    setTimeout(() => { window.print(); setPrinting(false) }, 300)
+      const link = document.createElement('a')
+      link.download = `LC_Certificate_${userName.replace(/\s+/g,'_')}.png`
+      link.href = dataUrl
+      link.click()
+    } catch(e) {
+      console.error('Certificate download failed:', e)
+    } finally {
+      setDownloading(false)
+    }
   }
 
-  const PART_MODULES = [
-    { n: '01', title: 'Fundamentals', modules: '01–04', moduleNums: ['01','02','03','04'] },
-    { n: '02', title: 'Systems & Applications', modules: '05–08', moduleNums: ['05','06','07','08'] },
-    { n: '03', title: 'Design Practice', modules: '09–12', moduleNums: ['09','10','11','12'] },
-  ]
-  const partProgress = PART_MODULES.map(p => {
-    const refs = MODULES.filter(m => p.moduleNums.includes(m.n))
-    const allLessons = refs.flatMap(m => m.lessons)
-    const done = allLessons.filter(l => completedLessons.has(l.ref)).length
-    const total = allLessons.length
-    return { ...p, done, total, pct: Math.round((done / total) * 100) }
-  })
+  if (loading) return (
+    <div style={{padding:"60px 36px",textAlign:"center",fontFamily:F.body,color:C.inkMute}}>
+      Loading certificate…
+    </div>
+  )
+
+  // ── Certificate card (used both for display and download capture) ──
+  const certCard = (
+    <div
+      ref={certRef}
+      style={{
+        position:'relative',
+        width:'100%',
+        aspectRatio:'3/2',
+        background:'#F5EFE6',
+        borderRadius:4,
+        overflow:'hidden',
+        boxShadow:`inset 0 0 0 12px #F5EFE6, inset 0 0 0 14px #C9A87C`,
+        fontFamily:"'DM Serif Display', Georgia, serif",
+        display:'flex', flexDirection:'column',
+        alignItems:'center', justifyContent:'center',
+        padding:'5% 8%',
+        boxSizing:'border-box',
+        textAlign:'center',
+      }}
+    >
+      {/* Corner decorations — Deep Forest teal triangles */}
+      <div style={{position:'absolute',top:0,left:0,width:'16%',paddingBottom:'10.7%',background:'#2F4A3F',clipPath:'polygon(0 0,100% 0,0 100%)'}}/>
+      <div style={{position:'absolute',bottom:0,right:0,width:'16%',paddingBottom:'10.7%',background:'#2F4A3F',clipPath:'polygon(100% 0,100% 100%,0 100%)'}}/>
+      {/* Corner inner accent lines */}
+      <div style={{position:'absolute',top:14,left:14,width:40,height:40,borderTop:`1px solid #C9A87C`,borderLeft:`1px solid #C9A87C`}}/>
+      <div style={{position:'absolute',bottom:14,right:14,width:40,height:40,borderBottom:`1px solid #C9A87C`,borderRight:`1px solid #C9A87C`}}/>
+
+      {/* Logo row */}
+      <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:'3%'}}>
+        <div style={{width:28,height:28,borderRadius:6,background:'#2F4A3F',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:F.display,fontWeight:800,fontSize:10,color:'#C9A87C',letterSpacing:'0.04em'}}>LC</div>
+        <div style={{textAlign:'left'}}>
+          <div style={{fontFamily:F.display,fontWeight:700,fontSize:11,color:'#2F4A3F',letterSpacing:'0.18em',textTransform:'uppercase'}}>LC · Lighting Master</div>
+          <div style={{fontFamily:F.mono,fontWeight:400,fontSize:7,color:'#8a7a6a',letterSpacing:'0.22em',textTransform:'uppercase'}}>by Luxart LLC</div>
+        </div>
+      </div>
+
+      {/* CERTIFICATE OF COMPLETION */}
+      <div style={{fontFamily:F.mono,fontSize:'clamp(6px,1.1vw,10px)',letterSpacing:'0.28em',textTransform:'uppercase',color:'#C9A87C',marginBottom:'1.5%'}}>
+        Certificate of Completion
+      </div>
+
+      {/* Divider */}
+      <div style={{display:'flex',alignItems:'center',gap:8,width:'70%',marginBottom:'2%'}}>
+        <div style={{flex:1,height:1,background:'#C9A87C'}}/>
+        <div style={{color:'#C9A87C',fontSize:8}}>◆</div>
+        <div style={{flex:1,height:1,background:'#C9A87C'}}/>
+      </div>
+
+      {/* Main title */}
+      <div style={{fontSize:'clamp(18px,3.2vw,40px)',fontWeight:400,color:'#1A3230',lineHeight:1.1,marginBottom:'0.8%'}}>
+        Certified Lighting Designer
+      </div>
+      <div style={{fontFamily:F.mono,fontSize:'clamp(7px,1vw,10px)',letterSpacing:'0.32em',textTransform:'uppercase',color:'#8a7a6a',marginBottom:'2.5%'}}>
+        Exam Preparation
+      </div>
+
+      {/* AWARDED TO row */}
+      <div style={{display:'flex',alignItems:'center',gap:10,width:'60%',marginBottom:'2%'}}>
+        <div style={{flex:1,height:1,background:'#C9A87C',opacity:0.5}}/>
+        <div style={{fontFamily:F.mono,fontSize:'clamp(6px,0.8vw,8px)',letterSpacing:'0.3em',textTransform:'uppercase',color:'#C9A87C'}}>Awarded to</div>
+        <div style={{flex:1,height:1,background:'#C9A87C',opacity:0.5}}/>
+      </div>
+
+      {/* USER NAME — dynamic */}
+      <div style={{fontSize:'clamp(22px,4.2vw,58px)',fontWeight:400,color:'#16120e',lineHeight:1.05,marginBottom:'1%'}}>
+        {userName}
+      </div>
+
+      {/* Diamond separator */}
+      <div style={{color:'#C9A87C',fontSize:10,marginBottom:'2%'}}>◆</div>
+
+      {/* Body text */}
+      <p style={{fontFamily:F.body,fontSize:'clamp(8px,1.1vw,13px)',lineHeight:1.7,color:'#5a4a3a',maxWidth:'72%',margin:'0 0 4%'}}>
+        For completing all <strong style={{color:'#b85835'}}>74</strong> lessons across <strong style={{color:'#b85835'}}>12</strong> modules and
+        passing the practice exam with a score of <strong style={{color:'#b85835'}}>100%</strong>,
+        earning <strong style={{color:'#b85835'}}>24 CEU</strong> contact hours of professional development.
+      </p>
+
+      {/* Bottom bar */}
+      <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:'6%',width:'80%',borderTop:`1px solid rgba(201,168,124,0.4)`,paddingTop:'2.5%'}}>
+        {/* Date */}
+        <div style={{textAlign:'center'}}>
+          <div style={{fontFamily:F.mono,fontSize:'clamp(5px,0.7vw,7px)',letterSpacing:'0.22em',textTransform:'uppercase',color:'#8a7a6a',marginBottom:4}}>Date</div>
+          <div style={{fontFamily:F.body,fontWeight:600,fontSize:'clamp(8px,1vw,12px)',color:'#16120e'}}>{issuedDate}</div>
+        </div>
+
+        {/* LC Seal */}
+        <div style={{
+          width:'clamp(36px,6vw,64px)',
+          height:'clamp(36px,6vw,64px)',
+          borderRadius:'50%',
+          background:'#2F4A3F',
+          border:`2px solid #C9A87C`,
+          display:'flex', alignItems:'center', justifyContent:'center',
+          fontFamily:F.display, fontWeight:800,
+          fontSize:'clamp(10px,1.6vw,18px)',
+          color:'#C9A87C',
+          letterSpacing:'0.06em',
+          flexShrink:0,
+        }}>LC</div>
+
+        {/* Website */}
+        <div style={{textAlign:'center'}}>
+          <div style={{fontFamily:F.mono,fontSize:'clamp(5px,0.7vw,7px)',letterSpacing:'0.22em',textTransform:'uppercase',color:'#8a7a6a',marginBottom:4}}>Provided by</div>
+          <div style={{fontFamily:F.body,fontWeight:500,fontSize:'clamp(7px,0.9vw,11px)',color:'#2F4A3F'}}>lightingmasterlc.com</div>
+        </div>
+      </div>
+    </div>
+  )
 
   return (
-    <>
-      <style>{`
-        @media print {
-          body * { visibility: hidden !important; }
-          #cert-printable, #cert-printable * { visibility: visible !important; }
-          #cert-printable {
-            position: fixed !important;
-            left: 0 !important; top: 0 !important;
-            width: 100vw !important; height: 100vh !important;
-            background: #fff !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            padding: 40px !important;
-          }
-        }
-      `}</style>
+    <div style={{padding:"0 36px 48px"}}>
+      <PageHead eyebrow="My progress · Course completion" title="Your" em="certificate."/>
 
-      <div style={{ padding: '0 36px 48px' }}>
-        <PageHead eyebrow="My progress · Course completion" title="Your" em="certificate." />
+      <section style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:40,margin:"32px 0 0",alignItems:"start"}}>
 
-        <section style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 40, margin: '32px 0 0', alignItems: 'start' }}>
+        {/* Certificate + Download */}
+        <div>
+          <div style={{position:'relative'}}>
+            {certCard}
 
-          {/* Certificate card */}
-          <div>
-            <div id="cert-printable" style={{
-              border: `2px solid ${C.rule}`,
-              borderRadius: 8,
-              padding: 36,
-              background: C.paper,
-              position: 'relative',
-              overflow: 'hidden',
-            }}>
-              {/* Decorative corner accents */}
-              <div style={{ position: 'absolute', top: 0, left: 0, width: 60, height: 60,
-                borderTop: `3px solid ${C.accent}`, borderLeft: `3px solid ${C.accent}`,
-                borderRadius: '8px 0 0 0' }}/>
-              <div style={{ position: 'absolute', top: 0, right: 0, width: 60, height: 60,
-                borderTop: `3px solid ${C.accent}`, borderRight: `3px solid ${C.accent}`,
-                borderRadius: '0 8px 0 0' }}/>
-              <div style={{ position: 'absolute', bottom: 0, left: 0, width: 60, height: 60,
-                borderBottom: `3px solid ${C.accent}`, borderLeft: `3px solid ${C.accent}`,
-                borderRadius: '0 0 0 8px' }}/>
-              <div style={{ position: 'absolute', bottom: 0, right: 0, width: 60, height: 60,
-                borderBottom: `3px solid ${C.accent}`, borderRight: `3px solid ${C.accent}`,
-                borderRadius: '0 0 8px 0' }}/>
-
-              {/* Logo + brand */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
-                <img src="/brand/logo-transparent.png" alt="LC Lighting Master"
-                  style={{ width: 40, height: 40, borderRadius: 8, border: `1px solid ${C.rule}` }} />
-                <div>
-                  <div style={{ fontFamily: F.display, fontWeight: 700, fontSize: 13, color: C.ink, lineHeight: 1.1 }}>LC · Lighting Master</div>
-                  <div style={{ fontFamily: F.mono, fontSize: 8, letterSpacing: '0.14em', textTransform: 'uppercase', color: C.inkMute }}>by Luxart LLC</div>
+            {/* Lock overlay — only shown when NOT unlocked */}
+            {!isUnlocked && (
+              <div style={{
+                position:"absolute",inset:0,
+                background:"rgba(248,243,236,0.92)",
+                display:"flex",flexDirection:"column",
+                alignItems:"center",justifyContent:"center",gap:10,
+                backdropFilter:"blur(3px)",
+                borderRadius:4,
+              }}>
+                <div style={{fontSize:28}}>🔒</div>
+                <div style={{fontFamily:F.display,fontWeight:700,fontSize:16,color:C.ink}}>Not unlocked yet</div>
+                <div style={{fontFamily:F.body,fontSize:13,color:C.inkMute,textAlign:"center",maxWidth:240}}>
+                  Complete all {TOTAL_LESSONS} lessons to unlock and download your certificate.
                 </div>
               </div>
-
-              <div style={{ height: 1, background: `linear-gradient(to right, ${C.accent}, ${C.rule}, transparent)`, marginBottom: 20 }}/>
-
-              <div style={{ fontFamily: F.mono, fontSize: 9, letterSpacing: '0.22em', textTransform: 'uppercase', color: C.accent, marginBottom: 14 }}>
-                Certificate of Completion
-              </div>
-
-              <h2 style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 28, fontWeight: 400, color: C.ink, lineHeight: 1.15, margin: '0 0 6px' }}>
-                Certified Lighting
-              </h2>
-              <h2 style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 28, fontWeight: 400, color: C.ink, lineHeight: 1.15, margin: '0 0 18px' }}>
-                Designer · Exam Prep
-              </h2>
-
-              <div style={{ fontFamily: F.mono, fontSize: 9, letterSpacing: '0.16em', textTransform: 'uppercase', color: C.inkMute, marginBottom: 6 }}>
-                Awarded to
-              </div>
-              <div style={{ fontFamily: F.display, fontWeight: 700, fontSize: 22, color: C.ink, marginBottom: 16, letterSpacing: '-0.01em' }}>
-                {userName || user?.email || 'Lighting Professional'}
-              </div>
-
-              <p style={{ fontFamily: F.body, fontSize: 12, lineHeight: 1.7, color: C.inkMute, marginBottom: 24, maxWidth: 340 }}>
-                For completing all 74 lessons across 12 modules and passing the
-                NCQLP practice exam with a score of {bestExamScore || 0}%,
-                earning 24 CEU contact hours of professional development.
-              </p>
-
-              <div style={{ height: 1, background: C.rule, marginBottom: 16 }}/>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                <div>
-                  <div style={{ fontFamily: F.mono, fontSize: 8, letterSpacing: '0.14em', textTransform: 'uppercase', color: C.inkMute, marginBottom: 4 }}>
-                    {isUnlocked ? 'Date issued' : 'Pending completion'}
-                  </div>
-                  <div style={{ fontFamily: F.display, fontWeight: 600, fontSize: 13, color: C.ink }}>
-                    {isUnlocked ? issueDate : '—'}
-                  </div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontFamily: F.mono, fontSize: 8, letterSpacing: '0.14em', textTransform: 'uppercase', color: C.inkMute, marginBottom: 4 }}>
-                    Issued by
-                  </div>
-                  <div style={{ fontFamily: F.display, fontWeight: 600, fontSize: 11, color: C.ink }}>lightingmasterlc.com</div>
-                </div>
-              </div>
-
-              {/* Lock overlay */}
-              {!isUnlocked && (
-                <div style={{ position: 'absolute', inset: 0,
-                  background: 'rgba(250,245,240,0.92)',
-                  display: 'flex', flexDirection: 'column',
-                  alignItems: 'center', justifyContent: 'center',
-                  gap: 10, backdropFilter: 'blur(3px)', borderRadius: 8 }}>
-                  <div style={{ fontSize: 32 }}>🔒</div>
-                  <div style={{ fontFamily: F.display, fontWeight: 700, fontSize: 16, color: C.ink }}>Not unlocked yet</div>
-                  <div style={{ fontFamily: F.body, fontSize: 13, color: C.inkMute,
-                    textAlign: 'center', maxWidth: 240, lineHeight: 1.6 }}>
-                    Complete all 4 requirements to issue and download your certificate.
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Download button */}
-            {isUnlocked && (
-              <button onClick={downloadCertificate} disabled={printing}
-                style={{
-                  width: '100%', marginTop: 14,
-                  fontFamily: F.display, fontWeight: 700, fontSize: 14,
-                  background: C.accent, color: '#fff', border: 'none',
-                  borderRadius: 99, padding: '13px 24px', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                }}>
-                {printing ? 'Preparing PDF...' : '⬇ Download Certificate PDF'}
-              </button>
             )}
           </div>
 
-          {/* Readiness panel */}
-          <div style={{ background: C.ink, borderRadius: 8, padding: '28px 32px', color: '#fff' }}>
-            <div style={mono({ fontSize: 9, letterSpacing: '0.22em', textTransform: 'uppercase', color: C.tan, marginBottom: 12 })}>
-              Certificate readiness
-            </div>
-            <div style={{ fontFamily: F.display, fontWeight: 700, fontSize: 52,
-              letterSpacing: '-0.03em', lineHeight: 1, marginBottom: 6 }}>
-              {readinessPct}
-              <em style={{ fontStyle: 'normal', fontSize: 24, color: C.tan }}>%</em>
-            </div>
-            <div style={mono({ fontSize: 10, letterSpacing: '0.16em', color: 'rgba(255,255,255,0.5)', marginBottom: 16 })}>
-              {metCount} of 4 requirements met
-            </div>
-            <div style={{ height: 4, background: 'rgba(255,255,255,0.12)',
-              borderRadius: 99, overflow: 'hidden', marginBottom: 24 }}>
-              <div style={{ height: '100%', width: `${readinessPct}%`,
-                background: C.accent, borderRadius: 99, transition: 'width 700ms ease' }}/>
-            </div>
-            {reqs.map((r, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12,
-                padding: '12px 0', borderBottom: i < 3 ? '1px solid rgba(255,255,255,0.08)' : 'none' }}>
-                <span style={{
-                  width: 20, height: 20, borderRadius: '50%', flexShrink: 0, marginTop: 1,
-                  background: r.done ? C.forest : 'transparent',
-                  border: `1.5px solid ${r.done ? C.forest : 'rgba(255,255,255,0.3)'}`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 10, color: '#fff',
-                }}>
-                  {r.done ? '✓' : ''}
-                </span>
-                <div>
-                  <div style={{ fontFamily: F.display, fontWeight: 600, fontSize: 13,
-                    color: r.done ? '#fff' : 'rgba(255,255,255,0.65)', marginBottom: 3 }}>
-                    {r.label}
-                  </div>
-                  <div style={mono({ fontSize: 9, letterSpacing: '0.1em', color: 'rgba(255,255,255,0.38)' })}>
-                    {r.detail}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
+          {/* Download button — only when unlocked */}
+          {isUnlocked && (
+            <button
+              onClick={handleDownload}
+              disabled={downloading}
+              style={{
+                marginTop:16,width:"100%",
+                padding:"13px 0",
+                background: downloading ? C.inkMute : C.forest,
+                color:"#fff",border:"none",borderRadius:4,
+                fontFamily:F.display,fontWeight:700,fontSize:14,
+                letterSpacing:"0.04em",cursor: downloading ? "default" : "pointer",
+                transition:"background 200ms",
+              }}
+            >
+              {downloading ? "Generating PDF…" : "⬇ Download Certificate"}
+            </button>
+          )}
+        </div>
 
-        {/* Metrics strip */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 0,
-          border: `1px solid ${C.rule}`, borderRadius: 6, overflow: 'hidden', margin: '32px 0 0' }}>
+        {/* Readiness panel */}
+        <div style={{background:C.ink,borderRadius:6,padding:"28px 32px",color:"#fff"}}>
+          <div style={mono({fontSize:9,letterSpacing:"0.22em",textTransform:"uppercase",color:C.tan,marginBottom:12})}>Certificate readiness</div>
+          <div style={{fontFamily:F.display,fontWeight:700,fontSize:52,letterSpacing:"-0.03em",lineHeight:1,marginBottom:6}}>
+            {readinessPct}<em style={{fontStyle:"normal",fontSize:24,color:C.tan}}>%</em>
+          </div>
+          <div style={mono({fontSize:10,letterSpacing:"0.16em",color:"rgba(255,255,255,0.5)",marginBottom:16})}>
+            {completedCount} of {TOTAL_LESSONS} lessons completed
+          </div>
+          <div style={{height:4,background:"rgba(255,255,255,0.12)",borderRadius:99,overflow:"hidden",marginBottom:24}}>
+            <div style={{height:"100%",width:`${readinessPct}%`,background:isUnlocked?C.forest:C.accent,borderRadius:99,transition:"width 700ms cubic-bezier(.4,0,.2,1)"}}/>
+          </div>
+
           {[
-            { n: 'Lessons', val: totalDone.toString(), sub: `/${totalLessons}` },
-            { n: 'CEU hours', val: ceuEarned, sub: '/24' },
-            { n: 'Practice exam',
-              val: bestExamScore !== null && examAttempts > 0 ? `${bestExamScore}%` : '—',
-              sub: examAttempts > 0 ? ` · ${examAttempts} attempt${examAttempts > 1 ? 's' : ''}` : '' },
-            { n: 'Access expires',
-              val: expiry.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-              sub: ` ${expiry.getFullYear()}` },
-          ].map((m, i) => (
-            <div key={m.n} style={{ padding: '22px 24px',
-              borderRight: i < 3 ? `1px solid ${C.rule}` : 'none', background: C.paper }}>
-              <div style={mono({ fontSize: 9, letterSpacing: '0.18em', textTransform: 'uppercase', color: C.inkMute, marginBottom: 8 })}>
-                {m.n}
-              </div>
-              <div style={{ fontFamily: F.display, fontWeight: 700, fontSize: 24,
-                letterSpacing: '-0.02em', color: C.ink, lineHeight: 1 }}>
-                {m.val}
-                <em style={{ fontStyle: 'normal', color: C.accent, fontSize: 14 }}>{m.sub}</em>
+            {
+              label:`Complete all ${TOTAL_LESSONS} lessons`,
+              detail:`${completedCount} of ${TOTAL_LESSONS} lessons done`,
+              done: completedCount >= TOTAL_LESSONS,
+            },
+            {
+              label:"Earn 24 CEU contact hours",
+              detail:`${Math.round((completedCount/TOTAL_LESSONS)*24*10)/10} of 24 hours logged`,
+              done: completedCount >= TOTAL_LESSONS,
+            },
+          ].map((r,i)=>(
+            <div key={i} style={{display:"flex",alignItems:"flex-start",gap:12,padding:"10px 0",borderBottom:i<1?`1px solid rgba(255,255,255,0.08)`:"none"}}>
+              <span style={{
+                width:18,height:18,borderRadius:"50%",flexShrink:0,marginTop:2,
+                border:`1px solid ${r.done?"transparent":"rgba(255,255,255,0.3)"}`,
+                background:r.done?C.forest:"transparent",
+                display:"flex",alignItems:"center",justifyContent:"center",
+                fontSize:9,color:"#fff",
+              }}>{r.done?"✓":""}</span>
+              <div>
+                <div style={{fontFamily:F.display,fontWeight:600,fontSize:13,color:r.done?"#fff":"rgba(255,255,255,0.7)",marginBottom:3}}>{r.label}</div>
+                <div style={mono({fontSize:9,letterSpacing:"0.1em",color:"rgba(255,255,255,0.38)"})}>{r.detail}</div>
               </div>
             </div>
           ))}
-        </div>
 
-        {/* Part progress */}
-        <div style={{ margin: '32px 0 0', background: C.paper,
-          border: `1px solid ${C.rule}`, borderRadius: 6, padding: '24px 28px' }}>
-          <div style={mono({ fontSize: 9, letterSpacing: '0.22em', textTransform: 'uppercase', color: C.inkMute, marginBottom: 18 })}>
-            Progress by part
-          </div>
-          {partProgress.map(p => (
-            <div key={p.n} style={{ marginBottom: 18 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
-                <div>
-                  <span style={{ fontFamily: F.display, fontWeight: 700, fontSize: 13, color: C.ink }}>Part {p.n} · {p.title}</span>
-                  <span style={mono({ fontSize: 9, letterSpacing: '0.14em', color: C.inkMute, marginLeft: 10 })}>Modules {p.modules}</span>
-                </div>
-                <span style={mono({ fontSize: 9, letterSpacing: '0.14em', color: p.pct > 0 ? C.accent : C.inkMute })}>
-                  {p.done}/{p.total} lessons
-                </span>
+          {isUnlocked && (
+            <div style={{marginTop:20,padding:"14px 16px",background:C.forest,borderRadius:4,display:"flex",alignItems:"center",gap:10}}>
+              <span style={{fontSize:18}}>🎓</span>
+              <div>
+                <div style={{fontFamily:F.display,fontWeight:700,fontSize:13,color:"#fff"}}>Certificate unlocked!</div>
+                <div style={{fontFamily:F.body,fontSize:11,color:"rgba(255,255,255,0.7)",marginTop:2}}>Issued {issuedDate}</div>
               </div>
-              <FilamentBar pct={p.pct} color={p.pct === 100 ? C.forest : C.accent} glow={p.pct > 0 && p.pct < 100}/>
             </div>
-          ))}
+          )}
         </div>
-      </div>
-    </>
+      </section>
+    </div>
   )
 }
-
-/* ── EXAM PAGE ───────────────────────────────────────────────── */
-
 function ExamPage({ setRoute, user, userSubscription }) {
   const supabase = createClient()
 
