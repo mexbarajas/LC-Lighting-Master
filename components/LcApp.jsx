@@ -2416,6 +2416,9 @@ function ExamPage({ setRoute, user, userSubscription }) {
   const [retakeReason, setRetakeReason] = useState('')
   const [retakeSubmitted, setRetakeSubmitted] = useState(false)
 
+  const [resumeData, setResumeData] = useState(null)  // null | resume payload
+  const [checkingResume, setCheckingResume] = useState(true)
+
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
@@ -2434,6 +2437,20 @@ function ExamPage({ setRoute, user, userSubscription }) {
       .eq('status', 'completed')
       .then(({ count }) => setAttemptsUsed(count || 0))
   }, [user])
+
+  // Check for a resumable session on mount
+  useEffect(() => {
+    if (!user?.id || !canAccess) { setCheckingResume(false); return }
+    fetch('/api/exam/resume', { method: 'POST' })
+      .then(r => r.json())
+      .then(data => {
+        if (data.resumable) {
+          setResumeData(data)
+        }
+        setCheckingResume(false)
+      })
+      .catch(() => setCheckingResume(false))
+  }, [user, canAccess])
 
   const current = questions[idx] || null
 
@@ -2477,6 +2494,7 @@ function ExamPage({ setRoute, user, userSubscription }) {
       setSelected(null)
       setFeedback(null)
       setResults(null)
+      setResumeData(null)
       setScreen('exam')
       setQStartMs(Date.now())
       setTimerOn(true)
@@ -2485,6 +2503,21 @@ function ExamPage({ setRoute, user, userSubscription }) {
     } finally {
       setLoading(false)
     }
+  }
+
+  function resumeSession() {
+    if (!resumeData) return
+    setSessionId(resumeData.sessionId)
+    setMode(resumeData.mode)
+    setQuestions(resumeData.questions)
+    setAnswers(resumeData.answers || {})
+    setIdx(resumeData.currentIdx || 0)
+    setSelected(null)
+    setFeedback(null)
+    setResults(null)
+    setScreen('exam')
+    setQStartMs(Date.now())
+    setTimerOn(true)
   }
 
   async function submitAnswer(choice, timedOut = false) {
@@ -2515,10 +2548,23 @@ function ExamPage({ setRoute, user, userSubscription }) {
         speedBonus,
       })
 
-      setAnswers(prev => ({
-        ...prev,
+      // Record answer and persist to DB
+      const newAnswers = {
+        ...answers,
         [current.qid]: { answer, correct: data.correct, timeMs, speedBonus }
-      }))
+      }
+      setAnswers(newAnswers)
+
+      // Save progress (fire and forget — don't block UI)
+      fetch('/api/exam/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId,
+          answers: newAnswers,
+          currentIdx: idx,
+        }),
+      }).catch(e => console.error('save failed:', e))
 
       setLoading(false)
     } catch (e) {
@@ -2537,11 +2583,18 @@ function ExamPage({ setRoute, user, userSubscription }) {
     if (isLast) {
       finishExam()
     } else {
-      setIdx(idx + 1)
+      const newIdx = idx + 1
+      setIdx(newIdx)
       setSelected(null)
       setFeedback(null)
       setQStartMs(Date.now())
       setTimerOn(true)
+      // Persist new position
+      fetch('/api/exam/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId, answers, currentIdx: newIdx }),
+      }).catch(e => console.error('save failed:', e))
     }
   }
 
@@ -2612,6 +2665,19 @@ function ExamPage({ setRoute, user, userSubscription }) {
   if (screen === 'start') return (
     <div style={{padding:'48px 36px',maxWidth:600}}>
       <div style={mono({fontSize:9,letterSpacing:'0.18em',textTransform:'uppercase',color:C.accent,marginBottom:12})}>Practice Exam · {attemptsUsed}/5 attempts used</div>
+      {resumeData && (
+        <div style={{background:`${C.forest}10`,border:`1px solid ${C.forest}`,borderRadius:10,padding:'18px 22px',marginBottom:24}}>
+          <div style={{fontFamily:F.display,fontWeight:700,fontSize:15,color:C.forest,marginBottom:6}}>
+            You have an exam in progress
+          </div>
+          <div style={{fontFamily:F.body,fontSize:13,color:C.inkMute,lineHeight:1.6,marginBottom:14}}>
+            {resumeData.answeredCount} of {resumeData.totalCount} questions answered · {resumeData.mode === 'quick' ? 'Quick' : resumeData.mode === 'mid' ? 'Mid' : 'Full'} exam. Resume where you left off, or start fresh below.
+          </div>
+          <button onClick={resumeSession} style={{fontFamily:F.display,fontWeight:700,fontSize:14,background:C.forest,color:'#fff',border:'none',borderRadius:99,padding:'11px 26px',cursor:'pointer'}}>
+            Resume exam →
+          </button>
+        </div>
+      )}
       <h2 style={{fontFamily:F.display,fontWeight:700,fontSize:28,color:C.ink,margin:'0 0 8px'}}>NCQLP Practice Exam</h2>
       <p style={{fontFamily:F.body,fontSize:14,color:C.inkMute,lineHeight:1.75,margin:'0 0 28px'}}>30-second timer per question with speed bonus up to +250. Immediate feedback after each answer.</p>
       <div style={{marginBottom:24}}>
@@ -2626,8 +2692,8 @@ function ExamPage({ setRoute, user, userSubscription }) {
         </div>
       </div>
       {error && <div style={{color:C.accent,fontFamily:F.mono,fontSize:11,marginBottom:16}}>❌ {error}</div>}
-      <button onClick={startSession} disabled={loading} style={{fontFamily:F.display,fontWeight:700,fontSize:15,background:C.accent,color:'#fff',border:'none',borderRadius:99,padding:'14px 36px',cursor:'pointer',opacity:loading?0.7:1}}>
-        {loading ? 'Loading questions...' : `Begin ${mode==='quick'?'20':mode==='mid'?'50':'180'}-question exam →`}
+      <button onClick={startSession} disabled={loading} style={{fontFamily:F.display,fontWeight:700,fontSize:15,background:resumeData?'transparent':C.accent,color:resumeData?C.inkMute:'#fff',border:resumeData?`1px solid ${C.rule}`:'none',borderRadius:99,padding:'14px 36px',cursor:'pointer',opacity:loading?0.7:1}}>
+        {loading ? 'Loading questions...' : resumeData ? 'Start a new exam instead' : `Begin ${mode==='quick'?'20':mode==='mid'?'50':'180'}-question exam →`}
       </button>
     </div>
   )
@@ -2639,7 +2705,19 @@ function ExamPage({ setRoute, user, userSubscription }) {
       <div key={current.qid} style={{padding:'32px 36px',maxWidth:680}}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
           <div style={mono({fontSize:9,letterSpacing:'0.16em',textTransform:'uppercase',color:C.inkMute})}>Q{idx+1} of {questions.length} · {current.topic}</div>
-          <div style={{width:40,height:40,borderRadius:'50%',background:timeLeft>10?C.forest:C.accent,display:'flex',alignItems:'center',justifyContent:'center',fontFamily:F.display,fontWeight:700,fontSize:14,color:'#fff'}}>{timeLeft}</div>
+          <div style={{display:'flex',alignItems:'center',gap:14}}>
+            <button onClick={()=>{
+              setTimerOn(false)
+              fetch('/api/exam/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId,answers,currentIdx:idx})}).catch(()=>{})
+              setScreen('start')
+              setResumeData(null)
+              // Re-check resume so the banner shows the saved session
+              fetch('/api/exam/resume',{method:'POST'}).then(r=>r.json()).then(d=>{if(d.resumable)setResumeData(d)}).catch(()=>{})
+            }} style={{fontFamily:F.display,fontWeight:600,fontSize:12,background:'transparent',color:C.inkMute,border:`1px solid ${C.rule}`,borderRadius:99,padding:'7px 16px',cursor:'pointer'}}>
+              Save & exit
+            </button>
+            <div style={{width:40,height:40,borderRadius:'50%',background:timeLeft>10?C.forest:C.accent,display:'flex',alignItems:'center',justifyContent:'center',fontFamily:F.display,fontWeight:700,fontSize:14,color:'#fff'}}>{timeLeft}</div>
+          </div>
         </div>
         <div style={{height:3,background:C.rule,borderRadius:99,overflow:'hidden',marginBottom:24}}>
           <div style={{height:'100%',width:`${pct}%`,background:C.accent,transition:'width 400ms ease'}}/>
