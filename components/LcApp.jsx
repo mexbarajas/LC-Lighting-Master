@@ -5067,7 +5067,7 @@ function FeedbackPage({ user, userSubscription }) {
 /* ══════════════════════════════════════════
    ROOT — wires landing ↔ auth ↔ app
 ══════════════════════════════════════════ */
-function LearnerRoot({onAdminClick=()=>{}}){
+function LearnerRoot({isAdmin=false, onAdminClick=()=>{}}){
   const [page, setPage] = useState("landing")   // landing | app
   const [authMode, setAuthMode] = useState(null) // null | signin | signup
   const [user, setUser] = useState(null)
@@ -5223,7 +5223,7 @@ function LearnerRoot({onAdminClick=()=>{}}){
           <Testimonials/>
           <FAQ/>
           <FinalCTA onSignUp={()=>openAuth("signup")}/>
-          <Footer onSignIn={()=>openAuth("signin")} onSignUp={()=>openAuth("signup")} onAdminClick={onAdminClick} onLegal={setLegalDoc}/>
+          <Footer onSignIn={()=>openAuth("signin")} onSignUp={()=>openAuth("signup")} onAdminClick={isAdmin ? onAdminClick : undefined} onLegal={setLegalDoc}/>
         </div>
       )}
 
@@ -6526,9 +6526,7 @@ function AdminSidebar({route,setRoute,flagCount,onSignOut,onBack=()=>{},adminEma
 }
 
 /* ── ROOT ──────────────────────────────────────── */
-function AdminApp({onBack=()=>{}}){
-  const [authed, setAuthed] = useState(false)
-  const [adminEmail, setAdminEmail] = useState("")
+function AdminApp({onBack=()=>{}, adminEmail=""}){
   const [route, setRoute] = useState("overview")
   const [users, setUsers] = useState([])
   const [selectedUser, setSelectedUser] = useState(null)
@@ -6662,18 +6660,13 @@ function AdminApp({onBack=()=>{}}){
     setSelectedUser(updated)
   }
   async function handleSignOut(){
-    try{await fetch('/api/admin/logout',{method:'POST',credentials:'same-origin'})}catch{}
-    setAuthed(false)
-    setAdminEmail("")
-    setRoute("overview")
-    setSelectedUser(null)
+    await supabase.auth.signOut()
+    onBack()
   }
   function navigate(r){
     setRoute(r)
     setSelectedUser(null)
   }
-
-  if(!authed) return <AdminLogin onLogin={(em)=>{setAuthed(true);setAdminEmail(em)}}/>
 
   return(
     <div style={{display:"flex",minHeight:"100vh",background:AT.bg2,
@@ -6772,9 +6765,13 @@ function ResetPassword({ onDone }) {
 
 /* ══ TOP-LEVEL ROUTER — learner app + admin portal in one file ══ */
 export default function Root(){
-  const [app, setApp]           = React.useState("learner")
-  const [recovery, setRecovery] = useState(false)
+  const [isAdmin, setIsAdmin]       = useState(false)
+  const [adminEmail, setAdminEmail] = useState("")
+  const [ready, setReady]           = useState(false)
+  const [showAdmin, setShowAdmin]   = useState(false)
+  const [recovery, setRecovery]     = useState(false)
 
+  // Detect Supabase recovery links before anything else renders
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") setRecovery(true)
@@ -6782,7 +6779,22 @@ export default function Root(){
     return () => sub?.subscription?.unsubscribe()
   }, [])
 
+  // Check admins table once on mount
+  useEffect(() => {
+    ;(async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        setAdminEmail(user.email)
+        const { data } = await supabase
+          .from('admins').select('user_id').eq('user_id', user.id).maybeSingle()
+        setIsAdmin(!!data)
+      }
+      setReady(true)
+    })()
+  }, [])
+
+  if (!ready) return null
   if (recovery) return <ResetPassword onDone={() => setRecovery(false)} />
-  if (app==="admin") return <AdminApp onBack={()=>setApp("learner")}/>
-  return <LearnerRoot onAdminClick={()=>setApp("admin")}/>
+  if (showAdmin) return <AdminApp adminEmail={adminEmail} onBack={() => setShowAdmin(false)} />
+  return <LearnerRoot isAdmin={isAdmin} onAdminClick={() => setShowAdmin(true)} />
 }
