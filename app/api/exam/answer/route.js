@@ -55,7 +55,8 @@ export async function POST(req) {
 
     const idx         = examSession.current_idx
     const questionIds = examSession.question_ids
-    const currentQId  = questionIds[idx]
+    const currentQId  = parseInt(questionIds[idx], 10)
+    console.log('[answer] currentQId:', currentQId, 'type:', typeof currentQId)
     console.log('[answer] idx:', idx, 'currentQId:', currentQId, 'qid sent:', qid)
 
     // Fetch correct answer via RPC
@@ -143,7 +144,7 @@ export async function POST(req) {
     // Fetch next question
     let nextQuestion = null
     if (!isLast) {
-      const nextQId = questionIds[nextIdx]
+      const nextQId = parseInt(questionIds[nextIdx], 10)
       const { data: nextQArr, error: nextErr } = await SERVICE
         .rpc('get_question_by_id', { p_id: nextQId })
       const nextQ = nextQArr?.[0] || null

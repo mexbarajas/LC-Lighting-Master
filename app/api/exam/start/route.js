@@ -65,6 +65,8 @@ export async function POST(req) {
     }
     const selected    = shuffled.slice(0, Math.min(count, shuffled.length))
     const questionIds = selected.map(q => q.id)
+    console.log('[start] questionIds sample:', questionIds.slice(0, 3),
+      'types:', questionIds.slice(0, 3).map(id => typeof id))
 
     const { data: session_row, error: sessionErr } = await SERVICE
       .from('exam_sessions')
@@ -87,7 +89,7 @@ export async function POST(req) {
     }
 
     const { data: firstQArr, error: firstQErr } = await SERVICE
-      .rpc('get_question_by_id', { p_id: questionIds[0] })
+      .rpc('get_question_by_id', { p_id: parseInt(questionIds[0], 10) })
     const firstQ = firstQArr?.[0]
 
     if (firstQErr || !firstQ) {
