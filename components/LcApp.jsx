@@ -6720,9 +6720,69 @@ function AdminApp({onBack=()=>{}}){
 
 
 
+/* ══ PASSWORD RESET (Supabase recovery link handler) ══ */
+function ResetPassword({ onDone }) {
+  const [pw, setPw]     = useState("")
+  const [pw2, setPw2]   = useState("")
+  const [busy, setBusy] = useState(false)
+  const [err, setErr]   = useState("")
+  const [ok, setOk]     = useState(false)
+
+  async function submit() {
+    setErr("")
+    if (pw.length < 10) { setErr("Password must be at least 10 characters."); return }
+    if (pw !== pw2)     { setErr("Passwords do not match."); return }
+    setBusy(true)
+    try {
+      const { error } = await supabase.auth.updateUser({ password: pw })
+      if (error) throw error
+      setOk(true)
+      setTimeout(() => onDone && onDone(), 2000)
+    } catch (e) {
+      setErr(e.message || "Could not update password. Request a new reset link.")
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (ok) return (
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Inter',sans-serif",color:"#16120e"}}>
+      Password updated. Redirecting to sign in…
+    </div>
+  )
+
+  return (
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#f5f0e8",padding:24}}>
+      <div style={{width:"100%",maxWidth:380,background:"#fff",border:"1px solid #e4d9ca",borderRadius:8,padding:"32px 28px"}}>
+        <h1 style={{fontFamily:"'Space Grotesk',sans-serif",fontWeight:700,fontSize:20,color:"#16120e",margin:"0 0 6px"}}>Set a new password</h1>
+        <p style={{fontFamily:"'Inter',sans-serif",fontSize:13,color:"#8a7a6a",margin:"0 0 20px"}}>Choose a strong password you haven't used before.</p>
+        <input type="password" value={pw} onChange={e=>setPw(e.target.value)} placeholder="New password (10+ characters)"
+          style={{width:"100%",boxSizing:"border-box",padding:"12px 14px",marginBottom:12,border:"1px solid #cfc3b0",borderRadius:4,fontSize:14}}/>
+        <input type="password" value={pw2} onChange={e=>setPw2(e.target.value)} placeholder="Confirm new password"
+          style={{width:"100%",boxSizing:"border-box",padding:"12px 14px",marginBottom:12,border:"1px solid #cfc3b0",borderRadius:4,fontSize:14}}/>
+        {err && <div style={{fontSize:12,color:"#b85835",marginBottom:12}}>{err}</div>}
+        <button onClick={submit} disabled={busy}
+          style={{width:"100%",padding:"12px 0",background:busy?"#8a7a6a":"#2a6048",color:"#fff",border:"none",borderRadius:4,fontFamily:"'Space Grotesk',sans-serif",fontWeight:700,fontSize:14,cursor:busy?"default":"pointer"}}>
+          {busy ? "Updating…" : "Update password"}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 /* ══ TOP-LEVEL ROUTER — learner app + admin portal in one file ══ */
 export default function Root(){
-  const [app, setApp] = React.useState("learner")
-  if(app==="admin") return <AdminApp onBack={()=>setApp("learner")}/>
+  const [app, setApp]           = React.useState("learner")
+  const [recovery, setRecovery] = useState(false)
+
+  useEffect(() => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") setRecovery(true)
+    })
+    return () => sub?.subscription?.unsubscribe()
+  }, [])
+
+  if (recovery) return <ResetPassword onDone={() => setRecovery(false)} />
+  if (app==="admin") return <AdminApp onBack={()=>setApp("learner")}/>
   return <LearnerRoot onAdminClick={()=>setApp("admin")}/>
 }
