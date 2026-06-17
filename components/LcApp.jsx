@@ -2438,31 +2438,22 @@ function ExamPage({setRoute, user, userSubscription, isMobile=false}) {
       .then(({ count }) => setAttemptsUsed(count || 0))
   }, [user])
 
-  // 30-second countdown
-  const timerRef = useRef(null)
+  // 30-second countdown — auto-submits on timeout
   useEffect(() => {
-    if (!timerActive) { clearInterval(timerRef.current); return }
+    if (!timerActive) return
     setTimeLeft(30)
-    timerRef.current = setInterval(() => {
+    const interval = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) {
-          clearInterval(timerRef.current)
+          clearInterval(interval)
+          handleAnswer(null, true)
           return 0
         }
         return prev - 1
       })
     }, 1000)
-    return () => clearInterval(timerRef.current)
-  }, [timerActive, idx])
-
-  // Auto-timeout when timer hits 0
-  const feedbackRef = useRef(null)
-  feedbackRef.current = feedback
-  useEffect(() => {
-    if (timeLeft === 0 && !feedbackRef.current && timerActive === false) {
-      handleAnswer(null, true)
-    }
-  }, [timeLeft])
+    return () => clearInterval(interval)
+  }, [timerActive, question?.qid])
 
   async function startSession() {
     if (!canAccess) return
@@ -2500,39 +2491,26 @@ function ExamPage({setRoute, user, userSubscription, isMobile=false}) {
   }
 
   async function handleAnswer(choice, timedOut = false) {
-    if (!sessionId || feedback) return
-    if (!question?.qid) {
-      setError('Question data missing — please refresh and try again')
-      return
-    }
+    // Hard guard — prevents double-submission from stale timer callbacks
+    if (loading || feedback || !sessionId || !question) return
+
     setTimerActive(false)
-    const answer = timedOut ? '' : choice
-    setSelected(answer)
     setLoading(true)
     setError(null)
 
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 10000)
+    const answer = timedOut ? '' : choice
+    const submittedTimeMs = Date.now() - (questionStartMs || Date.now())
+    setSelected(answer)
 
     try {
       const res = await fetch('/api/exam/answer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId,
-          answer,
-          timeMs: Date.now() - (questionStartMs || Date.now()),
-        }),
-        signal: controller.signal,
+        body: JSON.stringify({ sessionId, answer, timeMs: submittedTimeMs }),
       })
-      clearTimeout(timeout)
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}))
-        throw new Error(errData.error || `Server error ${res.status}`)
-      }
 
       const data = await res.json()
+      if (!res.ok) throw new Error(data.error || `Server error ${res.status}`)
 
       setFeedback({
         correct: data.correct,
@@ -2547,38 +2525,33 @@ function ExamPage({setRoute, user, userSubscription, isMobile=false}) {
         setTimeout(() => setFloatPts(null), 1200)
       }
 
-      if (data.isLast) {
-        setFinalScore(data.finalScore)
-        setTopicBreakdown(data.topicBreakdown || {})
-        setAttemptsUsed(prev => prev + 1)
-        setTimeout(() => setScreen('results'), 1800)
-      } else {
-        setTimeout(() => {
-          setQuestion(data.nextQuestion)
-          setIdx(data.nextIdx)
+      setTimeout(() => {
+        if (data.isLast) {
+          setFinalScore(data.finalScore)
+          setTopicBreakdown(data.topicBreakdown || {})
+          setAttemptsUsed(prev => prev + 1)
+          setScreen('results')
+        } else {
+          // Clear per-question state BEFORE setting new question to avoid stale render
           setSelected(null)
           setFeedback(null)
-          setTimerActive(true)
+          setLoading(false)
+          setQuestion(data.nextQuestion)
+          setIdx(data.nextIdx)
           setQuestionStartMs(Date.now())
-        }, 1800)
-      }
+          setTimerActive(true)
+        }
+      }, 1800)
 
     } catch (e) {
-      clearTimeout(timeout)
       console.error('handleAnswer error:', e.message)
-
-      if (e.name === 'AbortError') {
-        setError('Request timed out — check your connection and try again')
-      } else {
-        setError(`Failed to submit answer: ${e.message}`)
-      }
-
+      setError(`Failed to submit answer: ${e.message}`)
       setSelected(null)
       setFeedback(null)
+      setLoading(false)
       setTimerActive(true)
       setQuestionStartMs(Date.now())
     }
-    setLoading(false)
   }
 
   async function submitRetake() {
@@ -2701,7 +2674,7 @@ function ExamPage({setRoute, user, userSubscription, isMobile=false}) {
     const dashOffset  = circumference * (1 - (timeLeft / 30))
 
     return (
-      <div style={{padding:'28px 36px 48px'}}>
+      <div key={question.qid} style={{padding:'28px 36px 48px'}}>
         <style>{`@keyframes floatUp{0%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-40px)}}`}</style>
         {/* Header */}
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
