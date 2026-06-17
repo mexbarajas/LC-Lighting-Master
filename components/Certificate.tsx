@@ -22,10 +22,8 @@ const CERT_BG =
 
 // Vertical center of the name: 65% down
 const NAME_Y = 0.65
-// On-screen font size as % of image width (was 5vw → now 2.5vw, 50% smaller)
+// On-screen font size as % of viewport width
 const NAME_VW = 2.5
-// Canvas font size as fraction of image width (was 0.05 → now 0.025)
-const NAME_SCALE = 0.025
 
 export default function Certificate({ studentName }: CertificateProps) {
   const wrapRef = useRef<HTMLDivElement>(null)
@@ -48,11 +46,17 @@ export default function Certificate({ studentName }: CertificateProps) {
       const ctx = canvas.getContext('2d')!
       ctx.drawImage(img, 0, 0)
 
+      // Match the on-screen rendered size exactly:
+      // screen font px = NAME_VW% of viewport width
+      // scale up by (naturalWidth / displayed container width) to get canvas px
+      const containerWidth = wrapRef.current?.offsetWidth ?? 600
+      const screenFontPx = window.innerWidth * (NAME_VW / 100)
+      const fontPx = screenFontPx * (img.naturalWidth / containerWidth)
+
       ctx.fillStyle = '#0D3135'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
-      ctx.font = `700 ${img.naturalWidth * NAME_SCALE}px "Cormorant Garamond", Georgia, serif`
-      const fontPx = img.naturalWidth * NAME_SCALE
+      ctx.font = `700 ${fontPx}px "Cormorant Garamond", Georgia, serif`
       ctx.fillText(studentName, canvas.width / 2, canvas.height * NAME_Y - fontPx)
 
       const link = document.createElement('a')
@@ -76,7 +80,7 @@ export default function Certificate({ studentName }: CertificateProps) {
           draggable={false}
           className="w-full h-auto block rounded shadow-lg"
         />
-        {/* Display name — centered horizontally, 70% down vertically */}
+        {/* Display name — centered horizontally, NAME_Y% down vertically */}
         <div
           className="absolute pointer-events-none"
           style={{
@@ -97,7 +101,7 @@ export default function Certificate({ studentName }: CertificateProps) {
       <button
         onClick={download}
         disabled={busy}
-        className="px-8 py-3 rounded-lg bg-[#0D3135] text-white text-sm font-semibold
+        className="px-16 py-6 rounded-lg bg-[#0D3135] text-white text-base font-semibold
                    hover:bg-[#0a2529] active:scale-95 transition disabled:opacity-50"
       >
         {busy ? 'Generating…' : 'Download Certificate'}
