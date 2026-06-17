@@ -62,6 +62,25 @@ const d = (s={}) => ({fontFamily:F.display,...s})
 const mono    = (s={}) => ({fontFamily:F.mono,...s})
 const display = (s={}) => ({fontFamily:F.display,...s})
 
+class ErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { hasError: false, message: '' } }
+  static getDerivedStateFromError(err) { return { hasError: true, message: err?.message || 'Unknown error' } }
+  componentDidCatch(err, info) { console.error('[ErrorBoundary]', err, info) }
+  render() {
+    if (this.state.hasError) return (
+      <div style={{padding:'48px 36px',fontFamily:'monospace',color:'#c65a3a'}}>
+        <div style={{fontWeight:700,marginBottom:8}}>Something went wrong.</div>
+        <div style={{fontSize:12,opacity:0.7}}>{this.state.message}</div>
+        <button onClick={()=>this.setState({hasError:false,message:''})}
+          style={{marginTop:16,padding:'8px 18px',border:'1px solid #c65a3a',background:'none',color:'#c65a3a',borderRadius:4,cursor:'pointer',fontFamily:'inherit'}}>
+          Try again
+        </button>
+      </div>
+    )
+    return this.props.children
+  }
+}
+
 /* ── PRIMITIVES ── */
 function Kicker({children,light=false,center=false}){
   return <div style={m({fontSize:9,letterSpacing:"0.26em",textTransform:"uppercase",
@@ -1741,7 +1760,7 @@ function _setPS(state){
   if(st)st.textContent=state==='play'?'Click to listen':'Playing…';
 }
 
-window._toggleTTS=function(){
+function _toggleTTS(){
   if(!_synth)return;
   if(_playing){_stopTTS();_setPS('play');return}
   _loadVoices();
@@ -1759,13 +1778,13 @@ window._toggleTTS=function(){
   _synth.cancel();_synth.speak(utt);
 };
 
-window._cycleSpeed=function(){
+function _cycleSpeed(){
   _spdIdx=(_spdIdx+1)%_speeds.length;
   const el=document.getElementById('_pspd');if(el)el.textContent=_speeds[_spdIdx]+'×';
   if(_playing){_stopTTS();_setPS('play');}
 };
 
-window._cycleVoice=function(){
+function _cycleVoice(){
   if(!_voices.length){_loadVoices();return}
   _voiceIdx=(_voiceIdx+1)%_voices.length;
   const el=document.getElementById('_pvc');
@@ -3334,7 +3353,7 @@ function TtsPlayer({lessonRef,ttsText=''}){
   return(
     <div style={{display:"flex",alignItems:"center",gap:10,border:`1px solid ${C.rule}`,borderRadius:6,padding:"10px 14px",background:C.paper}}>
       <span id="_lesson_ref" data-ref={lessonRef} data-tts={ttsText} style={{display:"none"}}/>
-      <button id="_ttsbtn" onClick={()=>window._toggleTTS()} style={{width:34,height:34,borderRadius:"50%",border:"none",background:C.accent,color:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"opacity 140ms"}}
+      <button id="_ttsbtn" onClick={()=>_toggleTTS()} style={{width:34,height:34,borderRadius:"50%",border:"none",background:C.accent,color:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"opacity 140ms"}}
         onMouseEnter={e=>e.currentTarget.style.opacity=".82"} onMouseLeave={e=>e.currentTarget.style.opacity="1"}>
         <svg viewBox="0 0 24 24" style={{width:14,height:14,fill:"currentColor"}}><path d="M8 5v14l11-7z"/></svg>
       </button>
@@ -3344,8 +3363,8 @@ function TtsPlayer({lessonRef,ttsText=''}){
       <div style={{width:120,height:3,background:C.rule,borderRadius:99,overflow:"hidden",flexShrink:0}}>
         <div id="_pfill" style={{height:"100%",background:C.accent,width:"0%",borderRadius:99,transition:"width .4s linear"}}/>
       </div>
-      <button id="_pspd" onClick={()=>window._cycleSpeed()} style={mono({fontSize:10,color:C.inkMute,padding:"3px 8px",borderRadius:99,border:`1px solid ${C.rule}`,background:"none",cursor:"pointer",minWidth:34,textAlign:"center"})}>{_speeds[_spdIdx]}×</button>
-      <button id="_pvc" onClick={()=>window._cycleVoice()} style={mono({fontSize:9,color:C.inkMute,padding:"3px 8px",borderRadius:99,border:`1px solid ${C.rule}`,background:"none",cursor:"pointer",maxWidth:90,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"})}>{voiceName}</button>
+      <button id="_pspd" onClick={()=>_cycleSpeed()} style={mono({fontSize:10,color:C.inkMute,padding:"3px 8px",borderRadius:99,border:`1px solid ${C.rule}`,background:"none",cursor:"pointer",minWidth:34,textAlign:"center"})}>{_speeds[_spdIdx]}×</button>
+      <button id="_pvc" onClick={()=>_cycleVoice()} style={mono({fontSize:9,color:C.inkMute,padding:"3px 8px",borderRadius:99,border:`1px solid ${C.rule}`,background:"none",cursor:"pointer",maxWidth:90,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"})}>{voiceName}</button>
     </div>
   )
 }
@@ -3542,11 +3561,7 @@ function LessonPage({lessonRef,setRoute,user,setShowUpgrade,completedLessons=new
       {visual&&(
         <div style={{background:C.paper,border:`1px solid ${C.rule}`,borderRadius:6,padding:"16px 18px",marginBottom:14,overflow:"hidden"}}>
           <div style={{fontFamily:F.display,fontSize:13,fontWeight:700,color:C.ink,letterSpacing:'0.06em',textTransform:'uppercase',marginBottom:10}}>Visual overview</div>
-          <div dangerouslySetInnerHTML={{
-            __html: typeof window !== 'undefined'
-              ? require('dompurify').sanitize(visual, { USE_PROFILES: { svg: true, svgFilters: true } })
-              : visual
-          }}/>
+          <div dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(visual, { USE_PROFILES: { svg: true, svgFilters: true } })}}/>
         </div>
       )}
 
@@ -3713,13 +3728,20 @@ function AccountPage({ user, setUser, setRoute }) {
   })
   const [saved,setSaved] = useState(false)
   const [saving,setSaving] = useState(false)
+  const [pwVal,setPwVal] = useState('')
+  const [pwErr,setPwErr] = useState('')
   const [checkoutLoading,setCheckoutLoading] = useState(null)
   const [checkoutError,setCheckoutError] = useState(null)
 
   async function save() {
+    setPwErr('')
+    if (pwVal && pwVal.length < 10) { setPwErr('Password must be at least 10 characters.'); return }
     setSaving(true)
-    await supabase.auth.updateUser({ data: { name: form.name, company: form.firm, role: form.role, state: form.location } })
+    const updates = { data: { name: form.name, company: form.firm, role: form.role, state: form.location } }
+    if (pwVal) updates.password = pwVal
+    await supabase.auth.updateUser(updates)
     if (setUser) setUser(prev => prev ? { ...prev, name: form.name, company: form.firm, state: form.location } : prev)
+    if (pwVal) setPwVal('')
     setSaving(false)
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
@@ -3773,9 +3795,10 @@ function AccountPage({ user, setUser, setRoute }) {
             ))}
             <div>
               <label style={{display:"block",fontFamily:F.mono,fontSize:9,letterSpacing:"0.18em",textTransform:"uppercase",color:C.inkMute,marginBottom:8}}>New password</label>
-              <input type="password" placeholder="At least 10 characters"
-                style={{width:"100%",boxSizing:"border-box",padding:"12px 14px",fontFamily:F.display,fontSize:14,color:C.ink,background:C.paper,border:`1px solid ${C.ruleStrong}`,borderRadius:4,outline:"none"}}
-                onFocus={e=>e.target.style.borderColor=C.accent} onBlur={e=>e.target.style.borderColor=C.ruleStrong}/>
+              <input type="password" placeholder="At least 10 characters" value={pwVal} onChange={e=>setPwVal(e.target.value)}
+                style={{width:"100%",boxSizing:"border-box",padding:"12px 14px",fontFamily:F.display,fontSize:14,color:C.ink,background:C.paper,border:`1px solid ${pwErr?'#f87171':C.ruleStrong}`,borderRadius:4,outline:"none"}}
+                onFocus={e=>e.target.style.borderColor=C.accent} onBlur={e=>e.target.style.borderColor=pwErr?'#f87171':C.ruleStrong}/>
+              {pwErr&&<div style={{fontFamily:F.body,fontSize:12,color:"#f87171",marginTop:6}}>{pwErr}</div>}
             </div>
           </div>
           <button onClick={save} disabled={saving} style={{marginTop:24,fontFamily:F.display,fontWeight:700,fontSize:14,background:saved?C.forest:C.accent,color:"#fff",border:"none",borderRadius:99,padding:"12px 28px",cursor:"pointer",transition:"background 200ms",opacity:saving?0.7:1}}>
@@ -5062,6 +5085,9 @@ function AppShell({user, setUser, onSignOut, completedLessons=new Set(), markLes
       if(next) setRoute('lesson-'+next.ref)
     }
   },[route])
+  const lessonRef = route.startsWith("lesson-")
+    ? (r => ALL_LESSONS.some(l => l.ref === r) ? r : null)(route.replace("lesson-",""))
+    : null
   return(
     <div style={{display:"flex",minHeight:"100vh",position:"relative",
       fontFamily:F.body,background:C.cream}}>
@@ -5089,21 +5115,23 @@ function AppShell({user, setUser, onSignOut, completedLessons=new Set(), markLes
             <div style={{width:38}}/>
           </div>
         )}
-        {route==="home"&&user?.plan==="team_admin"  && <TeamAdminDashboard user={user} setRoute={setRoute}/>}
-        {route==="home"&&user?.plan==="team_member" && <TeamMemberView user={user} setRoute={setRoute}/>}
-        {route==="home"&&user?.plan!=="team_admin"&&user?.plan!=="team_member" && <Dashboard setRoute={setRoute} user={user} completedLessons={completedLessons} isMobile={isMobile}/>}
-        {route==="search"    && <SearchPage setRoute={setRoute} user={user} setShowUpgrade={setShowUpgrade}/>}
-        {route==="bookmarks" && <BookmarksPage setRoute={setRoute} bookmarks={bookmarks} toggleBookmark={toggleBookmark}/>}
-        {route==="notes"     && <NotesPage setRoute={setRoute} user={user}/>}
-        {route==="continue"  && <ContinuePage setRoute={setRoute} completedLessons={completedLessons}/>}
-        {route==="exam"      && <ExamPage setRoute={setRoute} user={user} userSubscription={user?.plan ? {plan:user.plan,exam_addon:user.examAddon||false,status:user.status||'active'} : null} isMobile={isMobile}/>}
-        {route==="cert"      && <CertPage setRoute={setRoute} user={user} completedLessons={completedLessons} userSubscription={user?.plan ? {plan:user.plan,current_period_end:null} : null}/>}
-        {route==="account"   && <AccountPage user={user} setUser={setUser} setRoute={setRoute}/>}
-        {route==="community"       && <CommunityPage setRoute={setRoute} user={user} userSubscription={user?.plan?{plan:user.plan}:null}/>}
-        {route==="open-questions"  && <CommunityPage setRoute={setRoute} user={user} userSubscription={user?.plan?{plan:user.plan}:null} initialFilter="open"/>}
-        {route==="trends"    && <TrendsPage setRoute={setRoute}/>}
-        {route==="feedback"  && <FeedbackPage user={user} userSubscription={user?.plan ? {plan:user.plan} : null}/>}
-        {route.startsWith("lesson-") && <LessonPage lessonRef={route.replace("lesson-","")} setRoute={setRoute} user={user} setShowUpgrade={setShowUpgrade} completedLessons={completedLessons} markLessonComplete={markLessonComplete} bookmarks={bookmarks} toggleBookmark={toggleBookmark} isMobile={isMobile}/>}
+        <ErrorBoundary>
+          {route==="home"&&user?.plan==="team_admin"  && <TeamAdminDashboard user={user} setRoute={setRoute}/>}
+          {route==="home"&&user?.plan==="team_member" && <TeamMemberView user={user} setRoute={setRoute}/>}
+          {route==="home"&&user?.plan!=="team_admin"&&user?.plan!=="team_member" && <Dashboard setRoute={setRoute} user={user} completedLessons={completedLessons} isMobile={isMobile}/>}
+          {route==="search"    && <SearchPage setRoute={setRoute} user={user} setShowUpgrade={setShowUpgrade}/>}
+          {route==="bookmarks" && <BookmarksPage setRoute={setRoute} bookmarks={bookmarks} toggleBookmark={toggleBookmark}/>}
+          {route==="notes"     && <NotesPage setRoute={setRoute} user={user}/>}
+          {route==="continue"  && <ContinuePage setRoute={setRoute} completedLessons={completedLessons}/>}
+          {route==="exam"      && <ExamPage setRoute={setRoute} user={user} userSubscription={user?.plan ? {plan:user.plan,exam_addon:user.examAddon||false,status:user.status||'active'} : null} isMobile={isMobile}/>}
+          {route==="cert"      && <CertPage setRoute={setRoute} user={user} completedLessons={completedLessons} userSubscription={user?.plan ? {plan:user.plan,current_period_end:null} : null}/>}
+          {route==="account"   && <AccountPage user={user} setUser={setUser} setRoute={setRoute}/>}
+          {route==="community"       && <CommunityPage setRoute={setRoute} user={user} userSubscription={user?.plan?{plan:user.plan}:null}/>}
+          {route==="open-questions"  && <CommunityPage setRoute={setRoute} user={user} userSubscription={user?.plan?{plan:user.plan}:null} initialFilter="open"/>}
+          {route==="trends"    && <TrendsPage setRoute={setRoute}/>}
+          {route==="feedback"  && <FeedbackPage user={user} userSubscription={user?.plan ? {plan:user.plan} : null}/>}
+          {lessonRef && <LessonPage lessonRef={lessonRef} setRoute={setRoute} user={user} setShowUpgrade={setShowUpgrade} completedLessons={completedLessons} markLessonComplete={markLessonComplete} bookmarks={bookmarks} toggleBookmark={toggleBookmark} isMobile={isMobile}/>}
+        </ErrorBoundary>
       </main>
     </div>
   )
