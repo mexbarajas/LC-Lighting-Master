@@ -7,6 +7,7 @@ import PricingCard from '@/components/PricingCard'
 import Certificate from '@/components/Certificate'
 
 const supabase = createClient()
+const ADMIN_EMAIL = 'admin@luxartmedia.com'
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(
@@ -3605,11 +3606,8 @@ function Sidebar({route, setRoute, user, onSignOut, bookmarks=new Set(), isMobil
   useEffect(() => {
     let alive = true
     ;(async () => {
-      const { data: { user: u } } = await supabase.auth.getUser()
-      if (!u) return
-      const { data } = await supabase
-        .from('admins').select('user_id').eq('user_id', u.id).maybeSingle()
-      if (alive) setIsAdmin(!!data)
+      const { data: { user } } = await supabase.auth.getUser()
+      if (alive) setIsAdmin(user?.email?.toLowerCase() === ADMIN_EMAIL)
     })()
     return () => { alive = false }
   }, [])
@@ -6808,9 +6806,7 @@ export default function Root(){
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         setAdminEmail(user.email)
-        const { data } = await supabase
-          .from('admins').select('user_id').eq('user_id', user.id).maybeSingle()
-        setIsAdmin(!!data)
+        setIsAdmin(user.email?.toLowerCase() === ADMIN_EMAIL)
       }
       setReady(true)
     })()
