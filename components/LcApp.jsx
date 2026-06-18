@@ -3626,16 +3626,7 @@ function ModuleRow({mod,oddCol,setRoute,completedLessons=new Set()}){
 
 
 
-function Sidebar({route, setRoute, user, onSignOut, bookmarks=new Set(), isMobile=false, sidebarOpen=false, setSidebarOpen=()=>{}, openQuestionCount=0, onAdminClick=()=>{}}){
-  const [isAdmin, setIsAdmin] = useState(false)
-  useEffect(() => {
-    let alive = true
-    ;(async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (alive) setIsAdmin(user?.email?.toLowerCase() === 'admin@luxartmedia.com')
-    })()
-    return () => { alive = false }
-  }, [])
+function Sidebar({route, setRoute, user, onSignOut, bookmarks=new Set(), isMobile=false, sidebarOpen=false, setSidebarOpen=()=>{}, openQuestionCount=0, onAdminClick=()=>{}, isAdmin=false}){
 
   const nav = [
     {section:"Library", items:[
@@ -6933,13 +6924,14 @@ export default function Root(){
     return () => sub?.subscription?.unsubscribe()
   }, [])
 
-  // Check admins table once on mount
+  // Determine admin status from subscription is_admin flag
   useEffect(() => {
     ;(async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         setAdminEmail(user.email)
-        setIsAdmin(user.email?.toLowerCase() === ADMIN_EMAIL)
+        const { data: sub } = await supabase.from('subscriptions').select('is_admin').eq('user_id', user.id).single()
+        setIsAdmin(sub?.is_admin === true)
       }
       setReady(true)
     })()
