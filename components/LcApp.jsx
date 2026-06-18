@@ -1622,13 +1622,6 @@ function Footer({onSignIn, onSignUp, onAdminClick=()=>{}, onLegal=()=>{}}){
           <span style={m({fontSize:9,color:"rgba(249,244,237,0.22)"})}>
             LC exam prep · Not affiliated with or endorsed by NCQLP®
           </span>
-          <button
-            onClick={onAdminClick}
-            style={m({fontSize:9,color:"rgba(249,244,237,0.18)",background:"none",border:"none",cursor:"pointer",letterSpacing:"0.06em",padding:0})}
-            onMouseEnter={e=>e.currentTarget.style.color="rgba(249,244,237,0.5)"}
-            onMouseLeave={e=>e.currentTarget.style.color="rgba(249,244,237,0.18)"}>
-            Admin portal ↗
-          </button>
         </div>
       </div>
     </footer>
