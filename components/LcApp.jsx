@@ -6352,81 +6352,23 @@ function SupportFlags({users,setUsers,onSelectUser}){
 }
 
 /* ── TEAMS ─────────────────────────────────────── */
-function TeamsView({users=[], teams=[], onRefresh=()=>{}}){
-  const [inviteEmails,setInviteEmails]=useState({})
-  const [inviting,setInviting]=useState({})
-  const [revoking,setRevoking]=useState({})
-  const [newOwner,setNewOwner]=useState('')
-  const [newSeats,setNewSeats]=useState('5')
-  const [creating,setCreating]=useState(false)
-
+function TeamsView({users=[], teams=[]}){
   const totalSeats=teams.reduce((s,t)=>s+t.seat_count,0)
   const totalUsed=teams.reduce((s,t)=>s+t.seatsUsed,0)
   const totalPending=teams.reduce((s,t)=>s+t.pendingCount,0)
 
-  async function adminInvite(teamId,email){
-    setInviting(prev=>({...prev,[teamId]:true}))
-    const r=await fetch('/api/admin/team/invite',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({teamId,email})})
-    setInviting(prev=>({...prev,[teamId]:false}))
-    if(r.ok){setInviteEmails(prev=>({...prev,[teamId]:''}));onRefresh()}
-    else alert(await r.text())
-  }
-
-  async function adminRevoke(payload){
-    const key=payload.memberUserId||payload.inviteId
-    setRevoking(prev=>({...prev,[key]:true}))
-    const r=await fetch('/api/admin/team/revoke',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
-    setRevoking(prev=>({...prev,[key]:false}))
-    if(r.ok) onRefresh()
-    else alert(await r.text())
-  }
-
-  async function adminCreateTeam(){
-    if(!newOwner||Number(newSeats)<5) return
-    setCreating(true)
-    const r=await fetch('/api/admin/team/create',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ownerUserId:newOwner,seatCount:Number(newSeats)})})
-    setCreating(false)
-    if(r.ok){setNewOwner('');setNewSeats('5');onRefresh()}
-    else alert(await r.text())
-  }
-
-  const btnBase={border:"none",borderRadius:6,fontFamily:AF.mono,fontSize:11,fontWeight:600,cursor:"pointer",padding:"6px 14px",flexShrink:0}
-
   return(
     <div>
       <div style={adisp({fontWeight:700,fontSize:22,color:AT.ink,marginBottom:22})}>Teams</div>
-
-      {/* Stat cards */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:24}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:20}}>
         <StatCard label="Active teams" value={teams.length} color={AT.green}/>
         <StatCard label="Seats used" value={totalSeats?`${totalUsed} / ${totalSeats}`:'0'}/>
         <StatCard label="Pending invites" value={totalPending} color={AT.purple}/>
       </div>
-
-      {/* Create team */}
-      <div style={{background:AT.bg3,border:`1px solid ${AT.border}`,borderRadius:8,padding:"16px 20px",marginBottom:20}}>
-        <div style={asans({fontSize:13,fontWeight:600,color:AT.ink,marginBottom:12})}>Create new team</div>
-        <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
-          <select value={newOwner} onChange={e=>setNewOwner(e.target.value)}
-            style={{flex:"1 1 220px",padding:"7px 10px",background:AT.bg2,border:`1px solid ${AT.border}`,borderRadius:6,fontFamily:AF.mono,fontSize:11,color:newOwner?AT.ink:AT.inkMute,colorScheme:"light"}}>
-            <option value="">Select owner…</option>
-            {users.map(u=><option key={u.id} value={u.id}>{u.email} ({u.plan})</option>)}
-          </select>
-          <input type="number" min="5" value={newSeats} onChange={e=>setNewSeats(e.target.value)}
-            placeholder="Seats (min 5)"
-            style={{width:130,padding:"7px 10px",background:AT.bg2,border:`1px solid ${AT.border}`,borderRadius:6,fontFamily:AF.mono,fontSize:11,color:AT.ink}}/>
-          <button onClick={adminCreateTeam} disabled={creating||!newOwner||Number(newSeats)<5}
-            style={{...btnBase,background:!creating&&newOwner&&Number(newSeats)>=5?AT.accent:AT.border,color:!creating&&newOwner&&Number(newSeats)>=5?"#fff":AT.inkMute}}>
-            {creating?'Creating…':'Create team'}
-          </button>
-        </div>
-      </div>
-
-      {/* Team list */}
       {teams.length===0?(
         <div style={{background:AT.bg3,border:`1px solid ${AT.border}`,borderRadius:8,padding:"48px",textAlign:"center"}}>
           <div style={amono({fontSize:11,color:AT.inkMute,marginBottom:8})}>No teams yet</div>
-          <div style={asans({fontSize:13,color:AT.inkSoft})}>Create one above or wait for a team purchase.</div>
+          <div style={asans({fontSize:13,color:AT.inkSoft})}>Teams will appear here once created.</div>
         </div>
       ):(
         <div style={{display:"flex",flexDirection:"column",gap:12}}>
@@ -6436,12 +6378,8 @@ function TeamsView({users=[], teams=[], onRefresh=()=>{}}){
             const ownerEmail=adminMember?.email||'—'
             const expiry=t.access_expiry?new Date(t.access_expiry).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'—'
             const seatPct=t.seat_count?Math.round((t.seatsUsed/t.seat_count)*100):0
-            const invEmail=inviteEmails[t.id]||''
-            const pendingInvites=t.pendingInvites||[]
             return(
               <div key={t.id} style={{background:AT.bg3,border:`1px solid ${AT.border}`,borderRadius:8,overflow:"hidden"}}>
-
-                {/* Header */}
                 <div style={{padding:"14px 18px",borderBottom:`1px solid ${AT.border}`,display:"flex",alignItems:"flex-start",gap:20,flexWrap:"wrap"}}>
                   <div style={{flex:"1 1 200px",minWidth:0}}>
                     <div style={asans({fontSize:14,fontWeight:600,color:AT.ink,marginBottom:2})}>{ownerLabel}</div>
@@ -6465,14 +6403,18 @@ function TeamsView({users=[], teams=[], onRefresh=()=>{}}){
                       <div style={amono({fontSize:8,letterSpacing:"0.12em",textTransform:"uppercase",color:AT.inkMute,marginBottom:3})}>Expires</div>
                       <div style={amono({fontSize:11,color:AT.ink})}>{expiry}</div>
                     </div>
+                    {t.pendingCount>0&&(
+                      <div>
+                        <div style={amono({fontSize:8,letterSpacing:"0.12em",textTransform:"uppercase",color:AT.inkMute,marginBottom:3})}>Pending</div>
+                        <div style={amono({fontSize:11,color:AT.accent})}>{t.pendingCount} invite{t.pendingCount!==1?'s':''}</div>
+                      </div>
+                    )}
                   </div>
                 </div>
-
-                {/* Members */}
                 {t.members.length>0?(
                   <div>
                     {t.members.map((m,i)=>(
-                      <div key={m.user_id||i} style={{display:"flex",alignItems:"center",gap:12,padding:"9px 18px",borderBottom:`1px solid ${AT.border}`,background:i%2===0?"transparent":AT.bg2}}>
+                      <div key={m.user_id||i} style={{display:"flex",alignItems:"center",gap:12,padding:"9px 18px",borderBottom:i<t.members.length-1?`1px solid ${AT.border}`:"none",background:i%2===0?"transparent":AT.bg2}}>
                         <div style={{width:22,height:22,borderRadius:"50%",background:AT.accent+"22",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:AF.mono,fontSize:8,color:AT.accent,flexShrink:0}}>
                           {(m.display_name||m.email||'?')[0].toUpperCase()}
                         </div>
@@ -6482,57 +6424,17 @@ function TeamsView({users=[], teams=[], onRefresh=()=>{}}){
                           </div>
                           {m.display_name&&m.email&&<div style={amono({fontSize:10,color:AT.inkMute})}>{m.email}</div>}
                         </div>
-                        <div style={amono({fontSize:9,color:m.role==='team_admin'?AT.green:AT.inkMute,textTransform:"uppercase",letterSpacing:"0.1em",marginRight:4})}>
+                        <div style={amono({fontSize:9,color:m.role==='team_admin'?AT.green:AT.inkMute,textTransform:"uppercase",letterSpacing:"0.1em"})}>
                           {m.role==='team_admin'?'Admin':'Member'}
                         </div>
-                        {m.role!=='team_admin'&&(
-                          <button onClick={()=>adminRevoke({teamId:t.id,memberUserId:m.user_id})} disabled={!!revoking[m.user_id]}
-                            style={{fontFamily:AF.mono,fontSize:9,background:"none",border:`1px solid ${AT.border}`,borderRadius:4,padding:"3px 8px",color:AT.inkMute,cursor:"pointer",flexShrink:0}}
-                            onMouseEnter={e=>{e.currentTarget.style.borderColor=AT.red;e.currentTarget.style.color=AT.red}}
-                            onMouseLeave={e=>{e.currentTarget.style.borderColor=AT.border;e.currentTarget.style.color=AT.inkMute}}>
-                            {revoking[m.user_id]?'…':'Remove'}
-                          </button>
-                        )}
                       </div>
                     ))}
                   </div>
                 ):(
-                  <div style={{padding:"10px 18px",borderBottom:`1px solid ${AT.border}`}}>
+                  <div style={{padding:"12px 18px"}}>
                     <span style={amono({fontSize:11,color:AT.inkMute})}>No members yet</span>
                   </div>
                 )}
-
-                {/* Pending invites */}
-                {pendingInvites.length>0&&(
-                  <div>
-                    {pendingInvites.map((inv,i)=>(
-                      <div key={inv.id||i} style={{display:"flex",alignItems:"center",gap:12,padding:"8px 18px",borderBottom:`1px solid ${AT.border}`,background:AT.amberDim}}>
-                        <div style={amono({fontSize:11,color:AT.amber,flex:1})}>✉ {inv.email}</div>
-                        <div style={amono({fontSize:9,color:AT.amber,textTransform:"uppercase",letterSpacing:"0.1em",marginRight:4})}>Pending</div>
-                        <button onClick={()=>adminRevoke({teamId:t.id,inviteId:inv.id})} disabled={!!revoking[inv.id]}
-                          style={{fontFamily:AF.mono,fontSize:9,background:"none",border:`1px solid ${AT.border}`,borderRadius:4,padding:"3px 8px",color:AT.inkMute,cursor:"pointer",flexShrink:0}}
-                          onMouseEnter={e=>{e.currentTarget.style.borderColor=AT.red;e.currentTarget.style.color=AT.red}}
-                          onMouseLeave={e=>{e.currentTarget.style.borderColor=AT.border;e.currentTarget.style.color=AT.inkMute}}>
-                          {revoking[inv.id]?'…':'Cancel'}
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Invite form */}
-                <div style={{padding:"10px 18px",borderTop:`1px solid ${AT.border}`,display:"flex",gap:8,alignItems:"center"}}>
-                  <input type="email" value={invEmail}
-                    onChange={e=>setInviteEmails(prev=>({...prev,[t.id]:e.target.value}))}
-                    onKeyDown={e=>e.key==='Enter'&&invEmail.includes('@')&&adminInvite(t.id,invEmail)}
-                    placeholder="Invite by email…"
-                    style={{flex:1,padding:"6px 10px",background:AT.bg2,border:`1px solid ${AT.border}`,borderRadius:6,fontFamily:AF.mono,fontSize:11,color:AT.ink,outline:"none"}}/>
-                  <button onClick={()=>adminInvite(t.id,invEmail)} disabled={inviting[t.id]||!invEmail.includes('@')}
-                    style={{...btnBase,background:!inviting[t.id]&&invEmail.includes('@')?AT.accent:AT.border,color:!inviting[t.id]&&invEmail.includes('@')?"#fff":AT.inkMute}}>
-                    {inviting[t.id]?'…':'Invite'}
-                  </button>
-                </div>
-
               </div>
             )
           })}
@@ -6945,7 +6847,7 @@ function AdminApp({onBack=()=>{}, adminEmail=""}){
         {route==="revenue"      && <Revenue revenueMonths={adminStats.revenueMonths||[]}/>}
         {route==="content"      && <ContentView moduleStats={adminStats.moduleStats||[]}/>}
         {route==="flags"        && <SupportFlags users={users} setUsers={setUsers} onSelectUser={handleSelectUser}/>}
-        {route==="teams"        && <TeamsView users={users} teams={teams} onRefresh={loadAdminData}/>}
+        {route==="teams"        && <TeamsView users={users} teams={teams}/>}
         {route==="reports"      && <Reports users={users}/>}
         {route==="settings"     && <Settings onSignOut={handleSignOut}/>}
       </main>
