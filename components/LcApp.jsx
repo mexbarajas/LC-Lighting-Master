@@ -3600,7 +3600,20 @@ function ModuleRow({mod,oddCol,setRoute,completedLessons=new Set()}){
 
 
 
-function Sidebar({route, setRoute, user, onSignOut, bookmarks=new Set(), isMobile=false, sidebarOpen=false, setSidebarOpen=()=>{}, openQuestionCount=0, isAdmin=false, onAdminClick=()=>{}}){
+function Sidebar({route, setRoute, user, onSignOut, bookmarks=new Set(), isMobile=false, sidebarOpen=false, setSidebarOpen=()=>{}, openQuestionCount=0, onAdminClick=()=>{}}){
+  const [isAdmin, setIsAdmin] = useState(false)
+  useEffect(() => {
+    let alive = true
+    ;(async () => {
+      const { data: { user: u } } = await supabase.auth.getUser()
+      if (!u) return
+      const { data } = await supabase
+        .from('admins').select('user_id').eq('user_id', u.id).maybeSingle()
+      if (alive) setIsAdmin(!!data)
+    })()
+    return () => { alive = false }
+  }, [])
+
   const nav = [
     {section:"Library", items:[
       {glyph:"▤",label:"Course home",route:"home"},
@@ -3714,6 +3727,13 @@ function Sidebar({route, setRoute, user, onSignOut, bookmarks=new Set(), isMobil
               onMouseLeave={e=>e.target.style.color="rgba(242,230,218,0.35)"}
             >{label}</a>
           ))}
+          {isAdmin && (
+            <button onClick={onAdminClick}
+              style={{fontFamily:F.mono,fontSize:9,letterSpacing:"0.12em",color:"rgba(242,230,218,0.35)",textDecoration:"none",textTransform:"uppercase",background:"none",border:"none",cursor:"pointer",padding:0}}
+              onMouseEnter={e=>e.currentTarget.style.color="rgba(242,230,218,0.7)"}
+              onMouseLeave={e=>e.currentTarget.style.color="rgba(242,230,218,0.35)"}
+            >Admin portal</button>
+          )}
         </div>
       </div>
     </aside>
@@ -6788,12 +6808,9 @@ export default function Root(){
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         setAdminEmail(user.email)
-        const { data, error } = await supabase
+        const { data } = await supabase
           .from('admins').select('user_id').eq('user_id', user.id).maybeSingle()
-        console.log('[Root] admins check — user:', user.id, 'data:', data, 'error:', error)
         setIsAdmin(!!data)
-      } else {
-        console.log('[Root] admins check — no session')
       }
       setReady(true)
     })()
