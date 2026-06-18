@@ -6788,9 +6788,12 @@ export default function Root(){
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         setAdminEmail(user.email)
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('admins').select('user_id').eq('user_id', user.id).maybeSingle()
+        console.log('[Root] admins check — user:', user.id, 'data:', data, 'error:', error)
         setIsAdmin(!!data)
+      } else {
+        console.log('[Root] admins check — no session')
       }
       setReady(true)
     })()
