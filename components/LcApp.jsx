@@ -3627,16 +3627,6 @@ function ModuleRow({mod,oddCol,setRoute,completedLessons=new Set()}){
 
 
 function Sidebar({route, setRoute, user, onSignOut, bookmarks=new Set(), isMobile=false, sidebarOpen=false, setSidebarOpen=()=>{}, openQuestionCount=0, onAdminClick=()=>{}}){
-  const [isAdmin, setIsAdmin] = useState(false)
-  useEffect(() => {
-    let alive = true
-    ;(async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (alive) setIsAdmin(user?.email?.toLowerCase() === ADMIN_EMAIL)
-    })()
-    return () => { alive = false }
-  }, [])
-
   const nav = [
     {section:"Library", items:[
       {glyph:"▤",label:"Course home",route:"home"},
@@ -3750,13 +3740,6 @@ function Sidebar({route, setRoute, user, onSignOut, bookmarks=new Set(), isMobil
               onMouseLeave={e=>e.target.style.color="rgba(242,230,218,0.35)"}
             >{label}</a>
           ))}
-          {isAdmin && (
-            <button onClick={onAdminClick}
-              style={{fontFamily:F.mono,fontSize:9,letterSpacing:"0.12em",color:"rgba(242,230,218,0.35)",textDecoration:"none",textTransform:"uppercase",background:"none",border:"none",cursor:"pointer",padding:0}}
-              onMouseEnter={e=>e.currentTarget.style.color="rgba(242,230,218,0.7)"}
-              onMouseLeave={e=>e.currentTarget.style.color="rgba(242,230,218,0.35)"}
-            >Admin portal</button>
-          )}
         </div>
       </div>
     </aside>
