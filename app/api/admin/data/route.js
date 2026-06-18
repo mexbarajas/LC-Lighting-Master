@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/service'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 const ADMIN_EMAIL = 'admin@luxartmedia.com'
 
@@ -30,10 +31,35 @@ export async function GET() {
     return new Response(JSON.stringify({ error: 'Database error' }), { status: 500 })
   }
 
+  const admin = createAdminClient()
+  const { data: teams } = await admin
+    .from('teams')
+    .select('id, owner_id, tier, seat_count, access_expiry, created_at')
+    .order('created_at', { ascending: false })
+  const { data: tmembers } = await admin
+    .from('team_members')
+    .select('team_id, user_id, role, display_name, email')
+  const { data: tinvites } = await admin
+    .from('team_invites')
+    .select('team_id, email, status')
+    .eq('status', 'pending')
+
+  const teamsWithMembers = (teams || []).map(t => {
+    const members = (tmembers || []).filter(m => m.team_id === t.id)
+    const pending = (tinvites || []).filter(i => i.team_id === t.id)
+    return {
+      ...t,
+      members,
+      pendingCount: pending.length,
+      seatsUsed: members.length + pending.length,
+    }
+  })
+
   return Response.json({
     subscriptions:      subscriptions      || [],
     progress:           progress           || [],
     communityQuestions: communityQuestions || 0,
     feedbackCount:      feedbackCount      || 0,
+    teams:              teamsWithMembers,
   })
 }

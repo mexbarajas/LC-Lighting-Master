@@ -6369,44 +6369,92 @@ function SupportFlags({users,setUsers,onSelectUser}){
 }
 
 /* ── TEAMS ─────────────────────────────────────── */
-function TeamsView({users=[]}){
-  const teamUsers=users.filter(u=>u.plan==="team")
-  const totalSeats=teamUsers.reduce((s,u)=>s+(u.seats||0),0)
-  const totalTeamRev=teamUsers.reduce((s,u)=>s+u.amount,0)
+function TeamsView({users=[], teams=[]}){
+  const totalSeats=teams.reduce((s,t)=>s+t.seat_count,0)
+  const totalUsed=teams.reduce((s,t)=>s+t.seatsUsed,0)
+  const totalPending=teams.reduce((s,t)=>s+t.pendingCount,0)
 
   return(
     <div>
       <div style={adisp({fontWeight:700,fontSize:22,color:AT.ink,marginBottom:22})}>Teams</div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:20}}>
-        <StatCard label="Team accounts" value={teamUsers.length} color={AT.green}/>
-        <StatCard label="Total seats" value={totalSeats}/>
-        <StatCard label="Team revenue" value={fmtMoney(totalTeamRev)} color={AT.purple}/>
+        <StatCard label="Active teams" value={teams.length} color={AT.green}/>
+        <StatCard label="Seats used" value={totalSeats?`${totalUsed} / ${totalSeats}`:'0'}/>
+        <StatCard label="Pending invites" value={totalPending} color={AT.purple}/>
       </div>
-      {teamUsers.length===0?(
+      {teams.length===0?(
         <div style={{background:AT.bg3,border:`1px solid ${AT.border}`,borderRadius:8,padding:"48px",textAlign:"center"}}>
-          <div style={amono({fontSize:11,color:AT.inkMute,marginBottom:8})}>No team accounts yet</div>
-          <div style={asans({fontSize:13,color:AT.inkSoft})}>Team purchases will appear here once customers buy a team plan.</div>
+          <div style={amono({fontSize:11,color:AT.inkMute,marginBottom:8})}>No teams yet</div>
+          <div style={asans({fontSize:13,color:AT.inkSoft})}>Teams will appear here once created.</div>
         </div>
       ):(
-        <div style={{background:AT.bg3,border:`1px solid ${AT.border}`,borderRadius:8,overflow:"hidden"}}>
-          <TableHeader cols={[{label:"Admin",w:"2fr"},{label:"Email",w:"2fr"},{label:"Seats",w:"70px"},{label:"Progress",w:"140px"},{label:"Revenue",w:"95px",right:true},{label:"Status",w:"95px"},{label:"Joined",w:"110px"}]}/>
-          {teamUsers.map((u,i)=>(
-            <div key={u.id} style={{display:"grid",gridTemplateColumns:"2fr 2fr 70px 140px 95px 95px 110px",
-              padding:"11px 16px",borderBottom:i<teamUsers.length-1?`1px solid ${AT.border}`:"none"}}>
-              <div style={asans({fontSize:13,color:AT.ink,fontWeight:500})}>{u.firstName} {u.lastName}</div>
-              <div style={amono({fontSize:11,color:AT.inkMute,paddingTop:2})}>{u.email}</div>
-              <div style={amono({fontSize:12,color:AT.inkSoft,paddingTop:2})}>{u.seats||'—'}</div>
-              <div style={{paddingTop:6,paddingRight:14}}>
-                <div style={{display:"flex",alignItems:"center",gap:7}}>
-                  <MiniBar value={u.progress} max={100} color={AT.accent}/>
-                  <span style={amono({fontSize:9,color:AT.inkMute,flexShrink:0,width:28,textAlign:"right"})}>{u.progress}%</span>
+        <div style={{display:"flex",flexDirection:"column",gap:12}}>
+          {teams.map(t=>{
+            const adminMember=t.members.find(m=>m.role==='team_admin')
+            const ownerLabel=adminMember?.display_name||adminMember?.email||t.owner_id?.slice(0,8)+'...'
+            const ownerEmail=adminMember?.email||'—'
+            const expiry=t.access_expiry?new Date(t.access_expiry).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'—'
+            const seatPct=t.seat_count?Math.round((t.seatsUsed/t.seat_count)*100):0
+            return(
+              <div key={t.id} style={{background:AT.bg3,border:`1px solid ${AT.border}`,borderRadius:8,overflow:"hidden"}}>
+                <div style={{padding:"14px 18px",borderBottom:`1px solid ${AT.border}`,display:"flex",alignItems:"flex-start",gap:20,flexWrap:"wrap"}}>
+                  <div style={{flex:"1 1 200px",minWidth:0}}>
+                    <div style={asans({fontSize:14,fontWeight:600,color:AT.ink,marginBottom:2})}>{ownerLabel}</div>
+                    <div style={amono({fontSize:10,color:AT.inkMute})}>{ownerEmail}</div>
+                  </div>
+                  <div style={{display:"flex",gap:20,flexWrap:"wrap",alignItems:"flex-start"}}>
+                    <div>
+                      <div style={amono({fontSize:8,letterSpacing:"0.12em",textTransform:"uppercase",color:AT.inkMute,marginBottom:3})}>Tier</div>
+                      <div style={amono({fontSize:12,color:AT.ink})}>{t.tier||'—'}</div>
+                    </div>
+                    <div>
+                      <div style={amono({fontSize:8,letterSpacing:"0.12em",textTransform:"uppercase",color:AT.inkMute,marginBottom:3})}>Seats</div>
+                      <div style={{display:"flex",alignItems:"center",gap:6}}>
+                        <div style={{width:60,height:5,background:AT.border,borderRadius:3,overflow:"hidden"}}>
+                          <div style={{width:`${seatPct}%`,height:5,background:seatPct>=100?AT.red:AT.green,borderRadius:3}}/>
+                        </div>
+                        <span style={amono({fontSize:11,color:AT.ink})}>{t.seatsUsed} / {t.seat_count}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <div style={amono({fontSize:8,letterSpacing:"0.12em",textTransform:"uppercase",color:AT.inkMute,marginBottom:3})}>Expires</div>
+                      <div style={amono({fontSize:11,color:AT.ink})}>{expiry}</div>
+                    </div>
+                    {t.pendingCount>0&&(
+                      <div>
+                        <div style={amono({fontSize:8,letterSpacing:"0.12em",textTransform:"uppercase",color:AT.inkMute,marginBottom:3})}>Pending</div>
+                        <div style={amono({fontSize:11,color:AT.accent})}>{t.pendingCount} invite{t.pendingCount!==1?'s':''}</div>
+                      </div>
+                    )}
+                  </div>
                 </div>
+                {t.members.length>0?(
+                  <div>
+                    {t.members.map((m,i)=>(
+                      <div key={m.user_id||i} style={{display:"flex",alignItems:"center",gap:12,padding:"9px 18px",borderBottom:i<t.members.length-1?`1px solid ${AT.border}`:"none",background:i%2===0?"transparent":AT.bg2}}>
+                        <div style={{width:22,height:22,borderRadius:"50%",background:AT.accent+"22",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:AF.mono,fontSize:8,color:AT.accent,flexShrink:0}}>
+                          {(m.display_name||m.email||'?')[0].toUpperCase()}
+                        </div>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={asans({fontSize:12,color:AT.ink,fontWeight:m.role==='team_admin'?600:400})}>
+                            {m.display_name||m.email||m.user_id?.slice(0,12)+'...'}
+                          </div>
+                          {m.display_name&&m.email&&<div style={amono({fontSize:10,color:AT.inkMute})}>{m.email}</div>}
+                        </div>
+                        <div style={amono({fontSize:9,color:m.role==='team_admin'?AT.green:AT.inkMute,textTransform:"uppercase",letterSpacing:"0.1em"})}>
+                          {m.role==='team_admin'?'Admin':'Member'}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ):(
+                  <div style={{padding:"12px 18px"}}>
+                    <span style={amono({fontSize:11,color:AT.inkMute})}>No members yet</span>
+                  </div>
+                )}
               </div>
-              <div style={amono({fontSize:12,color:AT.purple,textAlign:"right",paddingTop:2})}>{fmtMoney(u.amount)}</div>
-              <div style={{paddingTop:2}}><StatusBadge status={u.status}/></div>
-              <div style={amono({fontSize:11,color:AT.inkMute,paddingTop:2})}>{u.joinDate?fmtDate(u.joinDate):'—'}</div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>
@@ -6640,6 +6688,7 @@ function AdminSidebar({route,setRoute,flagCount,onSignOut,onBack=()=>{},adminEma
 function AdminApp({onBack=()=>{}, adminEmail=""}){
   const [route, setRoute] = useState("overview")
   const [users, setUsers] = useState([])
+  const [teams, setTeams] = useState([])
   const [selectedUser, setSelectedUser] = useState(null)
   const [dataError, setDataError] = useState(null)
   const [adminStats, setAdminStats] = useState({
@@ -6659,7 +6708,7 @@ function AdminApp({onBack=()=>{}, adminEmail=""}){
         const body=await res.json().catch(()=>({}))
         throw new Error(body.error||`HTTP ${res.status}`)
       }
-      const {subscriptions,progress,communityQuestions,feedbackCount}=await res.json()
+      const {subscriptions,progress,communityQuestions,feedbackCount,teams:rawTeams}=await res.json()
 
       // ── Stats ─────────────────────────────────────
       const PLAN_PRICES={t1:250,t2:395,t3:595,team:360}
@@ -6754,6 +6803,7 @@ function AdminApp({onBack=()=>{}, adminEmail=""}){
           flagged:false,notes:'',
         }
       }))
+      setTeams(rawTeams||[])
     }catch(e){
       console.error("loadAdminData:",e)
       setDataError(e.message||"Failed to load admin data")
@@ -6814,7 +6864,7 @@ function AdminApp({onBack=()=>{}, adminEmail=""}){
         {route==="revenue"      && <Revenue revenueMonths={adminStats.revenueMonths||[]}/>}
         {route==="content"      && <ContentView moduleStats={adminStats.moduleStats||[]}/>}
         {route==="flags"        && <SupportFlags users={users} setUsers={setUsers} onSelectUser={handleSelectUser}/>}
-        {route==="teams"        && <TeamsView users={users}/>}
+        {route==="teams"        && <TeamsView users={users} teams={teams}/>}
         {route==="reports"      && <Reports users={users}/>}
         {route==="settings"     && <Settings onSignOut={handleSignOut}/>}
       </main>
