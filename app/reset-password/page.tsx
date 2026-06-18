@@ -29,7 +29,7 @@ function ResetPasswordForm() {
       if (uErr) throw uErr
       setDone(true)
     } catch (e) {
-      setErr(e?.message || 'Could not reset password.')
+      setErr((e as any)?.message || 'Could not reset password.')
     } finally {
       setBusy(false)
     }
