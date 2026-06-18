@@ -9,6 +9,30 @@ import Certificate from '@/components/Certificate'
 const supabase = createClient()
 const ADMIN_EMAIL = 'admin@luxartmedia.com'
 
+async function loadTeamContext() {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { onTeam: false }
+  const { data: membership } = await supabase
+    .from('team_members').select('team_id, role').eq('user_id', user.id).maybeSingle()
+  if (!membership) return { onTeam: false }
+  const { data: team } = await supabase
+    .from('teams').select('id, name, tier, seat_count, access_expiry, owner_id').eq('id', membership.team_id).single()
+  const { data: members } = await supabase.rpc('team_member_progress')
+  const { data: invites } = await supabase
+    .from('team_invites').select('id, email, status, invited_at, expires_at')
+    .eq('team_id', membership.team_id).eq('status', 'pending')
+  const accessActive = !!team && new Date(team.access_expiry) >= new Date(new Date().toDateString())
+  return {
+    onTeam: true, team, role: membership.role,
+    isOwner: team.owner_id === user.id,
+    members: members || [],
+    pendingInvites: invites || [],
+    seatsUsed: (members?.length || 0) + (invites?.length || 0),
+    seatsTotal: team?.seat_count || 0,
+    accessActive,
+  }
+}
+
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(
     typeof window !== 'undefined' ? window.innerWidth < 768 : false
@@ -1832,6 +1856,7 @@ function isLessonLocked(lessonRef, user) {
   const status = user?.status || 'free'
   if (status === 'refunded' || status === 'disputed') return true
   if (plan === 't2' || plan === 't3') return false
+  if (plan === 'team_admin' || plan === 'team_member') return !user?.accessActive
   if (plan === 't1') return true
   const moduleNum = parseInt(lessonRef.split('.')[0])
   return moduleNum !== 1
@@ -3741,8 +3766,9 @@ function Sidebar({route, setRoute, user, onSignOut, bookmarks=new Set(), isMobil
 /* ── PLAN HELPERS ── */
 const PLAN_LABELS = { free:"Free trial", t1:"LC Preparation Test", t2:"Full Course", t3:"Full Course + Exam", team_admin:"Team Admin", team_member:"Team Member" }
 
-function moduleAccess(plan, modFree){
-  if(plan==="t3"||plan==="t2"||plan==="team_admin"||plan==="team_member") return true
+function moduleAccess(plan, modFree, accessActive=true){
+  if(plan==="t3"||plan==="t2") return true
+  if(plan==="team_admin"||plan==="team_member") return !!accessActive
   if(plan==="t1") return false
   return modFree
 }
@@ -3786,27 +3812,62 @@ function UpgradeModal({user, onClose}){
 
 
 /* ── TEAM ADMIN DASHBOARD ── */
-function TeamAdminDashboard({user,setRoute}){
-  const team=user?.team
-  const [members,setMembers]=useState(team?.members||[])
+function TeamAdminDashboard({user,teamCtx,setRoute,onTeamRefresh}){
   const [inviteEmail,setInviteEmail]=useState("")
   const [inviteSent,setInviteSent]=useState(false)
+  const [inviting,setInviting]=useState(false)
+  const [extraInvites,setExtraInvites]=useState([])
+  const [removedIds,setRemovedIds]=useState(new Set())
+
+  if(!teamCtx) return <div style={{padding:"40px 36px",fontFamily:F.body,color:C.inkMute}}>Loading team data…</div>
+
+  const team=teamCtx.team
+  const seatsTotal=teamCtx.seatsTotal
+
+  function mapMember(m){
+    const progress=Math.min(100,Math.round(((m.completed||0)/74)*100))
+    return{id:m.user_id,name:m.display_name||"Team member",email:null,
+      progress,modulesCompleted:Math.min(12,Math.floor(progress/100*12)),
+      examBestScore:m.exam_best_score||null,lastActive:m.last_active||null,status:"active"}
+  }
+
+  const activeMapped=(teamCtx.members||[]).filter(m=>!removedIds.has(m.user_id)).map(mapMember)
+  const invitedMapped=[
+    ...(teamCtx.pendingInvites||[]).map(inv=>({id:inv.id,name:"Invite pending",email:inv.email,progress:0,modulesCompleted:0,examBestScore:null,lastActive:null,status:"invited"})),
+    ...extraInvites
+  ]
+  const emptyCount=Math.max(0,seatsTotal-activeMapped.length-invitedMapped.length)
+  const emptySlots=Array.from({length:emptyCount},(_,i)=>({id:"empty_"+i,name:"Seat available",email:null,progress:0,modulesCompleted:0,examBestScore:null,lastActive:null,status:"empty"}))
+  const members=[...activeMapped,...invitedMapped,...emptySlots]
   const activeM=members.filter(m=>m.status==="active")
   const invitedM=members.filter(m=>m.status==="invited")
   const emptyM=members.filter(m=>m.status==="empty")
   const avgP=activeM.length?Math.round(activeM.reduce((s,m)=>s+m.progress,0)/activeM.length):0
   const topPerformer=[...activeM].sort((a,b)=>b.progress-a.progress)[0]
+  const expiryLabel=team?.access_expiry?new Date(team.access_expiry).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):`Dec 31, ${new Date().getFullYear()}`
 
-  function sendInvite(){
-    if(!inviteEmail.includes("@"))return
-    const emptyIdx=members.findIndex(m=>m.status==="empty")
-    if(emptyIdx===-1)return
-    const newMember={id:"ni_"+Date.now(),name:"Invite pending",email:inviteEmail,progress:0,modulesCompleted:0,examBestScore:null,lastActive:null,status:"invited"}
-    setMembers(prev=>prev.map((m,i)=>i===emptyIdx?newMember:m))
+  async function sendInvite(){
+    if(!inviteEmail.includes("@")||inviting)return
+    setInviting(true)
+    const res=await fetch('/api/team/invite',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:inviteEmail})})
+    setInviting(false)
+    if(!res.ok){alert(await res.text());return}
     setInviteEmail("");setInviteSent(true);setTimeout(()=>setInviteSent(false),3000)
+    setExtraInvites([])
+    if(onTeamRefresh)onTeamRefresh()
   }
-  function removeMember(id){
-    setMembers(prev=>prev.map(m=>m.id===id?{id:m.id,name:"Seat available",email:null,progress:0,modulesCompleted:0,examBestScore:null,lastActive:null,status:"empty"}:m))
+  async function removeMember(id){
+    const res=await fetch('/api/team/revoke',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({memberUserId:id})})
+    if(!res.ok){alert(await res.text());return}
+    setRemovedIds(new Set())
+    if(onTeamRefresh)onTeamRefresh()
+  }
+  async function cancelInvite(id){
+    if(id.startsWith("ni_")){setExtraInvites(prev=>prev.filter(e=>e.id!==id));return}
+    const res=await fetch('/api/team/revoke',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({inviteId:id})})
+    if(!res.ok){alert(await res.text());return}
+    setExtraInvites([])
+    if(onTeamRefresh)onTeamRefresh()
   }
 
   return(
@@ -3815,16 +3876,16 @@ function TeamAdminDashboard({user,setRoute}){
         <div>
           <div style={{fontFamily:F.mono,fontSize:9,letterSpacing:"0.24em",textTransform:"uppercase",color:C.accent,marginBottom:6}}>Team Admin</div>
           <h1 style={{fontFamily:F.display,fontWeight:700,fontSize:28,letterSpacing:"-0.02em",color:C.ink,margin:"0 0 4px"}}>{team?.name}</h1>
-          <div style={{fontFamily:F.mono,fontSize:11,color:C.inkMute}}>{user?.name} · {user?.company} · {activeM.length} of {team?.seats} seats active</div>
+          <div style={{fontFamily:F.mono,fontSize:11,color:C.inkMute}}>{user?.name} · {user?.company} · {activeM.length} of {seatsTotal} seats active</div>
         </div>
         <div style={{background:C.forestLight,border:`1px solid ${C.forest}`,borderRadius:10,padding:"12px 18px",textAlign:"center"}}>
           <div style={{fontFamily:F.mono,fontSize:9,letterSpacing:"0.14em",textTransform:"uppercase",color:C.forest,marginBottom:4}}>Seats</div>
-          <div style={{fontFamily:F.display,fontWeight:700,fontSize:26,color:C.forest,lineHeight:1}}>{activeM.length}<span style={{color:C.inkMute,fontSize:16}}> / {team?.seats}</span></div>
+          <div style={{fontFamily:F.display,fontWeight:700,fontSize:26,color:C.forest,lineHeight:1}}>{activeM.length}<span style={{color:C.inkMute,fontSize:16}}> / {seatsTotal}</span></div>
           <div style={{fontFamily:F.mono,fontSize:10,color:C.inkMute,marginTop:3}}>{emptyM.length} available · {invitedM.length} invited</div>
         </div>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:28}}>
-        {[["Active members",activeM.length,`of ${team?.seats} seats`],["Avg progress",`${avgP}%`,"across active members"],["Invites pending",invitedM.length,invitedM.length?"awaiting signup":"none pending"],["Top performer",topPerformer?`${topPerformer.progress}%`:"—",topPerformer?.name.split(" ")[0]||"—"]].map(([label,val,sub])=>(
+        {[["Active members",activeM.length,`of ${seatsTotal} seats`],["Avg progress",`${avgP}%`,"across active members"],["Invites pending",invitedM.length,invitedM.length?"awaiting signup":"none pending"],["Top performer",topPerformer?`${topPerformer.progress}%`:"—",topPerformer?.name.split(" ")[0]||"—"]].map(([label,val,sub])=>(
           <div key={label} style={{background:C.paper,border:`1px solid ${C.rule}`,borderRadius:10,padding:"16px 18px"}}>
             <div style={{fontFamily:F.mono,fontSize:8,letterSpacing:"0.18em",textTransform:"uppercase",color:C.inkMute,marginBottom:8}}>{label}</div>
             <div style={{fontFamily:F.display,fontWeight:700,fontSize:22,color:C.ink,marginBottom:3}}>{val}</div>
@@ -3835,7 +3896,7 @@ function TeamAdminDashboard({user,setRoute}){
       <div style={{background:C.paper,border:`1px solid ${C.rule}`,borderRadius:10,overflow:"hidden",marginBottom:20}}>
         <div style={{padding:"16px 20px",borderBottom:`1px solid ${C.rule}`,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
           <div style={{fontFamily:F.display,fontWeight:700,fontSize:15,color:C.ink}}>Team progress</div>
-          <div style={{fontFamily:F.mono,fontSize:10,color:C.inkMute}}>Access expires Dec 31, {new Date().getFullYear()}</div>
+          <div style={{fontFamily:F.mono,fontSize:10,color:C.inkMute}}>Access expires {expiryLabel}</div>
         </div>
         <div style={{display:"grid",gridTemplateColumns:"2fr 130px 70px 80px 1fr 100px",padding:"8px 20px",background:C.creamWarm,borderBottom:`1px solid ${C.rule}`}}>
           {["Member","Status","Modules","Exam","Progress",""].map(h=><div key={h} style={{fontFamily:F.mono,fontSize:9,letterSpacing:"0.16em",textTransform:"uppercase",color:C.inkMute}}>{h}</div>)}
@@ -3858,7 +3919,7 @@ function TeamAdminDashboard({user,setRoute}){
             </div>
             <div style={{display:"flex",alignItems:"center",gap:6,justifyContent:"flex-end"}}>
               {m.status==="active"&&<button onClick={()=>removeMember(m.id)} style={{fontFamily:F.mono,fontSize:9,background:"none",border:`1px solid ${C.rule}`,borderRadius:4,padding:"3px 8px",color:C.inkMute,cursor:"pointer"}} onMouseEnter={e=>{e.currentTarget.style.borderColor="#c0392b";e.currentTarget.style.color="#c0392b"}} onMouseLeave={e=>{e.currentTarget.style.borderColor=C.rule;e.currentTarget.style.color=C.inkMute}}>Remove</button>}
-              {m.status==="invited"&&<button onClick={()=>alert(`Invite resent to ${m.email}`)} style={{fontFamily:F.mono,fontSize:9,background:"none",border:`1px solid ${C.rule}`,borderRadius:4,padding:"3px 8px",color:C.inkMute,cursor:"pointer"}} onMouseEnter={e=>e.currentTarget.style.borderColor=C.accent} onMouseLeave={e=>e.currentTarget.style.borderColor=C.rule}>Resend</button>}
+              {m.status==="invited"&&<button onClick={()=>cancelInvite(m.id)} style={{fontFamily:F.mono,fontSize:9,background:"none",border:`1px solid ${C.rule}`,borderRadius:4,padding:"3px 8px",color:C.inkMute,cursor:"pointer"}} onMouseEnter={e=>{e.currentTarget.style.borderColor="#c0392b";e.currentTarget.style.color="#c0392b"}} onMouseLeave={e=>{e.currentTarget.style.borderColor=C.rule;e.currentTarget.style.color=C.inkMute}}>Cancel</button>}
             </div>
           </div>
         ))}
@@ -3870,7 +3931,7 @@ function TeamAdminDashboard({user,setRoute}){
           {inviteSent&&<div style={{background:C.forestLight,border:`1px solid ${C.forest}`,borderRadius:8,padding:"10px 14px",fontFamily:F.body,fontSize:13,color:C.forest,marginBottom:12}}>✓ Invite sent!</div>}
           <div style={{display:"flex",gap:10}}>
             <input type="email" value={inviteEmail} onChange={e=>setInviteEmail(e.target.value)} placeholder="colleague@yourfirm.com" onKeyDown={e=>e.key==="Enter"&&sendInvite()} style={{flex:1,padding:"10px 14px",border:`1px solid ${C.rule}`,borderRadius:8,fontFamily:F.body,fontSize:14,color:C.ink,background:C.cream,outline:"none"}} onFocus={e=>e.target.style.borderColor=C.accent} onBlur={e=>e.target.style.borderColor=C.rule}/>
-            <button onClick={sendInvite} style={{padding:"10px 24px",background:inviteEmail.includes("@")?C.accent:C.rule,color:inviteEmail.includes("@")?"#fff":C.inkMute,border:"none",borderRadius:8,fontFamily:F.display,fontWeight:700,fontSize:13,cursor:"pointer",flexShrink:0,transition:"all 0.15s"}}>Send invite →</button>
+            <button onClick={sendInvite} disabled={inviting} style={{padding:"10px 24px",background:inviteEmail.includes("@")&&!inviting?C.accent:C.rule,color:inviteEmail.includes("@")&&!inviting?"#fff":C.inkMute,border:"none",borderRadius:8,fontFamily:F.display,fontWeight:700,fontSize:13,cursor:"pointer",flexShrink:0,transition:"all 0.15s"}}>{inviting?"Sending…":"Send invite →"}</button>
           </div>
         </div>
       )}
@@ -3879,21 +3940,32 @@ function TeamAdminDashboard({user,setRoute}){
 }
 
 /* ── TEAM MEMBER VIEW ── */
-function TeamMemberView({user,setRoute}){
-  const team=user?.team
-  const allActive=team?.members?.filter(m=>m.status==="active")||[]
-  const me=allActive[0]||{name:user?.name,progress:72,modulesCompleted:8,examBestScore:88}
-  const myRank=[...allActive].sort((a,b)=>b.progress-a.progress).findIndex(m=>m.id===me.id)+1||1
+function TeamMemberView({user,teamCtx,setRoute}){
+  if(!teamCtx) return <div style={{padding:"40px 36px",fontFamily:F.body,color:C.inkMute}}>Loading team data…</div>
+  const team=teamCtx.team
+  function mapMember(m){
+    const progress=Math.min(100,Math.round(((m.completed||0)/74)*100))
+    return{id:m.user_id,name:m.display_name||"Team member",
+      progress,modulesCompleted:Math.min(12,Math.floor(progress/100*12)),
+      examBestScore:m.exam_best_score||null}
+  }
+  const allActive=(teamCtx.members||[]).map(mapMember)
+  const me=allActive.find(m=>m.id===user?.id)||{name:user?.name||"",progress:0,modulesCompleted:0,examBestScore:null}
+  const sorted=[...allActive].sort((a,b)=>b.progress-a.progress)
+  const myRank=allActive.length?sorted.findIndex(m=>m.id===user?.id)+1:1
+  const teamAvg=allActive.length?Math.round(allActive.reduce((s,m)=>s+m.progress,0)/allActive.length):0
+  const adminMember=allActive.find(m=>m.id===team?.owner_id)
+  const adminName=adminMember?.name||"your team admin"
 
   return(
     <div style={{padding:"40px 36px",minHeight:"100vh"}}>
       <div style={{marginBottom:28}}>
         <div style={{fontFamily:F.mono,fontSize:9,letterSpacing:"0.24em",textTransform:"uppercase",color:C.accent,marginBottom:6}}>Team Member · {team?.name}</div>
         <h1 style={{fontFamily:F.display,fontWeight:700,fontSize:28,letterSpacing:"-0.02em",color:C.ink,margin:"0 0 4px"}}>{user?.name?.split(" ")[0]}'s Progress</h1>
-        <div style={{fontFamily:F.mono,fontSize:11,color:C.inkMute}}>Team managed by {team?.adminName} · {allActive.length} of {team?.seats} seats active</div>
+        <div style={{fontFamily:F.mono,fontSize:11,color:C.inkMute}}>Team managed by {adminName} · {allActive.length} of {teamCtx.seatsTotal} seats active</div>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:28}}>
-        {[["My progress",`${me.progress}%`,`Rank ${myRank} of ${allActive.length} on team`],["Modules done",`${me.modulesCompleted} / 12`,"All modules unlocked"],["Best exam score",me.examBestScore?`${me.examBestScore}%`:"Not yet","85% needed to pass"],["Team avg",`${Math.round(allActive.reduce((s,m)=>s+m.progress,0)/allActive.length)}%`,"Team average"]].map(([label,val,sub])=>(
+        {[["My progress",`${me.progress}%`,`Rank ${myRank} of ${allActive.length} on team`],["Modules done",`${me.modulesCompleted} / 12`,"All modules unlocked"],["Best exam score",me.examBestScore?`${me.examBestScore}%`:"Not yet","85% needed to pass"],["Team avg",`${teamAvg}%`,"Team average"]].map(([label,val,sub])=>(
           <div key={label} style={{background:C.paper,border:`1px solid ${C.rule}`,borderRadius:10,padding:"16px 18px"}}>
             <div style={{fontFamily:F.mono,fontSize:8,letterSpacing:"0.18em",textTransform:"uppercase",color:C.inkMute,marginBottom:8}}>{label}</div>
             <div style={{fontFamily:F.display,fontWeight:700,fontSize:22,color:C.ink,marginBottom:3}}>{val}</div>
@@ -3921,9 +3993,9 @@ function TeamMemberView({user,setRoute}){
           <div style={{padding:"16px 20px",borderBottom:`1px solid ${C.rule}`}}>
             <div style={{fontFamily:F.display,fontWeight:700,fontSize:15,color:C.ink}}>Team leaderboard</div>
           </div>
-          {[...allActive].sort((a,b)=>b.progress-a.progress).map((m,i)=>{
-            const isMe=m.id===me.id||(i===0&&me)
-            return(<div key={m.id||i} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 20px",borderBottom:i<allActive.length-1?`1px solid ${C.rule}`:"none",background:isMe?C.accentLight:"transparent"}}>
+          {sorted.map((m,i)=>{
+            const isMe=m.id===user?.id
+            return(<div key={m.id||i} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 20px",borderBottom:i<sorted.length-1?`1px solid ${C.rule}`:"none",background:isMe?C.accentLight:"transparent"}}>
               <div style={{fontFamily:F.display,fontWeight:700,fontSize:15,color:i===0?C.amber:C.inkMute,width:20,textAlign:"center",flexShrink:0}}>{i===0?"🥇":i===1?"🥈":i===2?"🥉":i+1}</div>
               <div style={{flex:1,minWidth:0}}>
                 <div style={{fontFamily:F.display,fontWeight:isMe?600:400,fontSize:13,color:C.ink,display:"flex",alignItems:"center",gap:6}}>
@@ -4778,7 +4850,7 @@ function TrendsPage({ setRoute }) {
   )
 }
 
-function AppShell({user, setUser, onSignOut, completedLessons=new Set(), markLessonComplete=async()=>{}, bookmarks=new Set(), toggleBookmark=async()=>{}, isAdmin=false, onAdminClick=()=>{}}){
+function AppShell({user, setUser, onSignOut, completedLessons=new Set(), markLessonComplete=async()=>{}, bookmarks=new Set(), toggleBookmark=async()=>{}, isAdmin=false, onAdminClick=()=>{}, teamCtx=null, onTeamRefresh=()=>{}}){
   const [route, setRoute] = useState("home")
   const [showUpgrade, setShowUpgrade] = useState(false)
   const isMobile = useIsMobile()
@@ -4830,8 +4902,8 @@ function AppShell({user, setUser, onSignOut, completedLessons=new Set(), markLes
           </div>
         )}
         <ErrorBoundary>
-          {route==="home"&&user?.plan==="team_admin"  && <TeamAdminDashboard user={user} setRoute={setRoute}/>}
-          {route==="home"&&user?.plan==="team_member" && <TeamMemberView user={user} setRoute={setRoute}/>}
+          {route==="home"&&user?.plan==="team_admin"  && <TeamAdminDashboard user={user} teamCtx={teamCtx} setRoute={setRoute} onTeamRefresh={onTeamRefresh}/>}
+          {route==="home"&&user?.plan==="team_member" && <TeamMemberView user={user} teamCtx={teamCtx} setRoute={setRoute}/>}
           {route==="home"&&user?.plan!=="team_admin"&&user?.plan!=="team_member" && <Dashboard setRoute={setRoute} user={user} completedLessons={completedLessons} isMobile={isMobile}/>}
           {route==="search"    && <SearchPage setRoute={setRoute} user={user} setShowUpgrade={setShowUpgrade}/>}
           {route==="bookmarks" && <BookmarksPage setRoute={setRoute} bookmarks={bookmarks} toggleBookmark={toggleBookmark}/>}
@@ -5098,6 +5170,7 @@ function LearnerRoot({isAdmin=false, onAdminClick=()=>{}}){
   const [successToast, setSuccessToast] = useState(null)
   const [sessionConflict, setSessionConflict] = useState(null)
   const [purchaseSuccess, setPurchaseSuccess] = useState(null)
+  const [teamCtx, setTeamCtx] = useState(null)
 
   async function loadSubscription(){
     const { data:{ session } } = await supabase.auth.getSession()
@@ -5170,6 +5243,15 @@ function LearnerRoot({isAdmin=false, onAdminClick=()=>{}}){
     loadBookmarks()
   },[user])
 
+  useEffect(()=>{
+    if(!user?.id) return
+    loadTeamContext().then(ctx=>setTeamCtx(ctx))
+  },[user?.id])
+
+  const refreshTeamCtx=useCallback(()=>{
+    loadTeamContext().then(ctx=>setTeamCtx(ctx))
+  },[])
+
   async function markLessonComplete(lessonRef){
     if(!user || completedLessons.has(lessonRef)) return
     setCompletedLessons(prev=>new Set([...prev, lessonRef]))
@@ -5205,10 +5287,18 @@ function LearnerRoot({isAdmin=false, onAdminClick=()=>{}}){
     }
     await supabase.auth.signOut()
     setUser(null)
+    setTeamCtx(null)
     setCompletedLessons(new Set())
     setBookmarks(new Set())
     setPage("landing")
   }
+
+  const effectivePlan = teamCtx?.onTeam
+    ? (teamCtx.role==='team_admin' ? 'team_admin' : 'team_member')
+    : user?.plan
+  const effectiveUser = user && teamCtx?.onTeam
+    ? {...user, plan:effectivePlan, accessActive:teamCtx.accessActive}
+    : user
 
   return(
     <>
@@ -5264,7 +5354,7 @@ function LearnerRoot({isAdmin=false, onAdminClick=()=>{}}){
       )}
 
       {page==="app"&&(
-        <AppShell user={user} setUser={setUser} onSignOut={handleSignOut} completedLessons={completedLessons} markLessonComplete={markLessonComplete} bookmarks={bookmarks} toggleBookmark={toggleBookmark} isAdmin={isAdmin} onAdminClick={onAdminClick}/>
+        <AppShell user={effectiveUser} setUser={setUser} onSignOut={handleSignOut} completedLessons={completedLessons} markLessonComplete={markLessonComplete} bookmarks={bookmarks} toggleBookmark={toggleBookmark} isAdmin={isAdmin} onAdminClick={onAdminClick} teamCtx={teamCtx} onTeamRefresh={refreshTeamCtx}/>
       )}
     </>
   )
