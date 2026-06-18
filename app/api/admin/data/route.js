@@ -41,7 +41,7 @@ export async function GET() {
     .select('team_id, user_id, role, display_name, email')
   const { data: tinvites } = await admin
     .from('team_invites')
-    .select('team_id, email, status')
+    .select('id, team_id, email, status')
     .eq('status', 'pending')
 
   const teamsWithMembers = (teams || []).map(t => {
@@ -50,6 +50,7 @@ export async function GET() {
     return {
       ...t,
       members,
+      pendingInvites: pending,
       pendingCount: pending.length,
       seatsUsed: members.length + pending.length,
     }
