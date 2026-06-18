@@ -3627,6 +3627,16 @@ function ModuleRow({mod,oddCol,setRoute,completedLessons=new Set()}){
 
 
 function Sidebar({route, setRoute, user, onSignOut, bookmarks=new Set(), isMobile=false, sidebarOpen=false, setSidebarOpen=()=>{}, openQuestionCount=0, onAdminClick=()=>{}}){
+  const [isAdmin, setIsAdmin] = useState(false)
+  useEffect(() => {
+    let alive = true
+    ;(async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (alive) setIsAdmin(user?.email?.toLowerCase() === 'admin@luxartmedia.com')
+    })()
+    return () => { alive = false }
+  }, [])
+
   const nav = [
     {section:"Library", items:[
       {glyph:"▤",label:"Course home",route:"home"},
