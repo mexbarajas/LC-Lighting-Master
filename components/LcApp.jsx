@@ -3658,6 +3658,9 @@ function Sidebar({route, setRoute, user, onSignOut, bookmarks=new Set(), isMobil
       {glyph:"○",label:"Settings",route:"account"},
       {glyph:"✉",label:"Feedback",route:"feedback"},
     ]},
+    ...(isAdmin ? [{section:"Admin", items:[
+      {glyph:"⚙",label:"Admin portal",route:"admin",action:onAdminClick},
+    ]}] : []),
   ]
   return (
     <aside style={{
