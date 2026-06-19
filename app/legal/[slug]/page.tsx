@@ -153,6 +153,21 @@ const DOCS: Record<string, Doc> = {
       { h: 'CONTACT INFORMATION', body: 'Questions regarding certificates should be directed to: admin@luxartmedia.com.' },
     ],
   },
+
+  'affiliate-terms': {
+    title: 'Affiliate Program Terms',
+    subtitle: 'LightingMasterLC.com Operated by Luxart LLC',
+    effective: 'June 18, 2026',
+    sections: [
+      { h: '1. PROGRAM OVERVIEW', body: 'This Affiliate Program Terms and Conditions ("Agreement") governs participation in the LightingMasterLC.com Affiliate Program operated by Luxart LLC ("Company," "we," "our," or "us"). By enrolling in the Affiliate Program, you ("Affiliate") agree to be bound by these terms. The Affiliate Program allows eligible individuals to earn commissions by promoting LightingMasterLC.com and referring customers.' },
+      { h: '2. ELIGIBILITY', body: 'Affiliates must be at least 18 years old and have a valid tax identification number (US residents) or equivalent. Employees of Luxart LLC and their immediate family members are not eligible. We reserve the right to deny enrollment or terminate participation at any time for any reason.' },
+      { h: '3. COMMISSION STRUCTURE', body: 'Affiliates earn commission on qualifying referrals as set forth in the Affiliate Dashboard. Commission rates may vary by offer and product. We may modify commission structures with 30 days\' notice. Commission is calculated based on the net purchase amount after refunds, chargebacks, or reversals.' },
+      { h: '4. PROMOTIONAL GUIDELINES', body: 'Affiliates may not: Use misleading or false advertising claims, Misrepresent the Platform or its benefits, Violate trademark or copyright laws, Use spam or unsolicited email, Purchase branded keywords without authorization, Create content that implies endorsement by Luxart LLC without permission. All promotional materials must be pre-approved by Luxart LLC.' },
+      { h: '5. PAYMENT TERMS', body: 'Commissions are calculated monthly and paid via the method specified in your Affiliate account within 30 days of the end of each month. Minimum payout threshold is $50. Luxart LLC is not responsible for taxes, withholding, or payment method fees incurred by Affiliates.' },
+      { h: '6. TERMINATION', body: 'Either party may terminate this Agreement with 14 days\' written notice. Unpaid commissions will be paid within 60 days of termination. Upon termination, all affiliate links and promotional rights are revoked immediately. Affiliates may not earn commission on sales initiated before termination.' },
+      { h: '7. CONTACT', body: 'For questions about the Affiliate Program: admin@luxartmedia.com. Luxart LLC, United States.' },
+    ],
+  },
 }
 
 export async function generateStaticParams() {
