@@ -3440,23 +3440,44 @@ function AccountPage({ user, setUser, setRoute }) {
   })
   const [saved,setSaved] = useState(false)
   const [saving,setSaving] = useState(false)
+  const [err,setErr] = useState('')
   const [pwVal,setPwVal] = useState('')
   const [pwErr,setPwErr] = useState('')
   const [checkoutLoading,setCheckoutLoading] = useState(null)
   const [checkoutError,setCheckoutError] = useState(null)
 
+  useEffect(() => {
+    ;(async () => {
+      const { data: { user: u } } = await supabase.auth.getUser()
+      const m = u?.user_metadata || {}
+      setForm(f => ({
+        ...f,
+        name:     m.full_name || f.name,
+        firm:     m.firm      || f.firm,
+        role:     m.role      || f.role,
+        location: m.location  || f.location,
+      }))
+    })()
+  }, [])
+
   async function save() {
-    setPwErr('')
+    setPwErr(''); setErr('')
     if (pwVal && pwVal.length < 10) { setPwErr('Password must be at least 10 characters.'); return }
     setSaving(true)
-    const updates = { data: { name: form.name, company: form.firm, role: form.role, state: form.location } }
-    if (pwVal) updates.password = pwVal
-    await supabase.auth.updateUser(updates)
-    if (setUser) setUser(prev => prev ? { ...prev, name: form.name, company: form.firm, state: form.location } : prev)
-    if (pwVal) setPwVal('')
-    setSaving(false)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+    try {
+      const updates = { data: { full_name: form.name?.trim(), firm: form.firm?.trim(), role: form.role?.trim(), location: form.location?.trim() } }
+      if (pwVal) updates.password = pwVal
+      const { error } = await supabase.auth.updateUser(updates)
+      if (error) throw error
+      if (setUser) setUser(prev => prev ? { ...prev, name: form.name?.trim(), company: form.firm?.trim(), state: form.location?.trim() } : prev)
+      if (pwVal) setPwVal('')
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2500)
+    } catch (e) {
+      setErr(e?.message || 'Could not save. Please try again.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   async function startCheckout(plan) {
@@ -3516,6 +3537,7 @@ function AccountPage({ user, setUser, setRoute }) {
           <button onClick={save} disabled={saving} style={{marginTop:24,fontFamily:F.display,fontWeight:700,fontSize:14,background:saved?C.forest:C.accent,color:"#fff",border:"none",borderRadius:99,padding:"12px 28px",cursor:"pointer",transition:"background 200ms",opacity:saving?0.7:1}}>
             {saved?"Saved ✓":saving?"Saving…":"Save changes"}
           </button>
+          {err&&<div style={{fontFamily:F.body,fontSize:12,color:"#f87171",marginTop:10}}>{err}</div>}
         </div>
       )}
 
