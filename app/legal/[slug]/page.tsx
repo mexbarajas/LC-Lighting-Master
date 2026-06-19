@@ -171,7 +171,8 @@ const DOCS: Record<string, Doc> = {
 }
 
 export async function generateStaticParams() {
-  return Object.keys(DOCS).map(slug => ({ slug }))
+  const params = Object.keys(DOCS).map(slug => ({ slug }))
+  return params
 }
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
