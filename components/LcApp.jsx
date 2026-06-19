@@ -310,6 +310,7 @@ function AuthModal({mode, onClose, onAuth, initialError=null, onErrorShown=()=>{
   const [suShowPw,  setSuShowPw]  = useState(false)
   const [confirmPassword, setConfirmPassword] = useState("")
   const [contactOk, setContactOk] = useState(false)
+  const [agreed, setAgreed] = useState(false)
   const [loginAttempts, setLoginAttempts] = useState(0)
   const [lockoutUntil, setLockoutUntil] = useState(null)
   // reset
@@ -350,6 +351,7 @@ function AuthModal({mode, onClose, onAuth, initialError=null, onErrorShown=()=>{
     if(!pwCheck.valid)   { setError("Password must be at least 10 characters and include uppercase, lowercase, and a number."); return false }
     if(suPw !== confirmPassword){ setError("Passwords do not match."); return false }
     if(!contactOk)       { setError("Please confirm you agree to receive product communications."); return false }
+    if(!agreed)          { setError("Please agree to the terms to create an account."); return false }
     return true
   }
   function validateSignin(){
@@ -415,7 +417,7 @@ function AuthModal({mode, onClose, onAuth, initialError=null, onErrorShown=()=>{
     }
     const { data, error } = await supabase.auth.signUp({
       email: suEmail, password: suPw,
-      options: { data: { name:`${firstName} ${lastName}`.trim(), company, state } }
+      options: { data: { name:`${firstName} ${lastName}`.trim(), company, state, consent_accepted: 'true', consent_version: '2026-06-18', consent_accepted_at: new Date().toISOString() } }
     })
     setLoading(false)
     if(error){ setError(error.message); return }
@@ -591,12 +593,20 @@ function AuthModal({mode, onClose, onAuth, initialError=null, onErrorShown=()=>{
               </span>
             </div>
 
-            <p style={{fontFamily:F.body,fontSize:11,color:C.inkMute,lineHeight:1.6,margin:0}}>
-              By creating an account you agree to our{" "}
-              <a href="#" style={{color:C.accent}}>Terms of Service</a> and{" "}
-              <a href="#" style={{color:C.accent}}>Privacy Policy</a>.
-              Your data is never sold to third parties.
-            </p>
+            <label style={{display:"flex",gap:8,alignItems:"flex-start",fontSize:13,lineHeight:1.5,cursor:"pointer",fontFamily:F.body,color:C.ink}}>
+              <input type="checkbox" checked={agreed} onChange={e=>setAgreed(e.target.checked)} style={{marginTop:3,flexShrink:0,accentColor:C.accent,width:15,height:15}}/>
+              <span>
+                I have read and agree to the{' '}
+                <a href="/legal/terms-of-service" target="_blank" rel="noopener noreferrer" style={{color:C.accent}}>Terms of Service</a>,{' '}
+                <a href="/legal/privacy-policy" target="_blank" rel="noopener noreferrer" style={{color:C.accent}}>Privacy Policy</a>,{' '}
+                <a href="/legal/acceptable-use-policy" target="_blank" rel="noopener noreferrer" style={{color:C.accent}}>Acceptable Use Policy</a>,{' '}
+                <a href="/legal/cookie-policy" target="_blank" rel="noopener noreferrer" style={{color:C.accent}}>Cookie Policy</a>,{' '}
+                <a href="/legal/refund-policy" target="_blank" rel="noopener noreferrer" style={{color:C.accent}}>Refund Policy</a>,{' '}
+                <a href="/legal/copyright-ip-policy" target="_blank" rel="noopener noreferrer" style={{color:C.accent}}>Copyright &amp; IP Policy</a>,{' '}
+                <a href="/legal/affiliate-terms" target="_blank" rel="noopener noreferrer" style={{color:C.accent}}>Affiliate Program Terms</a>, and the{' '}
+                <a href="/legal/certificate-disclaimer" target="_blank" rel="noopener noreferrer" style={{color:C.accent}}>Certificate Disclaimer</a>.
+              </span>
+            </label>
           </div>
         )}
 
@@ -612,7 +622,7 @@ function AuthModal({mode, onClose, onAuth, initialError=null, onErrorShown=()=>{
           </div>
         )}
 
-        <Btn variant="primary" onClick={handleSubmit} disabled={loading||(!contactOk&&tab==="signup")}
+        <Btn variant="primary" onClick={handleSubmit} disabled={loading||(!contactOk&&tab==="signup")||(!agreed&&tab==="signup")}
           style={{width:"100%",justifyContent:"center",marginTop:18,padding:"12px"}}>
           {loading?"…":tab==="signin"?"Sign in →":tab==="signup"?"Create free account →":"Send reset link →"}
         </Btn>
