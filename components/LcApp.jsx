@@ -1601,10 +1601,14 @@ function Footer({onSignIn, onSignUp, onAdminClick=()=>{}, onLegal=()=>{}}){
               {label:"Contact us",action:null,href:"mailto:admin@luxartmedia.com"},
             ]},
             {head:"Legal",links:[
-              {label:"Privacy policy",action:()=>onLegal("privacy")},
-              {label:"Terms of service",action:()=>onLegal("terms")},
-              {label:"Cookie policy",action:()=>onLegal("cookies")},
-              {label:"Refund policy",action:()=>onLegal("refund")},
+              {label:"Terms of service",action:()=>{window.location.href="/legal/terms-of-service"}},
+              {label:"Privacy policy",action:()=>{window.location.href="/legal/privacy-policy"}},
+              {label:"Acceptable use policy",action:()=>{window.location.href="/legal/acceptable-use-policy"}},
+              {label:"Cookie policy",action:()=>{window.location.href="/legal/cookie-policy"}},
+              {label:"Refund policy",action:()=>{window.location.href="/legal/refund-policy"}},
+              {label:"Copyright & IP policy",action:()=>{window.location.href="/legal/copyright-ip-policy"}},
+              {label:"Affiliate terms",action:()=>{window.location.href="/legal/affiliate-terms"}},
+              {label:"Certificate disclaimer",action:()=>{window.location.href="/legal/certificate-disclaimer"}},
             ]},
           ].map(col=>(
             <div key={col.head}>
@@ -3786,7 +3790,7 @@ function Sidebar({route, setRoute, user, onSignOut, bookmarks=new Set(), isMobil
           Sign out
         </button>
         <div style={{borderTop:"1px solid rgba(255,255,255,0.06)",marginTop:12,paddingTop:12,display:"flex",flexWrap:"wrap",gap:"4px 12px"}}>
-          {[{label:"Privacy",href:"/legal/privacy"},{label:"Terms",href:"/legal/terms"},{label:"Refund",href:"/legal/refund"},{label:"Cookies",href:"/legal/cookies"}].map(({label,href})=>(
+          {[{label:"Terms",href:"/legal/terms-of-service"},{label:"Privacy",href:"/legal/privacy-policy"},{label:"Acceptable Use",href:"/legal/acceptable-use-policy"},{label:"Cookies",href:"/legal/cookie-policy"},{label:"Refund",href:"/legal/refund-policy"},{label:"Copyright",href:"/legal/copyright-ip-policy"},{label:"Affiliates",href:"/legal/affiliate-terms"},{label:"Certificate",href:"/legal/certificate-disclaimer"}].map(({label,href})=>(
             <a key={label} href={href} target="_blank"
               style={{fontFamily:F.mono,fontSize:9,letterSpacing:"0.12em",color:"rgba(242,230,218,0.35)",textDecoration:"none",textTransform:"uppercase"}}
               onMouseEnter={e=>e.target.style.color="rgba(242,230,218,0.7)"}
