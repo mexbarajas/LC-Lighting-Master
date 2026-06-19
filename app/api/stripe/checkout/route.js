@@ -1,9 +1,9 @@
 // TODO (Mario): In Supabase Dashboard → Authentication → Email Templates,
 // add these legal links to the footer of the Confirm Signup email:
 //   <p style="font-size:11px;color:#8a7a6a;margin:8px 0 0;">
-//     <a href="https://lightingmasterlc.com/legal/terms" style="color:#b85835;text-decoration:none;">Terms</a> ·
-//     <a href="https://lightingmasterlc.com/legal/privacy" style="color:#b85835;text-decoration:none;">Privacy</a> ·
-//     <a href="https://lightingmasterlc.com/legal/refund" style="color:#b85835;text-decoration:none;">Refund Policy</a>
+//     <a href="https://lightingmasterlc.com/legal/terms-of-service" style="color:#b85835;text-decoration:none;">Terms</a> ·
+//     <a href="https://lightingmasterlc.com/legal/privacy-policy" style="color:#b85835;text-decoration:none;">Privacy</a> ·
+//     <a href="https://lightingmasterlc.com/legal/refund-policy" style="color:#b85835;text-decoration:none;">Refund Policy</a>
 //   </p>
 
 import Stripe from 'stripe'

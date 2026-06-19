@@ -11,9 +11,13 @@ export default function sitemap() {
     { url: `${base}/resources/lighting-certifications-compared`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${base}/resources/ncqlp-practice-questions`,         lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${base}/resources/ncqlp-study-guide`,                lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${base}/legal/terms`,                         lastModified: now, changeFrequency: 'yearly',  priority: 0.3 },
-    { url: `${base}/legal/privacy`,                       lastModified: now, changeFrequency: 'yearly',  priority: 0.3 },
-    { url: `${base}/legal/refund`,                        lastModified: now, changeFrequency: 'yearly',  priority: 0.3 },
-    { url: `${base}/legal/cookies`,                       lastModified: now, changeFrequency: 'yearly',  priority: 0.3 },
+    { url: `${base}/legal/terms-of-service`,               lastModified: now, changeFrequency: 'yearly',  priority: 0.3 },
+    { url: `${base}/legal/privacy-policy`,                lastModified: now, changeFrequency: 'yearly',  priority: 0.3 },
+    { url: `${base}/legal/acceptable-use-policy`,         lastModified: now, changeFrequency: 'yearly',  priority: 0.3 },
+    { url: `${base}/legal/cookie-policy`,                 lastModified: now, changeFrequency: 'yearly',  priority: 0.3 },
+    { url: `${base}/legal/refund-policy`,                 lastModified: now, changeFrequency: 'yearly',  priority: 0.3 },
+    { url: `${base}/legal/copyright-ip-policy`,           lastModified: now, changeFrequency: 'yearly',  priority: 0.3 },
+    { url: `${base}/legal/affiliate-terms`,               lastModified: now, changeFrequency: 'yearly',  priority: 0.3 },
+    { url: `${base}/legal/certificate-disclaimer`,        lastModified: now, changeFrequency: 'yearly',  priority: 0.3 },
   ]
 }
