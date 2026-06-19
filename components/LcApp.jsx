@@ -3441,8 +3441,12 @@ function AccountPage({ user, setUser, setRoute }) {
   const [saved,setSaved] = useState(false)
   const [saving,setSaving] = useState(false)
   const [err,setErr] = useState('')
-  const [pwVal,setPwVal] = useState('')
+  const [currentPw,setCurrentPw] = useState('')
+  const [newPw,setNewPw] = useState('')
+  const [confirmPw,setConfirmPw] = useState('')
+  const [pwBusy,setPwBusy] = useState(false)
   const [pwErr,setPwErr] = useState('')
+  const [pwMsg,setPwMsg] = useState('')
   const [checkoutLoading,setCheckoutLoading] = useState(null)
   const [checkoutError,setCheckoutError] = useState(null)
 
@@ -3461,22 +3465,40 @@ function AccountPage({ user, setUser, setRoute }) {
   }, [])
 
   async function save() {
-    setPwErr(''); setErr('')
-    if (pwVal && pwVal.length < 10) { setPwErr('Password must be at least 10 characters.'); return }
+    setErr('')
     setSaving(true)
     try {
-      const updates = { data: { full_name: form.name?.trim(), firm: form.firm?.trim(), role: form.role?.trim(), location: form.location?.trim() } }
-      if (pwVal) updates.password = pwVal
-      const { error } = await supabase.auth.updateUser(updates)
+      const { error } = await supabase.auth.updateUser({
+        data: { full_name: form.name?.trim(), firm: form.firm?.trim(), role: form.role?.trim(), location: form.location?.trim() },
+      })
       if (error) throw error
       if (setUser) setUser(prev => prev ? { ...prev, name: form.name?.trim(), company: form.firm?.trim(), state: form.location?.trim() } : prev)
-      if (pwVal) setPwVal('')
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
     } catch (e) {
       setErr(e?.message || 'Could not save. Please try again.')
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function changePassword() {
+    setPwErr(''); setPwMsg('')
+    if (newPw.length < 10) { setPwErr('New password must be at least 10 characters.'); return }
+    if (newPw !== confirmPw) { setPwErr('New passwords do not match.'); return }
+    setPwBusy(true)
+    try {
+      const { data: { user: u } } = await supabase.auth.getUser()
+      const { error: verifyErr } = await supabase.auth.signInWithPassword({ email: u.email, password: currentPw })
+      if (verifyErr) { setPwErr('Current password is incorrect.'); return }
+      const { error: updErr } = await supabase.auth.updateUser({ password: newPw })
+      if (updErr) throw updErr
+      setPwMsg('Password updated.')
+      setCurrentPw(''); setNewPw(''); setConfirmPw('')
+    } catch (e) {
+      setPwErr(e?.message || 'Could not change password.')
+    } finally {
+      setPwBusy(false)
     }
   }
 
@@ -3526,18 +3548,34 @@ function AccountPage({ user, setUser, setRoute }) {
                   onFocus={e=>{if(!readOnly)e.target.style.borderColor=C.accent}} onBlur={e=>e.target.style.borderColor=C.ruleStrong}/>
               </div>
             ))}
-            <div>
-              <label style={{display:"block",fontFamily:F.mono,fontSize:9,letterSpacing:"0.18em",textTransform:"uppercase",color:C.inkMute,marginBottom:8}}>New password</label>
-              <input type="password" placeholder="At least 10 characters" value={pwVal} onChange={e=>setPwVal(e.target.value)}
-                style={{width:"100%",boxSizing:"border-box",padding:"12px 14px",fontFamily:F.display,fontSize:14,color:C.ink,background:C.paper,border:`1px solid ${pwErr?'#f87171':C.ruleStrong}`,borderRadius:4,outline:"none"}}
-                onFocus={e=>e.target.style.borderColor=C.accent} onBlur={e=>e.target.style.borderColor=pwErr?'#f87171':C.ruleStrong}/>
-              {pwErr&&<div style={{fontFamily:F.body,fontSize:12,color:"#f87171",marginTop:6}}>{pwErr}</div>}
-            </div>
           </div>
           <button onClick={save} disabled={saving} style={{marginTop:24,fontFamily:F.display,fontWeight:700,fontSize:14,background:saved?C.forest:C.accent,color:"#fff",border:"none",borderRadius:99,padding:"12px 28px",cursor:"pointer",transition:"background 200ms",opacity:saving?0.7:1}}>
             {saved?"Saved ✓":saving?"Saving…":"Save changes"}
           </button>
           {err&&<div style={{fontFamily:F.body,fontSize:12,color:"#f87171",marginTop:10}}>{err}</div>}
+
+          <div style={{marginTop:40,paddingTop:32,borderTop:`1px solid ${C.rule}`}}>
+            <div style={{fontFamily:F.display,fontWeight:700,fontSize:16,color:C.ink,marginBottom:20}}>Change password</div>
+            <div style={{display:"grid",gap:16,maxWidth:400}}>
+              {[
+                {label:"Current password",val:currentPw,set:setCurrentPw},
+                {label:"New password",val:newPw,set:setNewPw,hint:"At least 10 characters"},
+                {label:"Confirm new password",val:confirmPw,set:setConfirmPw},
+              ].map(({label,val,set,hint})=>(
+                <div key={label}>
+                  <label style={{display:"block",fontFamily:F.mono,fontSize:9,letterSpacing:"0.18em",textTransform:"uppercase",color:C.inkMute,marginBottom:8}}>{label}</label>
+                  <input type="password" value={val} placeholder={hint||""} onChange={e=>set(e.target.value)}
+                    style={{width:"100%",boxSizing:"border-box",padding:"12px 14px",fontFamily:F.display,fontSize:14,color:C.ink,background:C.paper,border:`1px solid ${C.ruleStrong}`,borderRadius:4,outline:"none"}}
+                    onFocus={e=>e.target.style.borderColor=C.accent} onBlur={e=>e.target.style.borderColor=C.ruleStrong}/>
+                </div>
+              ))}
+            </div>
+            <button onClick={changePassword} disabled={pwBusy} style={{marginTop:20,fontFamily:F.display,fontWeight:700,fontSize:14,background:C.ink,color:"#fff",border:"none",borderRadius:99,padding:"12px 28px",cursor:"pointer",opacity:pwBusy?0.6:1}}>
+              {pwBusy?"Updating…":"Update password"}
+            </button>
+            {pwErr&&<div style={{fontFamily:F.body,fontSize:12,color:"#f87171",marginTop:10}}>{pwErr}</div>}
+            {pwMsg&&<div style={{fontFamily:F.body,fontSize:12,color:C.forest,marginTop:10}}>{pwMsg}</div>}
+          </div>
         </div>
       )}
 
