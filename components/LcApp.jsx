@@ -3527,7 +3527,7 @@ function AccountPage({ user, setUser, setRoute }) {
   const isActiveStatus = user?.status === 'active'
   const isPaid = isActiveStatus && planKey !== 'free'
 
-  const tabs = [["profile","Profile"],["billing","Billing"],["notifications","Notifications"]]
+  const tabs = [["profile","Profile"],["billing","Billing"]]
   return (
     <div style={{padding:"0 36px 48px"}}>
       <PageHead eyebrow="Account" title="Account &" em="billing."/>
@@ -3619,17 +3619,6 @@ function AccountPage({ user, setUser, setRoute }) {
               </div>
             </div>
           )}
-        </div>
-      )}
-
-      {tab==="notifications"&&(
-        <div style={{maxWidth:480}}>
-          {[["Email me weekly progress summaries",true],["Notify when new modules are released",true],["Exam readiness reminders",true],["Marketing and product updates",false]].map(([label,checked],i)=>(
-            <label key={i} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 0",borderBottom:`1px solid ${C.rule}`,cursor:"pointer"}}>
-              <span style={{fontFamily:F.display,fontSize:14,color:C.ink}}>{label}</span>
-              <input type="checkbox" defaultChecked={checked} style={{accentColor:C.accent,width:16,height:16}}/>
-            </label>
-          ))}
         </div>
       )}
 
