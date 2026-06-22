@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import React, { useState, useEffect, useRef, useCallback } from "react"
 import DOMPurify from 'dompurify'
@@ -1722,6 +1722,36 @@ const MODULES = [
 
 const ALL_LESSONS = MODULES.flatMap(m => m.lessons.map(l=>({...l,module:m.n,moduleTitle:m.title,part:m.part})))
 
+const MODULE_SHARE_COPY = {
+  "01": "Module 01 complete — Theory, Light, Sight & Color. Photometric quantities, the visible spectrum, human vision, and color rendering. Building the foundation right. ✅ → lightingmasterlc.com",
+  "02": "Module 02 complete — Light Sources & Ballasts. Incandescent, halogen, fluorescent, CFL, HID, and the leap to LED. Know your sources, know your craft. 💡 → lightingmasterlc.com",
+  "03": "Module 03 complete — LED Technology Deep Dive. COB, SMD, filament, tape, high-power, UV, IR, and OLED packages. Thermal management, L70/L80/L90, and melanopic lux. ⚡ This is the future of light. → lightingmasterlc.com",
+  "04": "Module 04 complete — Photometry & IES Files. Goniophotometers, integrating spheres, LM-79, candela distributions, and the IES file format. Read an IES file, design anything. 📐 → lightingmasterlc.com",
+  "05": "Module 05 complete — Lighting Controls. DALI, 0-10V, BACnet, occupancy sensing, daylight harvesting, and demand response. Smart buildings start with smart control. 🎛️ → lightingmasterlc.com",
+  "06": "Module 06 complete — Downlighting & Interior Design. Cutoff angles, beam spreads, CRI selection, and retail accent ratios. Great interiors begin with intentional light. 🏛️ → lightingmasterlc.com",
+  "07": "Module 07 complete — Exterior, Emergency & Codes. IES roadway classes, NFPA 101 egress, and Dark Sky compliance. Safety starts at the spec. 🌃 → lightingmasterlc.com",
+  "08": "Module 08 complete — Industrial Lighting & Human Health. High-bay efficacy, flicker metrics, melanopic lux, and WELL v2 targets. Light affects health — design accordingly. 🏭 → lightingmasterlc.com",
+  "09": "Module 09 complete — Energy, Environment & Sustainable Design. ASHRAE 90.1, LPD, LEED v4.1, Title 24, and life-cycle cost. Sustainable design is the only design. 🌿 → lightingmasterlc.com",
+  "10": "Module 10 complete — Design Process I: Planning to DD. Programming, schematic design, reflected ceiling plans, and photometric software. The process is the product. 📋 → lightingmasterlc.com",
+  "11": "Module 11 complete — Design Process II: Documents to POE. Construction docs, submittal review, commissioning, and post-occupancy evaluation. From drawings to delivered light. 🏗️ → lightingmasterlc.com",
+  "12": "Module 12 complete — Residential & Commercial Applications. All 12 modules integrated. Every formula, threshold, and code the NCQLP LC exam tests. 🏆 You're ready. → lightingmasterlc.com"
+}
+
+const MODULE_HASHTAGS = {
+  "01": "#NCQLP #LightingCertified #LC #IES #Photometry #ColorRendering #CRI #LightingEducation #LuxartMedia lightingmasterlc.com",
+  "02": "#NCQLP #LightingCertified #LC #IES #LightSources #Fluorescent #HIDlighting #LEDtransition #LightingEducation #LuxartMedia lightingmasterlc.com",
+  "03": "#NCQLP #LightingCertified #LC #IES #LEDTechnology #COBled #SMDled #OLEDlighting #LEED #WELLBuilding #MelanopicLux #L70 #LightingEducation #LuxartMedia lightingmasterlc.com",
+  "04": "#NCQLP #LightingCertified #LC #IES #IESfiles #Photometry #LM79 #Goniophotometer #LightingEducation #LuxartMedia lightingmasterlc.com",
+  "05": "#NCQLP #LightingCertified #LC #IES #LightingControls #DALI #BACnet #DaylightHarvesting #SmartBuilding #LightingEducation #LuxartMedia lightingmasterlc.com",
+  "06": "#NCQLP #LightingCertified #LC #IES #InteriorLighting #Downlighting #CRI #RetailLighting #LightingDesign #LuxartMedia lightingmasterlc.com",
+  "07": "#NCQLP #LightingCertified #LC #IES #ExteriorLighting #NFPA101 #EgressLighting #DarkSky #LightingCodes #LuxartMedia lightingmasterlc.com",
+  "08": "#NCQLP #LightingCertified #LC #IES #IndustrialLighting #HumanCentricLighting #WELLBuilding #MelanopicLux #Flicker #LuxartMedia lightingmasterlc.com",
+  "09": "#NCQLP #LightingCertified #LC #IES #ASHRAE901 #LEED #SustainableLighting #EnergyEfficiency #Title24 #LPD #LuxartMedia lightingmasterlc.com",
+  "10": "#NCQLP #LightingCertified #LC #IES #LightingDesignProcess #RCP #SchematicDesign #LightingEducation #LuxartMedia lightingmasterlc.com",
+  "11": "#NCQLP #LightingCertified #LC #IES #ConstructionDocuments #Commissioning #POE #LightingSpec #LuxartMedia lightingmasterlc.com",
+  "12": "#NCQLP #LightingCertified #LC #IES #LightingDesign #LCexam #CommercialLighting #ResidentialLighting #LuxartMedia lightingmasterlc.com"
+}
+
 const PARTS = [
   {id:1,title:"Fundamentals · light, sources, math",modules:[1,2,3,4]},
   {id:2,title:"Systems & applications",modules:[5,6,7,8]},
@@ -2618,141 +2648,6 @@ function ExamPage({ setRoute, user, userSubscription }) {
 
 /* ── LESSON CONTENT DATA ───────────────────────────────────────── */
 
-/* ── MODULE LESSON VIEW ── */
-/* ── PER-MODULE SHARE COPY ── */
-const MODULE_SHARE_COPY = {
-  "01": "Module 01 complete — Theory, Light, Sight & Color. Photometric quantities, the visible spectrum, human vision, color rendering, and the fundamentals that every lighting professional must own. ✅ Building the foundation right → lightingmasterlc.com",
-  "02": "Module 02 complete — Light Sources & Ballasts. Incandescent, halogen, fluorescent, CFL, HID, and the transition to LED. Knowing your sources is knowing your craft. 💡 Study it right → lightingmasterlc.com",
-  "03": "Module 03 complete — LED Technology Deep Dive. COB, SMD, filament, tape, high-power, UV, IR, and OLED packages. Thermal management, L70/L80/L90 ratings, LEED EQ credits, and WELL melanopic lux targets. ⚡ This is the technology powering the future of light. Study it right → lightingmasterlc.com",
-  "04": "Module 04 complete — Photometry & IES Files. Goniophotometers, integrating spheres, LM-79, candela distributions, and the IES file format. If you can read an IES file, you can design anything. 📐 Study it right → lightingmasterlc.com",
-  "05": "Module 05 complete — Lighting Controls. DALI, 0-10V, BACnet, occupancy sensors, daylight harvesting, and demand response. Smart buildings start with smart lighting control. 🎛️ Study it right → lightingmasterlc.com",
-  "06": "Module 06 complete — Downlighting & Interior Design. Cutoff angles, beam spreads, CRI selection, retail accent ratios, and residential design principles. Great interiors begin with intentional light. 🏛️ Study it right → lightingmasterlc.com",
-  "07": "Module 07 complete — Exterior, Emergency & Codes. IES roadway classifications, NFPA 101 egress requirements, Dark Sky compliance, and the codes that govern outdoor and emergency lighting. Safety starts at the spec. 🌃 Study it right → lightingmasterlc.com",
-  "08": "Module 08 complete — Industrial Lighting & Human Health. High-bay efficacy, flicker metrics, melanopic lux, circadian rhythm, and WELL v2 targets. Light affects health — design accordingly. 🏭 Study it right → lightingmasterlc.com",
-  "09": "Module 09 complete — Energy, Environment & Sustainable Design. ASHRAE 90.1, LPD calculations, LEED v4.1 EQ credits, Title 24, and life-cycle cost analysis. Sustainable design is the only design. 🌿 Study it right → lightingmasterlc.com",
-  "10": "Module 10 complete — Design Process I: Planning to Design Development. Programming, schematic design, reflected ceiling plans, photometric software, and the design process from kickoff to DD. The process is the product. 📋 Study it right → lightingmasterlc.com",
-  "11": "Module 11 complete — Design Process II: Documents to POE. Construction documents, submittal review, field verification, commissioning, and post-occupancy evaluation. From drawings to delivered light. 🏗️ Study it right → lightingmasterlc.com",
-  "12": "Module 12 complete — Residential & Commercial Applications. All 12 modules integrated. Every formula, threshold, code, and concept tested on the NCQLP LC exam. 🏆 You're ready. lightingmasterlc.com"
-}
-
-const MODULE_HASHTAGS = {
-  "01": "#NCQLP #LightingCertified #LC #IES #Photometry #ColorRendering #LightingDesign #CRI #VisibleSpectrum #LightingEducation #LuxartMedia lightingmasterlc.com",
-  "02": "#NCQLP #LightingCertified #LC #IES #LightSources #Fluorescent #HIDlighting #LEDtransition #LightingEducation #LuxartMedia lightingmasterlc.com",
-  "03": "#NCQLP #LightingCertified #LC #IES #LEDTechnology #COBled #SMDled #OLEDlighting #LEED #WELLBuilding #MelanopicLux #CircadianLighting #LumenMaintenance #L70 #LightingEducation #LuxartMedia lightingmasterlc.com",
-  "04": "#NCQLP #LightingCertified #LC #IES #IESfiles #Photometry #LM79 #Goniophotometer #CandelaDistribution #LightingEducation #LuxartMedia lightingmasterlc.com",
-  "05": "#NCQLP #LightingCertified #LC #IES #LightingControls #DALI #BACnet #OccupancySensors #DaylightHarvesting #SmartBuilding #LightingEducation #LuxartMedia lightingmasterlc.com",
-  "06": "#NCQLP #LightingCertified #LC #IES #InteriorLighting #Downlighting #CRI #RetailLighting #LightingDesign #LightingEducation #LuxartMedia lightingmasterlc.com",
-  "07": "#NCQLP #LightingCertified #LC #IES #ExteriorLighting #NFPA101 #EgressLighting #DarkSky #LightPollution #LightingCodes #LightingEducation #LuxartMedia lightingmasterlc.com",
-  "08": "#NCQLP #LightingCertified #LC #IES #IndustrialLighting #HumanCentricLighting #WELLBuilding #MelanopicLux #CircadianLighting #Flicker #LightingEducation #LuxartMedia lightingmasterlc.com",
-  "09": "#NCQLP #LightingCertified #LC #IES #ASHRAE901 #LEED #SustainableLighting #EnergyEfficiency #Title24 #LPD #LightingEducation #LuxartMedia lightingmasterlc.com",
-  "10": "#NCQLP #LightingCertified #LC #IES #LightingDesignProcess #RCP #PhotometricSoftware #SchematicDesign #LightingEducation #LuxartMedia lightingmasterlc.com",
-  "11": "#NCQLP #LightingCertified #LC #IES #ConstructionDocuments #Commissioning #POE #LightingSpec #LightingEducation #LuxartMedia lightingmasterlc.com",
-  "12": "#NCQLP #LightingCertified #LC #IES #LightingDesign #LightingEducation #LCexam #CommercialLighting #ResidentialLighting #LuxartMedia lightingmasterlc.com"
-}
-
-/* ── SHARE BUTTON (used inside ModuleCompleteModal) ── */
-function ShareBtn({icon, label, hoverBg, hoverColor, defaultColor, onClick}){
-  return(
-    <button onClick={onClick}
-      style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,
-        padding:"10px 16px",borderRadius:8,border:`1px solid ${C.rule}`,
-        background:C.paper,color:defaultColor||C.inkSoft,
-        fontFamily:F.display,fontSize:12,fontWeight:600,cursor:"pointer",transition:"all 0.15s"}}
-      onMouseEnter={e=>{e.currentTarget.style.background=hoverBg;e.currentTarget.style.color=hoverColor;e.currentTarget.style.borderColor=hoverBg}}
-      onMouseLeave={e=>{e.currentTarget.style.background=C.paper;e.currentTarget.style.color=defaultColor||C.inkSoft;e.currentTarget.style.borderColor=C.rule}}>
-      <span style={{fontWeight:700,fontSize:13,lineHeight:1}}>{icon}</span>
-      {label}
-    </button>
-  )
-}
-
-/* ── MODULE COMPLETE SHARE MODAL ── */
-function ModuleCompleteModal({mod, onContinue, onHome}){
-  const [copied, setCopied] = React.useState(false)
-  if(!mod) return null
-  const shareCopy = MODULE_SHARE_COPY[mod.n] || ''
-  const hashtags  = MODULE_HASHTAGS[mod.n] || ''
-  const shareText = shareCopy + '\n\n' + hashtags
-
-  const btnStyle = {
-    display:'flex', alignItems:'center', gap:6,
-    fontFamily:F.body, fontWeight:600, fontSize:13,
-    background:'#fff', color:C.ink,
-    border:'1.5px solid #d9d0c4', borderRadius:8,
-    padding:'9px 14px', cursor:'pointer', whiteSpace:'nowrap'
-  }
-  const accentBtn = {
-    ...btnStyle,
-    background:C.accent, color:'#fff', border:'none', borderRadius:99,
-    padding:'11px 22px', fontSize:14, fontFamily:F.display, fontWeight:700
-  }
-  const inkBtn = {
-    ...btnStyle,
-    background:C.ink, color:'#fff', border:'none', borderRadius:99,
-    padding:'11px 22px', fontSize:14, fontFamily:F.display, fontWeight:700
-  }
-
-  return(
-    <div style={{position:'fixed',inset:0,background:'rgba(22,18,14,0.72)',zIndex:999,display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
-      <div style={{background:C.cream,borderRadius:16,maxWidth:520,width:'100%',padding:'32px 28px',boxShadow:'0 24px 64px rgba(0,0,0,0.22)'}}>
-        {/* Trophy header */}
-        <div style={{textAlign:'center',marginBottom:20}}>
-          <div style={{fontSize:48,marginBottom:8}}>🏆</div>
-          <p style={{fontFamily:F.body,fontSize:12,fontWeight:700,letterSpacing:'0.12em',color:C.accent,textTransform:'uppercase',margin:'0 0 4px'}}>Module Complete</p>
-          <h2 style={{fontFamily:F.display,fontSize:22,fontWeight:700,color:C.ink,margin:'0 0 6px'}}>{mod.n} · {mod.title}</h2>
-          <p style={{fontFamily:F.body,fontSize:13,color:C.inkSoft,margin:0}}>{mod.total} lessons · {mod.ceu} CEU credits earned</p>
-        </div>
-
-        {/* Share message preview */}
-        <div style={{background:'#f5ede0',borderRadius:10,padding:'14px 16px',marginBottom:20,border:'1px solid #e0d4c0'}}>
-          <p style={{fontFamily:F.body,fontSize:12,fontWeight:700,color:C.accent,textTransform:'uppercase',letterSpacing:'0.1em',margin:'0 0 8px'}}>Share your achievement</p>
-          <p style={{fontFamily:F.body,fontSize:12,color:C.ink,lineHeight:1.6,margin:'0 0 8px',whiteSpace:'pre-wrap'}}>{shareCopy}</p>
-          <p style={{fontFamily:'monospace',fontSize:11,color:'#7a6a5a',margin:0,lineHeight:1.5}}>{hashtags}</p>
-        </div>
-
-        {/* Share buttons */}
-        <div style={{display:'flex',flexWrap:'wrap',gap:8,marginBottom:20}}>
-          <button onClick={()=>window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`,'_blank')} style={btnStyle}>
-            <span style={{fontWeight:900,fontSize:15}}>𝕏</span> Post on X
-          </button>
-          <button onClick={()=>{
-            navigator.clipboard.writeText(shareText).then(()=>{
-              window.open('https://www.linkedin.com/feed/','_blank')
-            })
-          }} style={btnStyle}>
-            <span style={{color:'#0077b5',fontWeight:900}}>in</span> LinkedIn
-          </button>
-          <button onClick={()=>{
-            navigator.clipboard.writeText(shareText).then(()=>{
-              window.open('https://www.facebook.com/','_blank')
-            })
-          }} style={btnStyle}>
-            <span style={{color:'#1877f2',fontWeight:900}}>f</span> Facebook
-          </button>
-          <button onClick={()=>{
-            navigator.clipboard.writeText(shareText).then(()=>{
-              setCopied(true)
-              setTimeout(()=>setCopied(false),2500)
-            })
-          }} style={{...btnStyle, background: copied ? '#e8f5ee' : '#fff', color: copied ? '#2a6048' : C.ink}}>
-            {copied ? '✓ Copied!' : '⧉ Copy message'}
-          </button>
-        </div>
-
-        {/* Note about LinkedIn/Facebook */}
-        <p style={{fontFamily:F.body,fontSize:11,color:'#9a8a7a',margin:'0 0 20px',lineHeight:1.5}}>
-          💡 LinkedIn and Facebook don't allow pre-filled text — your message is copied to clipboard automatically when you click those buttons. Just paste it into your post.
-        </p>
-
-        {/* Navigation buttons */}
-        <div style={{display:'flex',gap:10,justifyContent:'flex-end'}}>
-          <button onClick={onHome} style={inkBtn}>← Dashboard</button>
-          {onContinue && <button onClick={onContinue} style={accentBtn}>Next Module →</button>}
-        </div>
-      </div>
-    </div>
-  )
-}
 
 const LC_MEDIA = {
   "1.1":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780595398/101.png",
@@ -3099,8 +2994,58 @@ function LessonNote({lessonRef, user}){
   )
 }
 
+function ModuleCompleteModal({mod, lessonsLearned, onHome, onContinue}){
+  const [copied,setCopied] = useState(false)
+  if(!mod) return null
+  const msg = MODULE_SHARE_COPY[mod.n] || ''
+  const tags = MODULE_HASHTAGS[mod.n] || ''
+  const shareText = msg + '\n\n' + tags
+  const lp = Array.isArray(lessonsLearned) ? lessonsLearned : []
+  const btn = {display:'flex',alignItems:'center',gap:6,fontFamily:F.body,fontWeight:600,fontSize:13,background:'#fff',color:C.ink,border:'1.5px solid #d9d0c4',borderRadius:8,padding:'9px 14px',cursor:'pointer',whiteSpace:'nowrap'}
+  const accent = {fontFamily:F.display,fontWeight:700,fontSize:14,background:C.accent,color:'#fff',border:'none',borderRadius:99,padding:'11px 22px',cursor:'pointer'}
+  const ink = {fontFamily:F.display,fontWeight:700,fontSize:14,background:C.ink,color:'#fff',border:'none',borderRadius:99,padding:'11px 22px',cursor:'pointer'}
+  return(
+    <div onClick={onHome} style={{position:'fixed',inset:0,background:'rgba(22,18,14,0.72)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:C.cream,borderRadius:16,maxWidth:540,width:'100%',maxHeight:'90vh',overflowY:'auto',padding:'32px 28px',boxShadow:'0 24px 64px rgba(0,0,0,0.22)'}}>
+        <div style={{textAlign:'center',marginBottom:18}}>
+          <div style={{fontSize:48,marginBottom:8}}>🏆</div>
+          <p style={{fontFamily:F.body,fontSize:12,fontWeight:700,letterSpacing:'0.12em',color:C.accent,textTransform:'uppercase',margin:'0 0 4px'}}>Module Complete</p>
+          <h2 style={{fontFamily:F.display,fontSize:22,fontWeight:700,color:C.ink,margin:'0 0 6px'}}>{mod.n} · {mod.title}</h2>
+          <p style={{fontFamily:F.body,fontSize:13,color:C.inkSoft,margin:0}}>{mod.total} lessons · {mod.ceu} CEU credits earned</p>
+        </div>
+        <div style={{background:'#f5ede0',borderRadius:10,padding:'14px 16px',marginBottom:14,border:'1px solid #e0d4c0'}}>
+          <p style={{fontFamily:F.body,fontSize:12,fontWeight:700,color:C.accent,textTransform:'uppercase',letterSpacing:'0.1em',margin:'0 0 8px'}}>Your post</p>
+          <p style={{fontFamily:F.body,fontSize:12,color:C.ink,lineHeight:1.6,margin:'0 0 8px',whiteSpace:'pre-wrap'}}>{msg}</p>
+          <p style={{fontFamily:'monospace',fontSize:11,color:'#7a6a5a',margin:0,lineHeight:1.5}}>{tags}</p>
+        </div>
+        {lp.length>0 &&
+        <div style={{background:C.creamWarm,border:'1px solid '+C.rule,borderRadius:10,padding:'14px 16px',marginBottom:18}}>
+          <p style={{fontFamily:F.body,fontSize:12,fontWeight:700,color:C.inkMute,textTransform:'uppercase',letterSpacing:'0.1em',margin:'0 0 10px'}}>Lessons learned</p>
+          {lp.map((t,i)=>(
+            <div key={i} style={{display:'flex',gap:9,alignItems:'flex-start',padding:'5px 0'}}>
+              <span style={{width:6,height:6,borderRadius:'50%',background:C.accent,flexShrink:0,marginTop:6}}/>
+              <span style={{fontFamily:F.display,fontSize:13,lineHeight:1.55,color:C.ink,fontWeight:600}}>{t}</span>
+            </div>
+          ))}
+        </div>}
+        <div style={{display:'flex',flexWrap:'wrap',gap:8,marginBottom:14}}>
+          <button onClick={()=>window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent(shareText),'_blank')} style={btn}><span style={{fontWeight:900,fontSize:15}}>𝕏</span> Post on X</button>
+          <button onClick={()=>{navigator.clipboard.writeText(shareText).then(()=>window.open('https://www.linkedin.com/feed/','_blank'))}} style={btn}><span style={{color:'#0077b5',fontWeight:900}}>in</span> LinkedIn</button>
+          <button onClick={()=>{navigator.clipboard.writeText(shareText).then(()=>window.open('https://www.facebook.com/','_blank'))}} style={btn}><span style={{color:'#1877f2',fontWeight:900}}>f</span> Facebook</button>
+          <button onClick={()=>{navigator.clipboard.writeText(shareText).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2500)})}} style={{...btn,background:copied?'#e8f5ee':'#fff',color:copied?'#2a6048':C.ink}}>{copied?'✓ Copied!':'⧉ Copy text'}</button>
+        </div>
+        <p style={{fontFamily:F.body,fontSize:11,color:'#9a8a7a',margin:'0 0 18px',lineHeight:1.5}}>💡 LinkedIn and Facebook can't pre-fill text — it's copied to your clipboard automatically when you click those. Just paste.</p>
+        <div style={{display:'flex',gap:10,justifyContent:'flex-end'}}>
+          <button onClick={onHome} style={ink}>← Dashboard</button>
+          {onContinue && <button onClick={onContinue} style={accent}>Next Module →</button>}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function LessonPage({lessonRef,setRoute,user,setShowUpgrade,completedLessons=new Set(),markLessonComplete=async()=>{},bookmarks=new Set(),toggleBookmark=async()=>{},isMobile=false}) {
-  const [showShare,setShowShare]=useState(false)
+  const [showComplete,setShowComplete]=useState(false)
   const [imgFullscreen,setImgFullscreen]=useState(null)
   const [lessonContent,setLessonContent]=useState(null)
   const [contentLoading,setContentLoading]=useState(true)
@@ -3126,6 +3071,7 @@ function LessonPage({lessonRef,setRoute,user,setShowUpgrade,completedLessons=new
   const idx = module.lessons.findIndex(l=>l.ref===lessonRef)
   const prev = module.lessons[idx-1]
   const next = module.lessons[idx+1]
+  const isLastInModule = idx === module.lessons.length-1
   const courseComplete = !next && module.n==="12"
   const crossModuleIdx = ALL_LESSONS.findIndex(l=>l.ref===lessonRef)
   const crossModuleNext = ALL_LESSONS[crossModuleIdx+1] || null
@@ -3138,6 +3084,12 @@ function LessonPage({lessonRef,setRoute,user,setShowUpgrade,completedLessons=new
 
   return (
     <div style={{padding:isMobile?"0 16px 32px":"0 36px 48px"}}>
+      {showComplete && <ModuleCompleteModal
+        mod={module}
+        lessonsLearned={lessonContent?.lp||[]}
+        onHome={()=>{setShowComplete(false);if(typeof _stopTTS!=='undefined')_stopTTS();setRoute('home')}}
+        onContinue={nextModule?()=>{setShowComplete(false);if(typeof _stopTTS!=='undefined')_stopTTS();setRoute('lesson-'+nextModule.lessons[0].ref)}:null}
+      />}
       <PageHead eyebrow={`Module ${module.n} · ${module.label}`} title={`Lesson ${lesson.ref} —`} em={lesson.title+"."}/>
       <div style={{display:"flex",gap:8,alignItems:"center",marginTop:14,marginBottom:18,flexWrap:"wrap"}}>
         <Tag label={lesson.tag}/>
@@ -3281,16 +3233,16 @@ function LessonPage({lessonRef,setRoute,user,setShowUpgrade,completedLessons=new
             onMouseLeave={e=>{e.currentTarget.style.borderColor=C.rule;e.currentTarget.style.color=C.inkMute}}
           >← {prevLesson.title}</button>
         )}
-        {nextLesson?(
+        {!isLastInModule?(
           <button
             onClick={()=>{if(typeof _stopTTS!=='undefined')_stopTTS();markLessonComplete(lessonRef);window.scrollTo({top:0,behavior:'instant'});setRoute('lesson-'+nextLesson.ref)}}
             style={{flex:1,fontFamily:F.display,fontWeight:700,fontSize:13,background:C.accent,color:'#fff',border:'none',borderRadius:99,padding:'11px 16px',cursor:'pointer',transition:'background 150ms',textAlign:'center'}}
           >{nextLesson.title} →</button>
         ):(
           <button
-            onClick={()=>{if(typeof _stopTTS!=='undefined')_stopTTS();markLessonComplete(lessonRef);setShowShare(true)}}
-            style={{flex:1,fontFamily:F.display,fontWeight:700,fontSize:13,background:C.accent,color:'#fff',border:'none',borderRadius:99,padding:'11px 16px',cursor:'pointer',textAlign:'center'}}
-          >Module complete 🏆</button>
+            onClick={()=>{if(typeof _stopTTS!=='undefined')_stopTTS();setShowComplete(true)}}
+            style={{flex:1,fontFamily:F.display,fontWeight:700,fontSize:13,background:C.accent,color:"#fff",border:"none",borderRadius:99,padding:"9px 18px",cursor:"pointer"}}
+          >Complete Module 🏆</button>
         )}
       </div>
 
@@ -3307,13 +3259,7 @@ function LessonPage({lessonRef,setRoute,user,setShowUpgrade,completedLessons=new
         </div>
       )}
 
-      {showShare&&(
-        <ModuleCompleteModal
-          mod={module}
-          onHome={()=>{setShowShare(false);if(typeof _stopTTS!=='undefined')_stopTTS();setRoute('home')}}
-          onContinue={nextModule ? ()=>{setShowShare(false);if(typeof _stopTTS!=='undefined')_stopTTS();setRoute('home')} : null}
-        />
-      )}
+
     </div>
   )
 }
