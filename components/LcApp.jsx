@@ -6627,48 +6627,6 @@ function Reports({users}){
   )
 }
 
-/* ── SETTINGS ──────────────────────────────────── */
-function Settings({onSignOut}){
-  return(
-    <div>
-      <div style={adisp({fontWeight:700,fontSize:22,color:AT.ink,marginBottom:24})}>Settings</div>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
-        <div style={{background:AT.bg3,border:`1px solid ${AT.border}`,borderRadius:8,padding:"24px"}}>
-          <div style={amono({fontSize:9,letterSpacing:"0.18em",textTransform:"uppercase",color:AT.inkMute,marginBottom:16})}>Admin credentials</div>
-          <div style={amono({fontSize:11,color:AT.inkSoft,lineHeight:1.7})}>
-            Credentials are managed via environment variables.<br/>
-            Update <code style={{fontFamily:AF.mono,fontSize:11,color:AT.amber}}>ADMIN_EMAIL</code> and{' '}
-            <code style={{fontFamily:AF.mono,fontSize:11,color:AT.amber}}>ADMIN_PASSWORD</code> in Vercel project settings.
-          </div>
-        </div>
-        <div style={{background:AT.bg3,border:`1px solid ${AT.border}`,borderRadius:8,padding:"24px"}}>
-          <div style={amono({fontSize:9,letterSpacing:"0.18em",textTransform:"uppercase",color:AT.inkMute,marginBottom:16})}>Integrations</div>
-          {[
-            {label:"Supabase",status:"Not connected",note:"Wire in Phase 2"},
-            {label:"Stripe Webhooks",status:"Not connected",note:"Wire in Phase 2"},
-            {label:"Email (Resend)",status:"Not connected",note:"For admin alerts"},
-          ].map(item=>(
-            <div key={item.label} style={{display:"flex",alignItems:"center",justifyContent:"space-between",
-              padding:"12px 0",borderBottom:`1px solid ${AT.border}`}}>
-              <div>
-                <div style={asans({fontSize:13,color:AT.ink,fontWeight:500})}>{item.label}</div>
-                <div style={amono({fontSize:10,color:AT.inkMute})}>{item.note}</div>
-              </div>
-              <Badge label={item.status} color={AT.amber}/>
-            </div>
-          ))}
-          <div style={{marginTop:16}}>
-            <Btn variant="ghost">Configure integrations →</Btn>
-          </div>
-        </div>
-      </div>
-      <div style={{marginTop:24,paddingTop:24,borderTop:`1px solid ${AT.border}`}}>
-        <Btn variant="danger" onClick={onSignOut}>Sign out of admin console</Btn>
-      </div>
-    </div>
-  )
-}
-
 /* ── SIDEBAR ───────────────────────────────────── */
 const NAV=[
   {id:"overview",glyph:"▦",label:"Overview"},
@@ -6679,7 +6637,6 @@ const NAV=[
   {id:"flags",glyph:"⚑",label:"Support & Flags"},
   {id:"teams",glyph:"⊛",label:"Teams"},
   {id:"reports",glyph:"⊡",label:"Reports"},
-  {id:"settings",glyph:"⊙",label:"Settings"},
 ]
 
 function AdminSidebar({route,setRoute,flagCount,onSignOut,onBack=()=>{},adminEmail=""}){
@@ -6925,7 +6882,6 @@ function AdminApp({onBack=()=>{}, adminEmail="", isAdmin=false}){
         {route==="flags"        && isAdmin && <SupportFlags users={users} setUsers={setUsers} onSelectUser={handleSelectUser}/>}
         {route==="teams"        && isAdmin && <TeamsView users={users} teams={teams}/>}
         {route==="reports"      && isAdmin && <Reports users={users}/>}
-        {route==="settings"     && isAdmin && <Settings onSignOut={handleSignOut}/>}
       </main>
     </div>
   )
