@@ -6193,11 +6193,11 @@ function Subscriptions({users}){
 
       <SectionTitle>All paid subscriptions</SectionTitle>
       <div style={{background:AT.bg3,border:`1px solid ${AT.border}`,borderRadius:8,overflow:"hidden"}}>
-        <TableHeader cols={[{label:"User",w:"2fr"},{label:"Plan",w:"120px"},
+        <TableHeader cols={[{label:"User",w:"2fr"},{label:"Plan",w:"2fr"},
           {label:"Status",w:"110px"},{label:"Amount",w:"90px",right:true},
           {label:"Stripe ID",w:"140px"},{label:"Expiry",w:"110px"}]}/>
         {paid.sort((a,b)=>new Date(b.joinDate)-new Date(a.joinDate)).map((u,i)=>(
-          <div key={u.id} style={{display:"grid",gridTemplateColumns:"2fr 120px 110px 90px 140px 110px",
+          <div key={u.id} style={{display:"grid",gridTemplateColumns:"2fr 2fr 110px 90px 140px 110px",
             gap:0,padding:"10px 16px",borderBottom:i<paid.length-1?`1px solid ${AT.border}`:"none",
             transition:"background 0.1s"}}
             onMouseEnter={e=>e.currentTarget.style.background=AT.bg4}
