@@ -168,67 +168,52 @@ export async function POST(request) {
       expiry.setFullYear(expiry.getFullYear() + 1)
     }
 
-    // IDEMPOTENCY: Use unique constraint on stripe_payment_intent to prevent race condition
-    // If payment_intent is provided, try to insert with unique constraint
+    // IDEMPOTENCY: Explicit pre-check — only skip if this payment_intent already
+    // wrote a real (non-free) plan. A null payment_intent row from the auth trigger
+    // must NOT be treated as already processed.
     if (session.payment_intent) {
-      const { error: upsertErr } = await supabase
+      const { data: existing } = await supabase
         .from('subscriptions')
-        .upsert({
-          user_id:               userId,
-          plan:                  plan,
-          status:                'active',
-          stripe_customer_id:    session.customer || null,
-          stripe_payment_intent: session.payment_intent,
-          email:                 session.customer_email || null,
-          current_period_end:    expiry.toISOString(),
-          seats:                 plan === 'team' ? seats : 1,
-          exam_addon:            plan === 'exam_addon' ? true : false,
-          is_admin:              false,
-          updated_at:            new Date().toISOString(),
-        }, { onConflict: 'stripe_payment_intent' })
+        .select('stripe_payment_intent, plan')
+        .eq('stripe_payment_intent', session.payment_intent)
+        .maybeSingle()
 
-      if (upsertErr?.code === '23505') { // Unique constraint violation
+      if (existing && existing.stripe_payment_intent && existing.plan !== 'free') {
         console.log(`Duplicate webhook ignored — payment already processed: ${session.payment_intent}`)
         return new Response('Already processed', { status: 200 })
       }
-
-      if (upsertErr) {
-        console.error('Supabase write error:', upsertErr)
-        return new Response('Database error', { status: 500 })
-      }
-
-      console.log('✓ Webhook processed:', {
-        userId,
-        plan,
-        seats,
-        customer: session.customer,
-        paymentIntent: session.payment_intent,
-      })
-    } else {
-      // Fallback: if no payment_intent, use user_id (less safe for idempotency)
-      const { error } = await supabase
-        .from('subscriptions')
-        .upsert({
-          user_id:               userId,
-          plan:                  plan,
-          status:                'active',
-          stripe_customer_id:    session.customer || null,
-          stripe_payment_intent: null,
-          email:                 session.customer_email || null,
-          current_period_end:    expiry.toISOString(),
-          seats:                 plan === 'team' ? seats : 1,
-          exam_addon:            plan === 'exam_addon' ? true : false,
-          is_admin:              false,
-          updated_at:            new Date().toISOString(),
-        }, { onConflict: 'user_id' })
-
-      if (error) {
-        console.error('Supabase write error:', error)
-        return new Response('Database error', { status: 500 })
-      }
-
-      console.log('✓ Webhook processed (no payment_intent):', { userId, plan })
     }
+
+    // Upsert on user_id — always updates the existing row (including free-plan rows
+    // created by the auth trigger) rather than trying to insert a duplicate.
+    const { error: upsertErr } = await supabase
+      .from('subscriptions')
+      .upsert({
+        user_id:               userId,
+        plan:                  plan,
+        status:                'active',
+        stripe_customer_id:    session.customer || null,
+        stripe_payment_intent: session.payment_intent || null,
+        email:                 session.customer_details?.email || session.customer_email || null,
+        current_period_end:    expiry.toISOString(),
+        seats:                 plan === 'team' ? seats : 1,
+        exam_addon:            plan === 'exam_addon' ? true : false,
+        is_admin:              false,
+        updated_at:            new Date().toISOString(),
+      }, { onConflict: 'user_id' })
+
+    if (upsertErr) {
+      console.error('Supabase write error:', upsertErr)
+      return new Response('Database error', { status: 500 })
+    }
+
+    console.log('✓ Webhook processed:', {
+      userId,
+      plan,
+      seats,
+      customer: session.customer,
+      paymentIntent: session.payment_intent,
+    })
   }
 
   // ── REFUND HANDLER ────────────────────────────────────
