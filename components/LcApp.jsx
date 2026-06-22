@@ -3445,7 +3445,8 @@ function ContinuePage({setRoute, completedLessons=new Set()}) {
 function AccountPage({ user, setUser, setRoute }) {
   const [tab,setTab] = useState("profile")
   const [form,setForm] = useState({
-    name: user?.name || '',
+    firstName: '',
+    lastName:  '',
     firm: user?.company || '',
     email: user?.email || '',
     role: user?.role || '',
@@ -3467,9 +3468,15 @@ function AccountPage({ user, setUser, setRoute }) {
     ;(async () => {
       const { data: { user: u } } = await supabase.auth.getUser()
       const m = u?.user_metadata || {}
+      // Signup saves full name to m.name — split it back into first/last
+      const fullName = m.name || m.full_name || user?.name || ''
+      const parts = fullName.trim().split(' ')
+      const firstName = parts[0] || ''
+      const lastName  = parts.slice(1).join(' ') || ''
       setForm(f => ({
         ...f,
-        name:     m.full_name || f.name,
+        firstName,
+        lastName,
         firm:     m.firm      || f.firm,
         role:     m.role      || f.role,
         location: m.location  || f.location,
@@ -3481,11 +3488,12 @@ function AccountPage({ user, setUser, setRoute }) {
     setErr('')
     setSaving(true)
     try {
+      const fullName = `${form.firstName.trim()} ${form.lastName.trim()}`.trim()
       const { error } = await supabase.auth.updateUser({
-        data: { full_name: form.name?.trim(), firm: form.firm?.trim(), role: form.role?.trim(), location: form.location?.trim() },
+        data: { name: fullName, firm: form.firm?.trim(), role: form.role?.trim(), location: form.location?.trim() },
       })
       if (error) throw error
-      if (setUser) setUser(prev => prev ? { ...prev, name: form.name?.trim(), company: form.firm?.trim(), state: form.location?.trim() } : prev)
+      if (setUser) setUser(prev => prev ? { ...prev, name: fullName, company: form.firm?.trim(), state: form.location?.trim() } : prev)
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
     } catch (e) {
@@ -3553,7 +3561,19 @@ function AccountPage({ user, setUser, setRoute }) {
       {tab==="profile"&&(
         <div style={{maxWidth:560}}>
           <div style={{display:"grid",gap:20}}>
-            {[{key:"name",label:"Display name"},{key:"firm",label:"Firm"},{key:"email",label:"Email",type:"email",readOnly:true},{key:"role",label:"Role"},{key:"location",label:"Location"}].map(({key,label,type="text",readOnly=false})=>(
+            {/* First name + Last name row — matches signup form */}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
+              {[{key:"firstName",label:"First name"},{key:"lastName",label:"Last name"}].map(({key,label})=>(
+                <div key={key}>
+                  <label style={{display:"block",fontFamily:F.mono,fontSize:9,letterSpacing:"0.18em",textTransform:"uppercase",color:C.inkMute,marginBottom:8}}>{label}</label>
+                  <input type="text" value={form[key]} onChange={e=>setForm(f=>({...f,[key]:e.target.value}))}
+                    style={{width:"100%",boxSizing:"border-box",padding:"12px 14px",fontFamily:F.display,fontSize:14,color:C.ink,background:C.paper,border:`1px solid ${C.ruleStrong}`,borderRadius:4,outline:"none"}}
+                    onFocus={e=>e.target.style.borderColor=C.accent} onBlur={e=>e.target.style.borderColor=C.ruleStrong}/>
+                </div>
+              ))}
+            </div>
+            {/* Remaining fields */}
+            {[{key:"firm",label:"Firm"},{key:"email",label:"Email",type:"email",readOnly:true},{key:"role",label:"Role"},{key:"location",label:"Location"}].map(({key,label,type="text",readOnly=false})=>(
               <div key={key}>
                 <label style={{display:"block",fontFamily:F.mono,fontSize:9,letterSpacing:"0.18em",textTransform:"uppercase",color:C.inkMute,marginBottom:8}}>{label}</label>
                 <input type={type} value={form[key]} readOnly={readOnly} onChange={e=>!readOnly&&setForm(f=>({...f,[key]:e.target.value}))}
