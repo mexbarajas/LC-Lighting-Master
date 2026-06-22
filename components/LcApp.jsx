@@ -3100,7 +3100,7 @@ function LessonNote({lessonRef, user}){
 }
 
 function LessonPage({lessonRef,setRoute,user,setShowUpgrade,completedLessons=new Set(),markLessonComplete=async()=>{},bookmarks=new Set(),toggleBookmark=async()=>{},isMobile=false}) {
-  const [showShareModal,setShowShareModal]=useState(false)
+  const [showShare,setShowShare]=useState(false)
   const [imgFullscreen,setImgFullscreen]=useState(null)
   const [lessonContent,setLessonContent]=useState(null)
   const [contentLoading,setContentLoading]=useState(true)
@@ -3288,7 +3288,7 @@ function LessonPage({lessonRef,setRoute,user,setShowUpgrade,completedLessons=new
           >{nextLesson.title} →</button>
         ):(
           <button
-            onClick={()=>{if(typeof _stopTTS!=='undefined')_stopTTS();markLessonComplete(lessonRef);setShowShareModal(true)}}
+            onClick={()=>{if(typeof _stopTTS!=='undefined')_stopTTS();markLessonComplete(lessonRef);setShowShare(true)}}
             style={{flex:1,fontFamily:F.display,fontWeight:700,fontSize:13,background:C.accent,color:'#fff',border:'none',borderRadius:99,padding:'11px 16px',cursor:'pointer',textAlign:'center'}}
           >Module complete 🏆</button>
         )}
@@ -3307,11 +3307,11 @@ function LessonPage({lessonRef,setRoute,user,setShowUpgrade,completedLessons=new
         </div>
       )}
 
-      {showShareModal&&(
+      {showShare&&(
         <ModuleCompleteModal
           mod={module}
-          onHome={()=>{setShowShareModal(false);if(typeof _stopTTS!=='undefined')_stopTTS();setRoute('home')}}
-          onContinue={nextModule ? ()=>{setShowShareModal(false);if(typeof _stopTTS!=='undefined')_stopTTS();setRoute('home')} : null}
+          onHome={()=>{setShowShare(false);if(typeof _stopTTS!=='undefined')_stopTTS();setRoute('home')}}
+          onContinue={nextModule ? ()=>{setShowShare(false);if(typeof _stopTTS!=='undefined')_stopTTS();setRoute('home')} : null}
         />
       )}
     </div>
