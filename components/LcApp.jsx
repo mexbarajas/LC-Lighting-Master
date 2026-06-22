@@ -3046,6 +3046,7 @@ function ModuleCompleteModal({mod, lessonsLearned, onHome, onContinue}){
 
 function LessonPage({lessonRef,setRoute,user,setShowUpgrade,completedLessons=new Set(),markLessonComplete=async()=>{},bookmarks=new Set(),toggleBookmark=async()=>{},isMobile=false}) {
   const [showComplete,setShowComplete]=useState(false)
+  console.log("[LP] ref=",lessonRef," isLast=",(typeof isLastInModule!=='undefined'?isLastInModule:'undef')," showComplete=",showComplete)
   const [imgFullscreen,setImgFullscreen]=useState(null)
   const [lessonContent,setLessonContent]=useState(null)
   const [contentLoading,setContentLoading]=useState(true)
@@ -3084,6 +3085,7 @@ function LessonPage({lessonRef,setRoute,user,setShowUpgrade,completedLessons=new
 
   return (
     <div style={{padding:isMobile?"0 16px 32px":"0 36px 48px"}}>
+      {console.log("[LP] render showComplete=",showComplete," module=",module?.n)}
       {showComplete && <ModuleCompleteModal
         mod={module}
         lessonsLearned={lessonContent?.lp||[]}
@@ -3240,7 +3242,7 @@ function LessonPage({lessonRef,setRoute,user,setShowUpgrade,completedLessons=new
           >{nextLesson.title} →</button>
         ):(
           <button
-            onClick={()=>{if(typeof _stopTTS!=='undefined')_stopTTS();setShowComplete(true)}}
+            onClick={()=>{console.log("[LP] COMPLETE CLICKED");if(typeof _stopTTS!=='undefined')_stopTTS();setShowComplete(true)}}
             style={{flex:1,fontFamily:F.display,fontWeight:700,fontSize:13,background:C.accent,color:"#fff",border:"none",borderRadius:99,padding:"9px 18px",cursor:"pointer"}}
           >Complete Module 🏆</button>
         )}
