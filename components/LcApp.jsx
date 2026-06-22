@@ -3077,6 +3077,7 @@ function LessonPage({lessonRef,setRoute,user,setShowUpgrade,completedLessons=new
   const crossModuleNext = ALL_LESSONS[crossModuleIdx+1] || null
   const prevLesson = crossModuleIdx > 0 ? ALL_LESSONS[crossModuleIdx - 1] : null
   const nextLesson = crossModuleNext
+  console.log("[LP-DIAG] lessonRef=",lessonRef," idx=",idx," lessonsLen=",module.lessons.length," isLast=",isLastInModule," moduleN=",module.n," lessonRefs=",module.lessons.map(l=>l.ref).join(","))
   const nextModule = MODULES[MODULES.findIndex(m=>m.n===module.n)+1]
   const content = lessonContent
   const visual = lessonContent?.visual
