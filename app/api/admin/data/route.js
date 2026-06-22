@@ -38,7 +38,7 @@ export async function GET(request) {
     { count: feedbackCount },
   ] = await Promise.all([
     service.from('subscriptions').select('*'),
-    service.from('progress').select('*'),
+    service.from('progress').select('user_id,lesson_ref,completed_at'),
     service.from('community_questions').select('*', { count: 'exact', head: true }),
     service.from('feedback').select('*', { count: 'exact', head: true }),
   ])

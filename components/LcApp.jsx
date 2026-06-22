@@ -6294,44 +6294,64 @@ function Revenue({revenueMonths=[]}){
 }
 
 /* ── CONTENT & PROGRESS ────────────────────────── */
-function ContentView({moduleStats=[]}){
+function ContentView({moduleStats=[], totalUsers=0, usersWithAnyActivity=0}){
   const ms=moduleStats
-  const maxStarted=ms.length?Math.max(...ms.map(m=>m.started||0),1):1
-  const totalLessons=ms.reduce((s,m)=>s+(m.completions||0),0)
-  const totalStarted=ms.reduce((s,m)=>s+(m.started||0),0)
+  const base=totalUsers||1
+  const pct=(n,b)=>b>0?Math.round((n/b)*100):0
+  const totalModuleFinishes=ms.reduce((s,m)=>s+(m.completions||0),0)
   const mostActive=ms.length?ms.reduce((a,b)=>(b.started||0)>(a.started||0)?b:a,ms[0]):null
   return(
     <div>
       <div style={adisp({fontWeight:700,fontSize:22,color:AT.ink,marginBottom:24})}>Content & Progress</div>
 
-      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:28}}>
-        <StatCard label="Modules with activity" value={ms.filter(m=>(m.started||0)>0).length} sub={`of ${ms.length} modules`} color={AT.green}/>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:28}}>
+        <StatCard label="Users with activity" value={usersWithAnyActivity} sub={`of ${totalUsers} registered`} color={AT.green}/>
+        <StatCard label="Modules with activity" value={ms.filter(m=>(m.started||0)>0).length} sub={`of ${ms.length} modules`}/>
         <StatCard label="Most active module" value={mostActive?`M${mostActive.n}`:"—"} sub={mostActive?.title||""}/>
-        <StatCard label="Total module completions" value={totalLessons} sub="users who finished all lessons"/>
+        <StatCard label="Total module finishes" value={totalModuleFinishes} sub="users who finished a module"/>
       </div>
 
       {/* Module funnel */}
       <div style={{background:AT.bg3,border:`1px solid ${AT.border}`,borderRadius:8,padding:"24px",marginBottom:20}}>
-        <SectionTitle>Module activity funnel</SectionTitle>
+        <SectionTitle action={
+          <span style={amono({fontSize:10,color:AT.inkMute})}>% of {totalUsers} registered users</span>
+        }>Module activity funnel</SectionTitle>
         {ms.length===0?(
           <div style={{padding:"24px 0",textAlign:"center",color:AT.inkMute,fontFamily:AF.mono,fontSize:12}}>
             No progress data yet — activity will appear as learners start modules.
           </div>
         ):(
           <>
-            <TableHeader cols={[{label:"Module",w:"2fr"},{label:"Started",w:"90px"},{label:"",w:"1fr"},{label:"Finished",w:"80px"}]}/>
+            <TableHeader cols={[
+              {label:"Module",w:"2fr"},
+              {label:"Started",w:"110px"},
+              {label:"",w:"1fr"},
+              {label:"In Progress",w:"100px"},
+              {label:"Finished",w:"110px"},
+            ]}/>
             {ms.map((mod,i)=>{
               const started=mod.started||0
               const finished=mod.completions||0
+              const inProgress=started-finished
               return(
-                <div key={mod.n} style={{display:"grid",gridTemplateColumns:"2fr 90px 1fr 80px",
+                <div key={mod.n} style={{display:"grid",gridTemplateColumns:"2fr 110px 1fr 100px 110px",
                   gap:0,padding:"10px 16px",borderBottom:i<ms.length-1?`1px solid ${AT.border}`:"none"}}>
-                  <div><span style={amono({fontSize:11,color:AT.accent,marginRight:10})}>M{mod.n}</span><span style={asans({fontSize:12,color:AT.ink})}>{mod.title}</span></div>
-                  <div style={amono({fontSize:11,color:started>0?AT.ink:AT.inkMute,paddingTop:2})}>{started}</div>
-                  <div style={{display:"flex",alignItems:"center",paddingTop:2}}>
-                    <MiniBar value={started} max={maxStarted} color={AT.accent}/>
+                  <div>
+                    <span style={amono({fontSize:11,color:AT.accent,marginRight:10})}>M{mod.n}</span>
+                    <span style={asans({fontSize:12,color:AT.ink})}>{mod.title}</span>
                   </div>
-                  <div style={amono({fontSize:11,color:finished>0?AT.green:AT.inkMute,paddingTop:2})}>{finished>0?`${finished} ✓`:"—"}</div>
+                  <div style={amono({fontSize:11,color:started>0?AT.ink:AT.inkMute,paddingTop:2})}>
+                    {started>0?`${started} (${pct(started,base)}%)`:"—"}
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",paddingTop:2}}>
+                    <MiniBar value={started} max={base} color={AT.accent}/>
+                  </div>
+                  <div style={amono({fontSize:11,color:inProgress>0?AT.amber:AT.inkMute,paddingTop:2})}>
+                    {inProgress>0?inProgress:"—"}
+                  </div>
+                  <div style={amono({fontSize:11,color:finished>0?AT.green:AT.inkMute,paddingTop:2})}>
+                    {finished>0?`${finished} (${pct(finished,base)}%)`:"—"}
+                  </div>
                 </div>
               )
             })}
@@ -6787,6 +6807,7 @@ function AdminApp({onBack=()=>{}, adminEmail="", isAdmin=false}){
         if(!userRefs[p.user_id]) userRefs[p.user_id]=new Set()
         userRefs[p.user_id].add(p.lesson_ref)
       })
+      const usersWithAnyActivity=Object.keys(userRefs).length
       const moduleStats=MODULES.map(m=>{
         const lessonRefs=m.lessons.map(l=>l.ref)
         const allRefs=Object.values(userRefs)
@@ -6805,6 +6826,7 @@ function AdminApp({onBack=()=>{}, adminEmail="", isAdmin=false}){
         recentUsers,
         revenueMonths,
         moduleStats,
+        usersWithAnyActivity,
       })
 
       // ── Users ─────────────────────────────────────
@@ -6901,7 +6923,7 @@ function AdminApp({onBack=()=>{}, adminEmail="", isAdmin=false}){
         {route==="user-detail"  && isAdmin && selectedUser && <UserDetail user={selectedUser} onBack={()=>navigate("users")} onUpdate={handleUpdateUser}/>}
         {route==="subscriptions"&& isAdmin && <Subscriptions users={users}/>}
         {route==="revenue"      && isAdmin && <Revenue revenueMonths={adminStats.revenueMonths||[]}/>}
-        {route==="content"      && isAdmin && <ContentView moduleStats={adminStats.moduleStats||[]}/>}
+        {route==="content"      && isAdmin && <ContentView moduleStats={adminStats.moduleStats||[]} totalUsers={adminStats.totalUsers||0} usersWithAnyActivity={adminStats.usersWithAnyActivity||0}/>}
         {route==="flags"        && isAdmin && <SupportFlags users={users} setUsers={setUsers} onSelectUser={handleSelectUser}/>}
         {route==="teams"        && isAdmin && <TeamsView users={users} teams={teams}/>}
         {route==="reports"      && isAdmin && <Reports users={users}/>}
