@@ -6693,8 +6693,8 @@ function AdminSidebar({route,setRoute,flagCount,onSignOut,onBack=()=>{},adminEma
               <span style={amono({fontSize:12,
                 color:active?AT.accent:"rgba(255,255,255,0.35)",
                 flexShrink:0,width:14,textAlign:"center"})}>{item.glyph}</span>
-              <span style={{fontFamily:AF.display,fontSize:12,fontWeight:active?600:400,
-                color:active?AT.ink:"rgba(255,255,255,0.55)",flex:1}}>{item.label}</span>
+              <span style={{fontFamily:AF.display,fontSize:12,fontWeight:active?700:400,
+                color:active?"#fff":"rgba(255,255,255,0.55)",flex:1}}>{item.label}</span>
               {isFlag&&flagCount>0&&(
                 <span style={{background:AT.red,color:"#fff",fontFamily:AF.mono,
                   fontSize:9,fontWeight:700,borderRadius:99,
