@@ -3077,7 +3077,6 @@ function LessonPage({lessonRef,setRoute,user,setShowUpgrade,completedLessons=new
   const crossModuleNext = ALL_LESSONS[crossModuleIdx+1] || null
   const prevLesson = crossModuleIdx > 0 ? ALL_LESSONS[crossModuleIdx - 1] : null
   const nextLesson = crossModuleNext
-  console.log("[LP-DIAG] lessonRef=",lessonRef," idx=",idx," lessonsLen=",module.lessons.length," isLast=",isLastInModule," moduleN=",module.n," lessonRefs=",module.lessons.map(l=>l.ref).join(","))
   const nextModule = MODULES[MODULES.findIndex(m=>m.n===module.n)+1]
   const content = lessonContent
   const visual = lessonContent?.visual
@@ -3085,7 +3084,6 @@ function LessonPage({lessonRef,setRoute,user,setShowUpgrade,completedLessons=new
 
   return (
     <div style={{padding:isMobile?"0 16px 32px":"0 36px 48px"}}>
-      {console.log("[LP] render showComplete=",showComplete," module=",module?.n)}
       {showComplete && <ModuleCompleteModal
         mod={module}
         lessonsLearned={lessonContent?.lp||[]}
@@ -3132,11 +3130,17 @@ function LessonPage({lessonRef,setRoute,user,setShowUpgrade,completedLessons=new
               onMouseLeave={e=>{e.currentTarget.style.borderColor=C.rule;e.currentTarget.style.color=C.inkMute}}
             >← {prevLesson.title}</button>
           )}
-          {nextLesson&&(
+          {!isLastInModule && nextLesson && (
             <button
               onClick={()=>{markLessonComplete(lessonRef);window.scrollTo({top:0,behavior:'instant'});setRoute('lesson-'+nextLesson.ref)}}
               style={{flex:1,fontFamily:F.display,fontWeight:700,fontSize:13,background:C.accent,color:'#fff',border:'none',borderRadius:99,padding:'11px 16px',cursor:'pointer',transition:'background 150ms',textAlign:'center'}}
             >{nextLesson.title} →</button>
+          )}
+          {isLastInModule && (
+            <button
+              onClick={()=>{markLessonComplete(lessonRef);if(typeof _stopTTS!=='undefined')_stopTTS();setShowComplete(true)}}
+              style={{flex:1,fontFamily:F.display,fontWeight:700,fontSize:13,background:C.accent,color:'#fff',border:'none',borderRadius:99,padding:'11px 16px',cursor:'pointer',transition:'background 150ms',textAlign:'center'}}
+            >Complete Module 🏆</button>
           )}
         </div>
       )}
@@ -3242,7 +3246,7 @@ function LessonPage({lessonRef,setRoute,user,setShowUpgrade,completedLessons=new
           >{nextLesson.title} →</button>
         ):(
           <button
-            onClick={()=>{console.log("[LP] COMPLETE CLICKED");if(typeof _stopTTS!=='undefined')_stopTTS();setShowComplete(true)}}
+            onClick={()=>{if(typeof _stopTTS!=='undefined')_stopTTS();setShowComplete(true)}}
             style={{flex:1,fontFamily:F.display,fontWeight:700,fontSize:13,background:C.accent,color:"#fff",border:"none",borderRadius:99,padding:"9px 18px",cursor:"pointer"}}
           >Complete Module 🏆</button>
         )}
