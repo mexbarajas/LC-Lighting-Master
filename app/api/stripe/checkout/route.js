@@ -15,6 +15,13 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 
 const VALID_PLANS = ['t1', 't2', 't3', 'team', 'exam_addon']
 
+// Stripe Price IDs for individual plans — set in Vercel env vars
+const PRICE_IDS = {
+  t1: process.env.STRIPE_PRICE_T1,
+  t2: process.env.STRIPE_PRICE_T2,
+  t3: process.env.STRIPE_PRICE_T3,
+}
+
 export async function POST(request) {
   if (!checkOrigin(request)) return originError()
 
@@ -79,6 +86,13 @@ export async function POST(request) {
 
   const appUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://lightingmasterlc.com'
 
+  // Use a pre-created Stripe Price ID for t1/t2/t3 if available, otherwise fall back
+  // to dynamic price_data (used for team plans and exam_addon which have no Price ID)
+  const priceId = PRICE_IDS[plan]
+  const lineItem = priceId
+    ? { price: priceId, quantity }
+    : { price_data: { currency: 'usd', unit_amount: unitAmount, product_data: { name: productName } }, quantity }
+
   try {
     const checkoutSession = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -89,14 +103,7 @@ export async function POST(request) {
         plan,
         seats: seats ? String(seats) : '1',
       },
-      line_items: [{
-        price_data: {
-          currency: 'usd',
-          unit_amount: unitAmount,
-          product_data: { name: productName },
-        },
-        quantity,
-      }],
+      line_items: [lineItem],
       success_url: `${appUrl}/?purchase=success&plan=${plan}`,
       cancel_url:  `${appUrl}/?cancelled=true`,
     })
