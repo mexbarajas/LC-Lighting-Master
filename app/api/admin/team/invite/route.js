@@ -1,15 +1,17 @@
 import { createAdminClient } from '@/lib/supabase/admin'
-import { validateAdminSession } from '@/lib/admin-middleware'
+import { createClient } from '@/lib/supabase/server'
 import { escapeHtml } from '@/lib/html-escape'
 import { sanitizeEmailHeaderField } from '@/lib/email-validation'
 import { NextResponse } from 'next/server'
 
+const ADMIN_EMAIL = 'admin@luxartmedia.com'
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export async function POST(req) {
   try {
-    const auth = validateAdminSession(req)
-    if (!auth.valid) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user || user.email !== ADMIN_EMAIL) {
       return new Response('Unauthorized', { status: 401 })
     }
 

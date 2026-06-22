@@ -1,13 +1,15 @@
 import { createServiceClient } from '@/lib/supabase/service'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { validateAdminSession } from '@/lib/admin-middleware'
+import { createClient } from '@/lib/supabase/server'
 import { createRateLimiter, getRateLimitHeaders } from '@/lib/rate-limit'
 
+const ADMIN_EMAIL = 'admin@luxartmedia.com'
 const adminDataLimiter = createRateLimiter(60000, 10)
 
 export async function GET(request) {
-  const auth = validateAdminSession(request)
-  if (!auth.valid) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user || user.email !== ADMIN_EMAIL) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' },
