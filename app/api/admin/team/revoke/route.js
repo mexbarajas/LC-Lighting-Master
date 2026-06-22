@@ -1,15 +1,12 @@
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { validateAdminSession } from '@/lib/admin-middleware'
 import { NextResponse } from 'next/server'
-
-const ADMIN_EMAIL = 'admin@luxartmedia.com'
 
 export async function POST(req) {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user || user.email?.toLowerCase() !== ADMIN_EMAIL) {
-      return new Response('Forbidden', { status: 403 })
+    const auth = validateAdminSession(req)
+    if (!auth.valid) {
+      return new Response('Unauthorized', { status: 401 })
     }
 
     let body

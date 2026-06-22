@@ -1,22 +1,28 @@
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { validateAdminSession } from '@/lib/admin-middleware'
 import { NextResponse } from 'next/server'
-
-const ADMIN_EMAIL = 'admin@luxartmedia.com'
 
 export async function POST(req) {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user || user.email?.toLowerCase() !== ADMIN_EMAIL) {
-      return new Response('Forbidden', { status: 403 })
+    const auth = validateAdminSession(req)
+    if (!auth.valid) {
+      return new Response('Unauthorized', { status: 401 })
     }
 
     let body
     try { body = await req.json() } catch { body = {} }
     const { ownerUserId, seatCount } = body
     if (!ownerUserId) return new Response('Missing ownerUserId', { status: 400 })
-    if (!seatCount || Number(seatCount) < 5) return new Response('Seat count must be at least 5', { status: 400 })
+
+    // Validate seat count
+    let seats = 0
+    try {
+      seats = Number(seatCount)
+    } catch {
+      return new Response('Invalid seat count', { status: 400 })
+    }
+    if (isNaN(seats) || seats < 5) return new Response('Seat count must be at least 5', { status: 400 })
+    if (seats >= 11) return new Response('For 11+ seats contact admin@luxartmedia.com for custom quote', { status: 400 })
 
     const admin = createAdminClient()
 

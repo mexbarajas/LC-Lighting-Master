@@ -1,12 +1,27 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { createRateLimiter, getRateLimitHeaders } from '@/lib/rate-limit'
 import { NextResponse } from 'next/server'
+
+const teamAcceptLimiter = createRateLimiter(3600000, 5) // 5 accepts per hour per user
 
 export async function POST(req) {
   try {
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) return new Response('Unauthorized', { status: 401 })
+
+    // Rate limiting: 5 team invites accepted per hour per user
+    const rateLimitInfo = teamAcceptLimiter(user.id)
+    if (!rateLimitInfo.allowed) {
+      return new Response(JSON.stringify({ error: 'Too many team joins. Try again later.' }), {
+        status: 429,
+        headers: {
+          'Content-Type': 'application/json',
+          ...getRateLimitHeaders(rateLimitInfo, 5),
+        },
+      })
+    }
 
     let body
     try { body = await req.json() } catch { body = {} }

@@ -1,4 +1,24 @@
-import { generateAdminToken } from '@/lib/admin-auth'
+import { generateAdminToken, verifyPassword } from '@/lib/admin-auth'
+
+// Simple in-memory rate limiting (ip -> {count, resetTime})
+const loginAttempts = new Map()
+
+function checkRateLimit(ip) {
+  const now = Date.now()
+  const attempt = loginAttempts.get(ip)
+
+  if (!attempt || attempt.resetTime < now) {
+    loginAttempts.set(ip, { count: 1, resetTime: now + 900000 }) // 15 min window
+    return true
+  }
+
+  if (attempt.count >= 5) {
+    return false // Blocked after 5 attempts
+  }
+
+  attempt.count++
+  return true
+}
 
 export async function POST(request) {
   let body
@@ -10,22 +30,31 @@ export async function POST(request) {
     return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400 })
   }
 
+  const ip = request.headers.get('x-forwarded-for') || request.headers.get('cf-connecting-ip') || 'unknown'
+
+  if (!checkRateLimit(ip)) {
+    return new Response(JSON.stringify({ error: 'Too many login attempts. Try again in 15 minutes.' }), { status: 429 })
+  }
+
   const { email, password } = body || {}
   const adminEmail = process.env.ADMIN_EMAIL
-  const adminPw = process.env.ADMIN_PASSWORD
+  const adminPwHash = process.env.ADMIN_PASSWORD_HASH
+  const adminJwtSecret = process.env.ADMIN_JWT_SECRET
 
-  if (!adminEmail || !adminPw) {
-    console.error('Admin env vars not configured')
+  if (!adminEmail || !adminPwHash || !adminJwtSecret) {
+    console.error('Admin env vars not properly configured')
     return new Response(JSON.stringify({ error: 'Server misconfigured' }), { status: 500 })
   }
 
-  const match =
-    typeof email === 'string' &&
-    typeof password === 'string' &&
-    email.trim().toLowerCase() === adminEmail.toLowerCase() &&
-    password === adminPw
+  if (typeof email !== 'string' || typeof password !== 'string') {
+    await new Promise(r => setTimeout(r, 600 + Math.floor(Math.random() * 400)))
+    return new Response(JSON.stringify({ error: 'Invalid credentials' }), { status: 401 })
+  }
 
-  if (!match) {
+  const emailMatch = email.trim().toLowerCase() === adminEmail.toLowerCase()
+  const passwordMatch = await verifyPassword(password, adminPwHash)
+
+  if (!emailMatch || !passwordMatch) {
     await new Promise(r => setTimeout(r, 600 + Math.floor(Math.random() * 400)))
     return new Response(JSON.stringify({ error: 'Invalid credentials' }), { status: 401 })
   }

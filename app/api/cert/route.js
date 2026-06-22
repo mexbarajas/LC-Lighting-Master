@@ -29,7 +29,7 @@ async function loadFont(family, weight = 400) {
   }
 }
 
-function CertSvg({ firstName, lastName, issuedDate }) {
+function CertSvg({ firstName, lastName, issuedDate, domain = 'lightingmasterlc.com' }) {
   const gold  = GOLD
   const teal  = TEAL
   const cream = CREAM
@@ -264,7 +264,7 @@ function CertSvg({ firstName, lastName, issuedDate }) {
           React.createElement('div', { style: {
             fontFamily: '"Inter", sans-serif', fontWeight: 500,
             fontSize: 12, color: teal,
-          }}, 'lightingmasterlc.com'),
+          }}, domain),
         ),
       ),
     ),
@@ -274,9 +274,19 @@ function CertSvg({ firstName, lastName, issuedDate }) {
 export async function GET(req) {
   try {
     const { searchParams } = new URL(req.url)
-    const firstName  = searchParams.get('fn')   || 'First'
-    const lastName   = searchParams.get('ln')   || 'Last'
-    const issuedDate = searchParams.get('date') || new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+
+    // Validate and sanitize query parameters
+    let firstName  = (searchParams.get('fn') || 'First').trim().slice(0, 50)
+    let lastName   = (searchParams.get('ln') || 'Last').trim().slice(0, 50)
+    let issuedDate = (searchParams.get('date') || '').trim().slice(0, 50)
+
+    if (!firstName || firstName === '') firstName = 'First'
+    if (!lastName || lastName === '') lastName = 'Last'
+    if (!issuedDate) {
+      issuedDate = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+    }
+
+    const domain = process.env.NEXT_PUBLIC_SITE_URL || 'lightingmasterlc.com'
 
     /* Load fonts in parallel */
     const [serifData, interData] = await Promise.all([
@@ -294,7 +304,7 @@ export async function GET(req) {
 
     /* Render SVG via Satori */
     const svg = await satori(
-      React.createElement(CertSvg, { firstName, lastName, issuedDate }),
+      React.createElement(CertSvg, { firstName, lastName, issuedDate, domain }),
       { width: W, height: H, fonts }
     )
 

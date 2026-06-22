@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+import { safeLogError } from '@/lib/safe-logging'
 import { NextResponse } from 'next/server'
 
 export async function POST(req) {
@@ -39,7 +40,7 @@ export async function POST(req) {
     })
 
   } catch (err) {
-    console.error('[exam/check] error:', err)
+    safeLogError('[exam/check]', err, true)
     return NextResponse.json({ error: 'Server error' }, { status: 500 })
   }
 }

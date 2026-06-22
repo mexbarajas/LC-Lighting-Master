@@ -1,22 +1,23 @@
-import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { validateAdminSession } from '@/lib/admin-middleware'
+import { escapeHtml } from '@/lib/html-escape'
+import { sanitizeEmailHeaderField } from '@/lib/email-validation'
 import { NextResponse } from 'next/server'
 
-const ADMIN_EMAIL = 'admin@luxartmedia.com'
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export async function POST(req) {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user || user.email?.toLowerCase() !== ADMIN_EMAIL) {
-      return new Response('Forbidden', { status: 403 })
+    const auth = validateAdminSession(req)
+    if (!auth.valid) {
+      return new Response('Unauthorized', { status: 401 })
     }
 
     let body
     try { body = await req.json() } catch { body = {} }
     const { teamId, email } = body
     if (!teamId) return new Response('Missing teamId', { status: 400 })
-    if (!email || !email.includes('@')) return new Response('Invalid email', { status: 400 })
+    if (!email || !EMAIL_REGEX.test(email)) return new Response('Invalid email', { status: 400 })
 
     const admin = createAdminClient()
 
@@ -74,16 +75,18 @@ export async function POST(req) {
     const brevoKey = process.env.BREVO_API_KEY
 
     if (brevoKey) {
+      const sanitizedTeamName = escapeHtml(team.name)
+      const sanitizedSubject = sanitizeEmailHeaderField(`You've been invited to join ${team.name} on LC Lighting Master`, 200)
       const emailRes = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'api-key': brevoKey },
         body: JSON.stringify({
           sender: { name: 'LC Lighting Master', email: senderEmail },
           to: [{ email }],
-          subject: `You've been invited to join ${team.name} on LC Lighting Master`,
+          subject: sanitizedSubject,
           htmlContent: `<div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px 24px">
 <h2 style="color:#2F4A3F;margin:0 0 16px">You're invited!</h2>
-<p style="color:#3D5C50;line-height:1.6;margin:0 0 12px">You've been invited to join <strong>${team.name}</strong> on <strong>LC · Lighting Master</strong>.</p>
+<p style="color:#3D5C50;line-height:1.6;margin:0 0 12px">You've been invited to join <strong>${sanitizedTeamName}</strong> on <strong>LC · Lighting Master</strong>.</p>
 <a href="${joinUrl}" style="display:inline-block;background:#C65A3A;color:#fff;text-decoration:none;padding:13px 28px;border-radius:8px;font-weight:700;font-size:15px;margin-bottom:24px">Accept Invitation →</a>
 <p style="color:#7A9688;font-size:12px;word-break:break-all;margin:0">Or copy: ${joinUrl}</p>
 </div>`,

@@ -1,5 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+import { sanitizeEmailInput, escapeHtml } from '@/lib/html-escape'
+import { sanitizeEmailHeaderField } from '@/lib/email-validation'
 import { NextResponse } from 'next/server'
 
 export async function POST(req) {
@@ -14,7 +16,7 @@ export async function POST(req) {
 
     let body
     try { body = await req.json() } catch { body = {} }
-    const reason = typeof body.reason === 'string' ? body.reason.slice(0, 500) : ''
+    const reason = sanitizeEmailInput(body.reason, 500)
 
     // Service client — created inside handler so env vars are always resolved at runtime
     const SERVICE = createSupabaseClient(
@@ -49,13 +51,13 @@ export async function POST(req) {
         body: JSON.stringify({
           sender:      { name: 'LC Lighting Master', email: 'noreply@lightingmasterlc.com' },
           to:          [{ email: process.env.ADMIN_EMAIL || 'admin@luxartmedia.com', name: 'Admin' }],
-          subject:     `Exam Retake Request — ${email}`,
+          subject:     `Exam Retake Request — ${sanitizeEmailHeaderField(email)}`,
           htmlContent: `
             <h2>Exam Retake Request</h2>
-            <p><strong>User:</strong> ${email}</p>
-            <p><strong>User ID:</strong> ${userId}</p>
-            <p><strong>Reason:</strong> ${reason || 'No reason provided'}</p>
-            <p><strong>Time:</strong> ${new Date().toISOString()}</p>
+            <p><strong>User:</strong> ${escapeHtml(email || '')}</p>
+            <p><strong>User ID:</strong> ${escapeHtml(userId)}</p>
+            <p><strong>Reason:</strong> ${reason ? `<pre>${reason}</pre>` : 'No reason provided'}</p>
+            <p><strong>Time:</strong> ${escapeHtml(new Date().toISOString())}</p>
             <hr/>
             <p>To approve: go to Supabase &rarr; exam_retake_requests table and
             update status to "approved", then clear completed exam_sessions rows

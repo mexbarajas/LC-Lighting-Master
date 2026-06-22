@@ -1,6 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+import { createRateLimiter, getRateLimitHeaders } from '@/lib/rate-limit'
 import { NextResponse } from 'next/server'
+
+const examFinishLimiter = createRateLimiter(3600000, 5) // 5 finishes per hour per user
 
 export async function POST(req) {
   try {
@@ -8,6 +11,15 @@ export async function POST(req) {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const userId = user.id
+
+    // Rate limiting: 5 exam finishes per hour per user
+    const rateLimitInfo = examFinishLimiter(userId)
+    if (!rateLimitInfo.allowed) {
+      return NextResponse.json({ error: 'Too many exam submissions. Try again later.' }, {
+        status: 429,
+        headers: getRateLimitHeaders(rateLimitInfo, 5),
+      })
+    }
 
     const SERVICE = createSupabaseClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,

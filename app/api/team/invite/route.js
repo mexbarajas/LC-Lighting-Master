@@ -1,6 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { escapeHtml } from '@/lib/html-escape'
+import { sanitizeEmailHeaderField } from '@/lib/email-validation'
+import { createRateLimiter, getRateLimitHeaders } from '@/lib/rate-limit'
 import { NextResponse } from 'next/server'
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const teamInviteLimiter = createRateLimiter(3600000, 10) // 10 invites per hour per team
 
 export async function POST(req) {
   try {
@@ -11,7 +17,7 @@ export async function POST(req) {
     let body
     try { body = await req.json() } catch { body = {} }
     const { email } = body
-    if (!email || !email.includes('@')) return new Response('Invalid email', { status: 400 })
+    if (!email || !EMAIL_REGEX.test(email)) return new Response('Invalid email', { status: 400 })
 
     const admin = createAdminClient()
 
@@ -26,6 +32,18 @@ export async function POST(req) {
     }
 
     const teamId = membership.team_id
+
+    // Rate limiting: 10 invites per hour per team
+    const rateLimitInfo = teamInviteLimiter(teamId)
+    if (!rateLimitInfo.allowed) {
+      return new Response(JSON.stringify({ error: 'Too many invites sent. Try again later.' }), {
+        status: 429,
+        headers: {
+          'Content-Type': 'application/json',
+          ...getRateLimitHeaders(rateLimitInfo, 10),
+        },
+      })
+    }
 
     const { data: team } = await admin
       .from('teams')
@@ -83,16 +101,18 @@ export async function POST(req) {
     const brevoKey = process.env.BREVO_API_KEY
 
     if (brevoKey) {
+      const sanitizedTeamName = escapeHtml(team.name)
+      const sanitizedSubject = sanitizeEmailHeaderField(`You've been invited to join ${team.name} on LC Lighting Master`, 200)
       const emailRes = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'api-key': brevoKey },
         body: JSON.stringify({
           sender: { name: 'LC Lighting Master', email: senderEmail },
           to: [{ email }],
-          subject: `You've been invited to join ${team.name} on LC Lighting Master`,
+          subject: sanitizedSubject,
           htmlContent: `<div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px 24px">
 <h2 style="color:#2F4A3F;margin:0 0 16px">You're invited!</h2>
-<p style="color:#3D5C50;line-height:1.6;margin:0 0 12px">You've been invited to join <strong>${team.name}</strong> on <strong>LC · Lighting Master</strong> — the professional lighting certification course.</p>
+<p style="color:#3D5C50;line-height:1.6;margin:0 0 12px">You've been invited to join <strong>${sanitizedTeamName}</strong> on <strong>LC · Lighting Master</strong> — the professional lighting certification course.</p>
 <p style="color:#3D5C50;line-height:1.6;margin:0 0 24px">Click below to accept your invitation and create your account (or log in if you already have one).</p>
 <a href="${joinUrl}" style="display:inline-block;background:#C65A3A;color:#fff;text-decoration:none;padding:13px 28px;border-radius:8px;font-weight:700;font-size:15px;margin-bottom:24px">Accept Invitation →</a>
 <p style="color:#7A9688;font-size:13px;margin:0 0 8px">This invitation expires in 7 days. If you didn't expect this, you can ignore it.</p>

@@ -77,7 +77,7 @@ export async function POST(request) {
     // Student discounts applied manually via Stripe coupon codes sent by email
   }
 
-  const appUrl = 'https://lightingmasterlc.com'
+  const appUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://lightingmasterlc.com'
 
   try {
     const checkoutSession = await stripe.checkout.sessions.create({

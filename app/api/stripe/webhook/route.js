@@ -4,6 +4,12 @@
 //   ✅ charge.refunded             (ADD THIS)
 //   ✅ charge.dispute.created      (ADD THIS)
 
+// CRITICAL: Add unique constraint on stripe_payment_intent in Supabase SQL Editor:
+// ALTER TABLE public.subscriptions
+//   ADD CONSTRAINT uq_stripe_payment_intent UNIQUE (stripe_payment_intent)
+//     WHERE stripe_payment_intent IS NOT NULL;
+// This prevents race condition where two concurrent webhooks create duplicate subscriptions.
+
 // Run in Supabase SQL Editor if not already present:
 // ALTER TABLE public.subscriptions
 //   ADD COLUMN IF NOT EXISTS seats integer DEFAULT 1,
@@ -46,9 +52,11 @@
 
 import Stripe from 'stripe'
 import { createServiceClient } from '@/lib/supabase/service'
+import { PLANS, getTeamPerSeat } from '@/lib/pricing'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
+const VALID_PLANS = ['t1', 't2', 't3', 'team', 'exam_addon']
 
 export async function POST(request) {
   const body = await request.text()
@@ -62,7 +70,7 @@ export async function POST(request) {
     event = stripe.webhooks.constructEvent(body, sig, webhookSecret)
   } catch (err) {
     console.error('Webhook signature failed:', err.message)
-    return new Response(`Webhook Error: ${err.message}`, { status: 400 })
+    return new Response('Unauthorized', { status: 401 })
   }
 
   if (event.type === 'checkout.session.completed') {
@@ -82,6 +90,41 @@ export async function POST(request) {
       return new Response('Missing metadata', { status: 400 })
     }
 
+    // VALIDATION: Plan must be in VALID_PLANS
+    if (!VALID_PLANS.includes(plan)) {
+      console.error('Invalid plan in webhook:', plan)
+      return new Response('Invalid plan', { status: 400 })
+    }
+
+    // VALIDATION: Verify amount_total matches expected plan price
+    let expectedAmount
+    if (plan === 'team') {
+      if (seats < 5 || seats >= 11 || isNaN(seats)) {
+        console.error('Invalid seat count in webhook:', seats)
+        return new Response('Invalid seat count', { status: 400 })
+      }
+      const tier = getTeamPerSeat(seats)
+      expectedAmount = tier.perSeat * seats * 100 // Convert to cents
+    } else {
+      const planData = PLANS[plan]
+      if (!planData) {
+        console.error('Plan not found:', plan)
+        return new Response('Invalid plan', { status: 400 })
+      }
+      expectedAmount = planData.amount
+    }
+
+    if (session.amount_total !== expectedAmount) {
+      console.error('Amount mismatch in webhook:', {
+        plan,
+        seats,
+        expected: expectedAmount,
+        actual: session.amount_total,
+        customer: session.customer,
+      })
+      return new Response('Amount mismatch', { status: 400 })
+    }
+
     // Access expiry = December 31 of current year.
     // If purchased after Nov 1, extend to Dec 31 next year.
     const now = new Date()
@@ -92,42 +135,66 @@ export async function POST(request) {
 
     const supabase = createServiceClient()
 
-    // Idempotency: skip if this payment_intent was already processed
+    // IDEMPOTENCY: Use unique constraint on stripe_payment_intent to prevent race condition
+    // If payment_intent is provided, try to insert with unique constraint
     if (session.payment_intent) {
-      const { data: existing } = await supabase
+      const { error: upsertErr } = await supabase
         .from('subscriptions')
-        .select('stripe_payment_intent')
-        .eq('stripe_payment_intent', session.payment_intent)
-        .single()
-      if (existing) {
-        console.log(`Duplicate webhook skipped — payment already processed: ${session.payment_intent}`)
+        .upsert({
+          user_id:               userId,
+          plan:                  plan,
+          status:                'active',
+          stripe_customer_id:    session.customer || null,
+          stripe_payment_intent: session.payment_intent,
+          email:                 session.customer_email || null,
+          current_period_end:    expiry.toISOString(),
+          seats:                 plan === 'team' ? seats : 1,
+          exam_addon:            plan === 'exam_addon' ? true : false,
+          is_admin:              false,
+          updated_at:            new Date().toISOString(),
+        }, { onConflict: 'stripe_payment_intent' })
+
+      if (upsertErr?.code === '23505') { // Unique constraint violation
+        console.log(`Duplicate webhook ignored — payment already processed: ${session.payment_intent}`)
         return new Response('Already processed', { status: 200 })
       }
-    }
 
-    const { error } = await supabase
-      .from('subscriptions')
-      .upsert({
-        user_id:               userId,
-        plan:                  plan,
-        status:                'active',
-        stripe_customer_id:    session.customer || null,
-        stripe_payment_intent: session.payment_intent || null,
-        email:                 session.customer_email || null,
-        current_period_end:    expiry.toISOString(),
-        seats:                 plan === 'team' ? seats : 1,
-        exam_addon:            plan === 'exam_addon' ? true : false,
-        is_admin:              false,
-        updated_at:            new Date().toISOString(),
-      }, { onConflict: 'user_id' })
+      if (upsertErr) {
+        console.error('Supabase write error:', upsertErr)
+        return new Response('Database error', { status: 500 })
+      }
 
-    console.log('Stored stripe_customer_id:', session.customer)
-    console.log('Stored payment_intent:', session.payment_intent)
-    console.log('Stored email:', session.customer_email)
+      console.log('✓ Webhook processed:', {
+        userId,
+        plan,
+        seats,
+        customer: session.customer,
+        paymentIntent: session.payment_intent,
+      })
+    } else {
+      // Fallback: if no payment_intent, use user_id (less safe for idempotency)
+      const { error } = await supabase
+        .from('subscriptions')
+        .upsert({
+          user_id:               userId,
+          plan:                  plan,
+          status:                'active',
+          stripe_customer_id:    session.customer || null,
+          stripe_payment_intent: null,
+          email:                 session.customer_email || null,
+          current_period_end:    expiry.toISOString(),
+          seats:                 plan === 'team' ? seats : 1,
+          exam_addon:            plan === 'exam_addon' ? true : false,
+          is_admin:              false,
+          updated_at:            new Date().toISOString(),
+        }, { onConflict: 'user_id' })
 
-    if (error) {
-      console.error('Supabase write error:', error)
-      return new Response('Database error', { status: 500 })
+      if (error) {
+        console.error('Supabase write error:', error)
+        return new Response('Database error', { status: 500 })
+      }
+
+      console.log('✓ Webhook processed (no payment_intent):', { userId, plan })
     }
   }
 
@@ -185,16 +252,28 @@ export async function POST(request) {
       }
     }
 
-    // Try 3: match by email
+    // Try 3: match by email (ONLY if exactly one match to prevent bulk revocation)
     if (!updated && charge.receipt_email) {
-      const { data, error } = await supabase
+      const { data: candidates, error: countErr } = await supabase
         .from('subscriptions')
-        .update(revokePayload)
+        .select('user_id')
         .eq('email', charge.receipt_email.toLowerCase())
-        .select()
-      if (!error && data?.length > 0) {
-        updated = true
-        console.log('✓ Refund: matched by email', charge.receipt_email)
+
+      if (!countErr && candidates && candidates.length === 1) {
+        const { error, data } = await supabase
+          .from('subscriptions')
+          .update(revokePayload)
+          .eq('user_id', candidates[0].user_id)
+          .select()
+        if (!error && data?.length > 0) {
+          updated = true
+          console.log('✓ Refund: matched by email (single user)', charge.receipt_email)
+        }
+      } else if (candidates && candidates.length > 1) {
+        console.warn('⚠ Refund: email match is ambiguous (multiple users), skipping email lookup', {
+          email: charge.receipt_email,
+          matches: candidates.length,
+        })
       }
     }
 
@@ -204,7 +283,8 @@ export async function POST(request) {
         paymentIntent: charge.payment_intent,
         email:         charge.receipt_email,
       })
-      // Return 200 so Stripe doesn't keep retrying — handle edge cases manually
+      // TODO: Send alert to admin for manual investigation
+      // For now, return 200 so Stripe doesn't keep retrying
     }
   }
 

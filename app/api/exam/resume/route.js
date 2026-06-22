@@ -18,7 +18,7 @@ export async function POST(req) {
     // Find most recent active session
     const { data: examSession } = await SERVICE
       .from('exam_sessions')
-      .select('*')
+      .select('id, user_id, status, mode, question_ids, answers, current_idx, started_at')
       .eq('user_id', userId)
       .eq('status', 'active')
       .order('started_at', { ascending: false })

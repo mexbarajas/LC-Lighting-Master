@@ -7,7 +7,6 @@ import PricingCard from '@/components/PricingCard'
 import Certificate from '@/components/Certificate'
 
 const supabase = createClient()
-const ADMIN_EMAIL = 'admin@luxartmedia.com'
 
 async function loadTeamContext() {
   const { data: { user } } = await supabase.auth.getUser()
@@ -3682,7 +3681,7 @@ function ModuleRow({mod,oddCol,setRoute,completedLessons=new Set()}){
 
 
 
-function Sidebar({route, setRoute, user, onSignOut, bookmarks=new Set(), isMobile=false, sidebarOpen=false, setSidebarOpen=()=>{}, openQuestionCount=0, onAdminClick=()=>{}, isAdmin=false}){
+function Sidebar({route, setRoute, user, onSignOut, bookmarks=new Set(), isMobile=false, sidebarOpen=false, setSidebarOpen=()=>{}, openQuestionCount=0, onAdminClick=()=>{}, isAdmin=false, authReady=false}){
 
   const nav = [
     {section:"Library", items:[
@@ -3740,7 +3739,7 @@ function Sidebar({route, setRoute, user, onSignOut, bookmarks=new Set(), isMobil
         <div key={section} style={{paddingTop:14}}>
           <div style={m({fontSize:8,letterSpacing:"0.26em",textTransform:"uppercase",
             color:"rgba(255,255,255,0.22)",padding:"0 16px 5px"})}>{section}</div>
-          {items.map(item=>(
+          {items.filter(item => (item.route === "admin" || item.route === "teams") ? isAdmin : true).map(item=>(
             <button key={item.route} onClick={()=>{if(item.action){item.action();if(isMobile)setSidebarOpen(false)}else{setRoute(item.route);if(isMobile)setSidebarOpen(false)}}}
               style={{display:"flex",alignItems:"center",gap:10,width:"100%",padding:"9px 16px",
                 background:route===item.route?"rgba(198,90,58,0.18)":"none",border:"none",
@@ -4890,7 +4889,7 @@ function TrendsPage({ setRoute }) {
   )
 }
 
-function AppShell({user, setUser, onSignOut, completedLessons=new Set(), markLessonComplete=async()=>{}, bookmarks=new Set(), toggleBookmark=async()=>{}, isAdmin=false, onAdminClick=()=>{}, teamCtx=null, onTeamRefresh=()=>{}}){
+function AppShell({user, setUser, onSignOut, completedLessons=new Set(), markLessonComplete=async()=>{}, bookmarks=new Set(), toggleBookmark=async()=>{}, isAdmin=false, authReady=false, onAdminClick=()=>{}, teamCtx=null, onTeamRefresh=()=>{}}){
   const [route, setRoute] = useState("home")
   const [showUpgrade, setShowUpgrade] = useState(false)
   const isMobile = useIsMobile()
@@ -4919,7 +4918,7 @@ function AppShell({user, setUser, onSignOut, completedLessons=new Set(), markLes
       fontFamily:F.body,background:C.cream}}>
       <style>{`@import url('${FONT_URL}');*{box-sizing:border-box}code{font-family:${F.mono};font-size:0.9em;background:rgba(0,0,0,0.06);padding:1px 5px;border-radius:3px}@keyframes bulbPulse{0%,100%{opacity:1;box-shadow:0 0 0 3px rgba(198,90,58,0.2),0 0 10px 2px rgba(198,90,58,0.4)}50%{opacity:0.7;box-shadow:0 0 0 5px rgba(198,90,58,0.1),0 0 16px 4px rgba(198,90,58,0.25)}}@keyframes wave{from{transform:scaleY(0.4)}to{transform:scaleY(1.2)}}`}</style>
       {showUpgrade && <UpgradeModal user={user} onClose={()=>setShowUpgrade(false)}/>}
-      <Sidebar route={route} setRoute={setRoute} user={user} onSignOut={onSignOut} bookmarks={bookmarks} isMobile={isMobile} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} openQuestionCount={openQuestionCount} isAdmin={isAdmin} onAdminClick={onAdminClick}/>
+      <Sidebar route={route} setRoute={setRoute} user={user} onSignOut={onSignOut} bookmarks={bookmarks} isMobile={isMobile} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} openQuestionCount={openQuestionCount} isAdmin={isAdmin} authReady={authReady} onAdminClick={onAdminClick}/>
       {isMobile && sidebarOpen && (
         <div onClick={()=>setSidebarOpen(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",zIndex:999,backdropFilter:"blur(2px)"}}/>
       )}
@@ -5200,7 +5199,7 @@ function FeedbackPage({ user, userSubscription }) {
 /* ══════════════════════════════════════════
    ROOT — wires landing ↔ auth ↔ app
 ══════════════════════════════════════════ */
-function LearnerRoot({isAdmin=false, onAdminClick=()=>{}}){
+function LearnerRoot({isAdmin=false, authReady=false, onAdminClick=()=>{}}){
   const [page, setPage] = useState("landing")   // landing | app
   const [authMode, setAuthMode] = useState(null) // null | signin | signup
   const [user, setUser] = useState(null)
@@ -5394,7 +5393,7 @@ function LearnerRoot({isAdmin=false, onAdminClick=()=>{}}){
       )}
 
       {page==="app"&&(
-        <AppShell user={effectiveUser} setUser={setUser} onSignOut={handleSignOut} completedLessons={completedLessons} markLessonComplete={markLessonComplete} bookmarks={bookmarks} toggleBookmark={toggleBookmark} isAdmin={isAdmin} onAdminClick={onAdminClick} teamCtx={teamCtx} onTeamRefresh={refreshTeamCtx}/>
+        <AppShell user={effectiveUser} setUser={setUser} onSignOut={handleSignOut} completedLessons={completedLessons} markLessonComplete={markLessonComplete} bookmarks={bookmarks} toggleBookmark={toggleBookmark} isAdmin={isAdmin} authReady={authReady} onAdminClick={onAdminClick} teamCtx={teamCtx} onTeamRefresh={refreshTeamCtx}/>
       )}
     </>
   )
@@ -6725,7 +6724,7 @@ function AdminSidebar({route,setRoute,flagCount,onSignOut,onBack=()=>{},adminEma
 }
 
 /* ── ROOT ──────────────────────────────────────── */
-function AdminApp({onBack=()=>{}, adminEmail=""}){
+function AdminApp({onBack=()=>{}, adminEmail="", isAdmin=false}){
   const [route, setRoute] = useState("overview")
   const [users, setUsers] = useState([])
   const [teams, setTeams] = useState([])
@@ -6897,16 +6896,16 @@ function AdminApp({onBack=()=>{}, adminEmail=""}){
             </button>
           </div>
         )}
-        {route==="overview"     && <Overview adminStats={adminStats} onNavigate={navigate}/>}
-        {route==="users"        && <UsersView users={users} setUsers={setUsers} onSelectUser={handleSelectUser}/>}
-        {route==="user-detail"  && selectedUser && <UserDetail user={selectedUser} onBack={()=>navigate("users")} onUpdate={handleUpdateUser}/>}
-        {route==="subscriptions"&& <Subscriptions users={users}/>}
-        {route==="revenue"      && <Revenue revenueMonths={adminStats.revenueMonths||[]}/>}
-        {route==="content"      && <ContentView moduleStats={adminStats.moduleStats||[]}/>}
-        {route==="flags"        && <SupportFlags users={users} setUsers={setUsers} onSelectUser={handleSelectUser}/>}
-        {route==="teams"        && <TeamsView users={users} teams={teams}/>}
-        {route==="reports"      && <Reports users={users}/>}
-        {route==="settings"     && <Settings onSignOut={handleSignOut}/>}
+        {route==="overview"     && isAdmin && <Overview adminStats={adminStats} onNavigate={navigate}/>}
+        {route==="users"        && isAdmin && <UsersView users={users} setUsers={setUsers} onSelectUser={handleSelectUser}/>}
+        {route==="user-detail"  && isAdmin && selectedUser && <UserDetail user={selectedUser} onBack={()=>navigate("users")} onUpdate={handleUpdateUser}/>}
+        {route==="subscriptions"&& isAdmin && <Subscriptions users={users}/>}
+        {route==="revenue"      && isAdmin && <Revenue revenueMonths={adminStats.revenueMonths||[]}/>}
+        {route==="content"      && isAdmin && <ContentView moduleStats={adminStats.moduleStats||[]}/>}
+        {route==="flags"        && isAdmin && <SupportFlags users={users} setUsers={setUsers} onSelectUser={handleSelectUser}/>}
+        {route==="teams"        && isAdmin && <TeamsView users={users} teams={teams}/>}
+        {route==="reports"      && isAdmin && <Reports users={users}/>}
+        {route==="settings"     && isAdmin && <Settings onSignOut={handleSignOut}/>}
       </main>
     </div>
   )
@@ -6966,35 +6965,34 @@ function ResetPassword({ onDone }) {
 
 /* ══ TOP-LEVEL ROUTER — learner app + admin portal in one file ══ */
 export default function Root(){
-  const [isAdmin, setIsAdmin]       = useState(false)
-  const [adminEmail, setAdminEmail] = useState("")
-  const [ready, setReady]           = useState(false)
+  const ADMIN_EMAIL = "admin@luxartmedia.com"
+  const [userEmail, setUserEmail]   = useState(null)
+  const [authReady, setAuthReady]   = useState(false)
   const [showAdmin, setShowAdmin]   = useState(false)
   const [recovery, setRecovery]     = useState(false)
 
-  // Detect Supabase recovery links before anything else renders
+  // Combined auth effect: get initial session + subscribe to ALL auth changes
   useEffect(() => {
-    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUserEmail(session?.user?.email ?? null)
+      setAuthReady(true)
+    })
+
+    // Subscribe to ALL auth changes (login, logout, token refresh, password recovery)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUserEmail(session?.user?.email ?? null)
+      setAuthReady(true)
       if (event === "PASSWORD_RECOVERY") setRecovery(true)
     })
-    return () => sub?.subscription?.unsubscribe()
+
+    return () => subscription?.unsubscribe()
   }, [])
 
-  // Determine admin status from subscription is_admin flag
-  useEffect(() => {
-    ;(async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        setAdminEmail(user.email)
-        const { data: sub } = await supabase.from('subscriptions').select('is_admin').eq('user_id', user.id).single()
-        setIsAdmin(sub?.is_admin === true)
-      }
-      setReady(true)
-    })()
-  }, [])
+  const isAdmin = userEmail === ADMIN_EMAIL
 
-  if (!ready) return null
+  if (!authReady) return null
   if (recovery) return <ResetPassword onDone={() => setRecovery(false)} />
-  if (showAdmin) return <AdminApp adminEmail={adminEmail} onBack={() => setShowAdmin(false)} />
-  return <LearnerRoot isAdmin={isAdmin} onAdminClick={() => setShowAdmin(true)} />
+  if (showAdmin && isAdmin) return <AdminApp onBack={() => setShowAdmin(false)} isAdmin={isAdmin} adminEmail={userEmail} />
+  return <LearnerRoot isAdmin={isAdmin} authReady={authReady} onAdminClick={() => setShowAdmin(true)} />
 }
