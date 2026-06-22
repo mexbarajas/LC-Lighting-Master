@@ -76,17 +76,52 @@ export async function POST(request) {
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object
 
+    console.log('WEBHOOK checkout.session.completed', {
+      user_id: session.metadata?.user_id,
+      customer_email: session.customer_details?.email,
+      customer: session.customer,
+      payment_intent: session.payment_intent,
+      amount: session.amount_total,
+      plan: session.metadata?.plan,
+    })
+
     // Only process paid sessions
     if (session.payment_status !== 'paid') {
       return new Response('Skipped — not paid', { status: 200 })
     }
 
-    const userId = session.metadata?.user_id
+    let userId = session.metadata?.user_id
     const plan   = session.metadata?.plan
     const seats  = parseInt(session.metadata?.seats || '1')
 
-    if (!userId || !plan) {
-      console.error('Webhook missing metadata:', session.metadata)
+    if (!plan) {
+      console.error('Webhook missing plan metadata:', session.metadata)
+      return new Response('Missing metadata', { status: 400 })
+    }
+
+    const supabase = createServiceClient()
+
+    // Fallback: if user_id missing from metadata, look up by email
+    if (!userId) {
+      const customerEmail = session.customer_details?.email || session.customer_email
+      if (customerEmail) {
+        const { data: existing } = await supabase
+          .from('subscriptions')
+          .select('user_id')
+          .eq('email', customerEmail.toLowerCase())
+          .maybeSingle()
+        if (existing?.user_id) {
+          userId = existing.user_id
+          console.log('Webhook: resolved user_id from email fallback', { customerEmail, userId })
+        }
+      }
+    }
+
+    if (!userId) {
+      console.error('Webhook: could not resolve user_id', {
+        metadata: session.metadata,
+        customer_details: session.customer_details,
+      })
       return new Response('Missing metadata', { status: 400 })
     }
 
@@ -132,8 +167,6 @@ export async function POST(request) {
     if (now.getMonth() >= 10) {
       expiry.setFullYear(expiry.getFullYear() + 1)
     }
-
-    const supabase = createServiceClient()
 
     // IDEMPOTENCY: Use unique constraint on stripe_payment_intent to prevent race condition
     // If payment_intent is provided, try to insert with unique constraint

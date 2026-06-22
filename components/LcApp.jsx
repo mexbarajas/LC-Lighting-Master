@@ -3839,7 +3839,7 @@ function accessExpiry(){ return `December 31, ${new Date().getFullYear()}` }
 function daysLeft(){ return Math.ceil((new Date(new Date().getFullYear(),11,31)-new Date())/(1000*60*60*24)) }
 
 /* ── UPGRADE MODAL (wraps PricingCard) ── */
-function UpgradeModal({user, onClose}){
+function UpgradeModal({user, onClose, onRefreshSubscription=async()=>{}}){
   useEffect(()=>{
     function onKey(e){ if(e.key==="Escape") onClose() }
     window.addEventListener("keydown", onKey)
@@ -3864,6 +3864,14 @@ function UpgradeModal({user, onClose}){
           </p>
         </div>
         <PricingCard userId={user?.id} userEmail={user?.email} />
+        <div style={{textAlign:"center",marginTop:16}}>
+          <button onClick={()=>onRefreshSubscription(user?.id)}
+            style={{background:"none",border:"none",cursor:"pointer",
+              fontFamily:F.body,fontSize:12,color:C.inkMute,
+              textDecoration:"underline",padding:"4px 8px"}}>
+            Already paid? Click here to restore access
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -4909,7 +4917,7 @@ function TrendsPage({ setRoute }) {
   )
 }
 
-function AppShell({user, setUser, onSignOut, completedLessons=new Set(), markLessonComplete=async()=>{}, bookmarks=new Set(), toggleBookmark=async()=>{}, isAdmin=false, authReady=false, onAdminClick=()=>{}, teamCtx=null, onTeamRefresh=()=>{}}){
+function AppShell({user, setUser, onSignOut, completedLessons=new Set(), markLessonComplete=async()=>{}, bookmarks=new Set(), toggleBookmark=async()=>{}, isAdmin=false, authReady=false, onAdminClick=()=>{}, teamCtx=null, onTeamRefresh=()=>{}, onRefreshSubscription=async()=>{}}){
   const [route, setRoute] = useState("home")
   const [showUpgrade, setShowUpgrade] = useState(false)
   const isMobile = useIsMobile()
@@ -4937,7 +4945,7 @@ function AppShell({user, setUser, onSignOut, completedLessons=new Set(), markLes
     <div style={{display:"flex",minHeight:"100vh",position:"relative",
       fontFamily:F.body,background:C.cream}}>
       <style>{`@import url('${FONT_URL}');*{box-sizing:border-box}code{font-family:${F.mono};font-size:0.9em;background:rgba(0,0,0,0.06);padding:1px 5px;border-radius:3px}@keyframes bulbPulse{0%,100%{opacity:1;box-shadow:0 0 0 3px rgba(198,90,58,0.2),0 0 10px 2px rgba(198,90,58,0.4)}50%{opacity:0.7;box-shadow:0 0 0 5px rgba(198,90,58,0.1),0 0 16px 4px rgba(198,90,58,0.25)}}@keyframes wave{from{transform:scaleY(0.4)}to{transform:scaleY(1.2)}}`}</style>
-      {showUpgrade && <UpgradeModal user={user} onClose={()=>setShowUpgrade(false)}/>}
+      {showUpgrade && <UpgradeModal user={user} onClose={()=>setShowUpgrade(false)} onRefreshSubscription={onRefreshSubscription}/>}
       <Sidebar route={route} setRoute={setRoute} user={user} onSignOut={onSignOut} bookmarks={bookmarks} isMobile={isMobile} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} openQuestionCount={openQuestionCount} isAdmin={isAdmin} authReady={authReady} onAdminClick={onAdminClick}/>
       {isMobile && sidebarOpen && (
         <div onClick={()=>setSidebarOpen(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",zIndex:999,backdropFilter:"blur(2px)"}}/>
@@ -5239,6 +5247,20 @@ function LearnerRoot({isAdmin=false, authReady=false, onAdminClick=()=>{}}){
     if(sub) setUser(prev=>prev?{...prev,plan:sub.plan,examAddon:sub.exam_addon||false}:prev)
   }
 
+  async function refreshSubscription(userId){
+    if(!userId) return
+    const { data: sub } = await supabase
+      .from('subscriptions')
+      .select('plan, exam_addon, status, current_period_end')
+      .eq('user_id', userId)
+      .maybeSingle()
+    if(!sub) return
+    const isActive = sub.status === 'active' &&
+      (!sub.current_period_end || new Date(sub.current_period_end) >= new Date())
+    const resolvedPlan = isActive ? (sub.plan || 'free') : 'free'
+    setUser(prev => prev ? {...prev, plan: resolvedPlan, examAddon: !!sub.exam_addon} : prev)
+  }
+
   function openAuth(mode){ setAuthMode(mode) }
   function closeAuth(){ setAuthMode(null) }
   function handleAuth(userData){
@@ -5264,6 +5286,7 @@ function LearnerRoot({isAdmin=false, authReady=false, onAdminClick=()=>{}}){
                 company:u.user_metadata?.company||"", state:u.user_metadata?.state||"",
                 plan:sub?.plan||"free", examAddon:sub?.exam_addon||false })
       setPage("app")
+      refreshSubscription(u.id)
     })
     const { data:{ subscription } } = supabase.auth.onAuthStateChange(async (event, session)=>{
       if(event==="SIGNED_OUT"){ setUser(null); setPage("landing") }
@@ -5413,7 +5436,7 @@ function LearnerRoot({isAdmin=false, authReady=false, onAdminClick=()=>{}}){
       )}
 
       {page==="app"&&(
-        <AppShell user={effectiveUser} setUser={setUser} onSignOut={handleSignOut} completedLessons={completedLessons} markLessonComplete={markLessonComplete} bookmarks={bookmarks} toggleBookmark={toggleBookmark} isAdmin={isAdmin} authReady={authReady} onAdminClick={onAdminClick} teamCtx={teamCtx} onTeamRefresh={refreshTeamCtx}/>
+        <AppShell user={effectiveUser} setUser={setUser} onSignOut={handleSignOut} completedLessons={completedLessons} markLessonComplete={markLessonComplete} bookmarks={bookmarks} toggleBookmark={toggleBookmark} isAdmin={isAdmin} authReady={authReady} onAdminClick={onAdminClick} teamCtx={teamCtx} onTeamRefresh={refreshTeamCtx} onRefreshSubscription={refreshSubscription}/>
       )}
     </>
   )
