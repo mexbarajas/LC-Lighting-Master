@@ -3030,11 +3030,11 @@ function ModuleCompleteModal({mod, lessonsLearned, onHome, onContinue}){
         </div>}
         <div style={{display:'flex',flexWrap:'wrap',gap:8,marginBottom:14}}>
           <button onClick={()=>window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent(shareText),'_blank')} style={btn}><span style={{fontWeight:900,fontSize:15}}>𝕏</span> Post on X</button>
-          <button onClick={()=>{navigator.clipboard.writeText(shareText).then(()=>window.open('https://www.linkedin.com/feed/','_blank'))}} style={btn}><span style={{color:'#0077b5',fontWeight:900}}>in</span> LinkedIn</button>
-          <button onClick={()=>{navigator.clipboard.writeText(shareText).then(()=>window.open('https://www.facebook.com/','_blank'))}} style={btn}><span style={{color:'#1877f2',fontWeight:900}}>f</span> Facebook</button>
+          <button onClick={()=>{navigator.clipboard.writeText(shareText).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2500);window.open('https://www.linkedin.com/feed/?shareActive=true','_blank')}).catch(()=>{window.open('https://www.linkedin.com/feed/?shareActive=true','_blank')})}} style={btn}><span style={{color:'#0077b5',fontWeight:900}}>in</span> LinkedIn</button>
+          <button onClick={()=>{navigator.clipboard.writeText(shareText).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2500);window.open('https://www.facebook.com/','_blank')}).catch(()=>{window.open('https://www.facebook.com/','_blank')})}} style={btn}><span style={{color:'#1877f2',fontWeight:900}}>f</span> Facebook</button>
           <button onClick={()=>{navigator.clipboard.writeText(shareText).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2500)})}} style={{...btn,background:copied?'#e8f5ee':'#fff',color:copied?'#2a6048':C.ink}}>{copied?'✓ Copied!':'⧉ Copy text'}</button>
         </div>
-        <p style={{fontFamily:F.body,fontSize:11,color:'#9a8a7a',margin:'0 0 18px',lineHeight:1.5}}>💡 LinkedIn and Facebook can't pre-fill text — it's copied to your clipboard automatically when you click those. Just paste.</p>
+        <p style={{fontFamily:F.body,fontSize:11,color:'#9a8a7a',margin:'0 0 18px',lineHeight:1.5}}>💡 Your post text — including lightingmasterlc.com — is copied to your clipboard automatically. Just press Ctrl/Cmd+V to paste it into LinkedIn or Facebook, add a personal line if you like, and post.</p>
         <div style={{display:'flex',gap:10,justifyContent:'flex-end'}}>
           <button onClick={onHome} style={ink}>← Dashboard</button>
           {onContinue && <button onClick={onContinue} style={accent}>Next Module →</button>}
