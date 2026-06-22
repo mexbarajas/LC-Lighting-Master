@@ -3046,7 +3046,6 @@ function ModuleCompleteModal({mod, lessonsLearned, onHome, onContinue}){
 
 function LessonPage({lessonRef,setRoute,user,setShowUpgrade,completedLessons=new Set(),markLessonComplete=async()=>{},bookmarks=new Set(),toggleBookmark=async()=>{},isMobile=false}) {
   const [showComplete,setShowComplete]=useState(false)
-  console.log("[LP] ref=",lessonRef," isLast=",(typeof isLastInModule!=='undefined'?isLastInModule:'undef')," showComplete=",showComplete)
   const [imgFullscreen,setImgFullscreen]=useState(null)
   const [lessonContent,setLessonContent]=useState(null)
   const [contentLoading,setContentLoading]=useState(true)
