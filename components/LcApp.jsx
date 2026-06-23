@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react"
 import DOMPurify from 'dompurify'
 import { createClient } from '@/lib/supabase/client'
+import { TEAM_PER_SEAT } from '@/lib/pricing'
 import PricingCard from '@/components/PricingCard'
 import Certificate from '@/components/Certificate'
 
@@ -11,13 +12,36 @@ const supabase = createClient()
 async function loadTeamContext() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { onTeam: false }
-  const { data: membership } = await supabase
+
+  // Try extended columns first; fall back to base columns if migration not yet run
+  let membership, membershipExt = false
+  const { data: m1, error: m1Err } = await supabase
     .from('team_members')
     .select('team_id, role, license_type, has_exam_access, member_exam_add_on_paid')
     .eq('user_id', user.id).maybeSingle()
+  if (m1Err) {
+    const { data: m2 } = await supabase
+      .from('team_members').select('team_id, role').eq('user_id', user.id).maybeSingle()
+    membership = m2
+  } else {
+    membership = m1
+    membershipExt = true
+  }
   if (!membership) return { onTeam: false }
-  const { data: team } = await supabase
+
+  let team, teamExt = false
+  const { data: t1, error: t1Err } = await supabase
     .from('teams').select('id, name, tier, plan_type, seat_count, access_expiry, owner_id').eq('id', membership.team_id).single()
+  if (t1Err || !t1) {
+    const { data: t2 } = await supabase
+      .from('teams').select('id, name, tier, seat_count, access_expiry, owner_id').eq('id', membership.team_id).single()
+    team = t2
+  } else {
+    team = t1
+    teamExt = true
+  }
+  if (!team) return { onTeam: false }
+
   const { data: members } = await supabase.rpc('team_member_progress')
   const { data: invites } = await supabase
     .from('team_invites').select('id, email, status, invited_at, expires_at')
@@ -31,11 +55,11 @@ async function loadTeamContext() {
     seatsUsed: (members?.length || 0) + (invites?.length || 0),
     seatsTotal: team?.seat_count || 0,
     accessActive,
-    myLicense: {
-      licenseType:        membership.license_type || 'course_exam',
-      hasExamAccess:      membership.has_exam_access || false,
+    myLicense: membershipExt ? {
+      licenseType:         membership.license_type || 'course_exam',
+      hasExamAccess:       membership.has_exam_access || false,
       memberExamAddOnPaid: membership.member_exam_add_on_paid || false,
-    },
+    } : null,
   }
 }
 
