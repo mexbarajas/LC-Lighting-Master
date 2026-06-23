@@ -6523,92 +6523,290 @@ function SupportFlags({users,setUsers,onSelectUser}){
 }
 
 /* ── TEAMS ─────────────────────────────────────── */
-function TeamsView({users=[], teams=[]}){
-  const totalSeats=teams.reduce((s,t)=>s+t.seat_count,0)
-  const totalUsed=teams.reduce((s,t)=>s+t.seatsUsed,0)
-  const totalPending=teams.reduce((s,t)=>s+t.pendingCount,0)
+function TeamsView({users=[], teams=[], onRefresh=()={}}){
+  const [selectedTeamId, setSelectedTeamId] = useState(null)
+  const [showInviteModal, setShowInviteModal] = useState(false)
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteLoading, setInviteLoading] = useState(false)
+  const [inviteError, setInviteError] = useState('')
+  const [actionLoading, setActionLoading] = useState('')
+  const [toastMsg, setToastMsg] = useState('')
 
-  return(
+  const selectedTeam = teams.find(t => t.id === selectedTeamId) ?? teams[0] ?? null
+
+  const showToast = (msg) => { setToastMsg(msg); setTimeout(() => setToastMsg(''), 3000) }
+
+  const allMembers     = selectedTeam?.team_members ?? []
+  const allInvites     = selectedTeam?.team_invites  ?? []
+  const activeMembers  = allMembers.filter(m => m.status === 'active')
+  const pendingInvites = allInvites.filter(i => i.status === 'pending')
+  const maxSeats       = selectedTeam?.seats_purchased ?? selectedTeam?.seat_count ?? 0
+  const usedSeats      = activeMembers.length + pendingInvites.length
+  const availSeats     = maxSeats - usedSeats
+  const seatPct        = maxSeats === 0 ? 0 : Math.round((usedSeats / maxSeats) * 100)
+
+  const planLabel    = selectedTeam?.plan_type === 'course_only' ? 'Course Only' : 'Course + Exam'
+  const pricePerSeat = selectedTeam?.price_per_seat
+  const totalPrice   = selectedTeam?.total_team_price
+
+  const totalSeats   = teams.reduce((s,t) => s + (t.seat_count   ?? 0), 0)
+  const totalUsed    = teams.reduce((s,t) => s + (t.seatsUsed    ?? 0), 0)
+  const totalPending = teams.reduce((s,t) => s + (t.pendingCount ?? 0), 0)
+
+  const dateStr = (d) => d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'
+
+  async function handleInvite() {
+    const email = inviteEmail.trim().toLowerCase()
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setInviteError('Enter a valid email address.'); return
+    }
+    setInviteLoading(true); setInviteError('')
+    try {
+      const res = await fetch('/api/admin/team/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ team_id: selectedTeam.id, email }),
+      })
+      const d = await res.json()
+      if (!res.ok) { setInviteError(d.error || 'Failed to send invite.'); setInviteLoading(false); return }
+      showToast(`Invitation sent to ${email}`)
+      setShowInviteModal(false); setInviteEmail('')
+      await onRefresh()
+    } catch { setInviteError('Network error.') }
+    finally { setInviteLoading(false) }
+  }
+
+  async function handleDeactivate(memberId, memberName) {
+    if (!confirm(`Deactivate ${memberName}? This will revoke their access immediately.`)) return
+    setActionLoading(memberId)
+    try {
+      const res = await fetch(`/api/team/members/${memberId}/deactivate`, { method: 'POST' })
+      const d = await res.json()
+      if (!res.ok) { showToast(d.error || 'Failed to deactivate.') }
+      else { showToast(`${memberName} deactivated.`); await onRefresh() }
+    } catch { showToast('Network error.') }
+    finally { setActionLoading('') }
+  }
+
+  return (
     <div>
-      <div style={adisp({fontWeight:700,fontSize:22,color:AT.ink,marginBottom:22})}>Teams</div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:20}}>
-        <StatCard label="Active teams" value={teams.length} color={AT.green}/>
-        <StatCard label="Seats used" value={totalSeats?`${totalUsed} / ${totalSeats}`:'0'}/>
-        <StatCard label="Pending invites" value={totalPending} color={AT.purple}/>
+      {toastMsg && (
+        <div style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', background: '#16120e', color: '#fff', padding: '12px 24px', borderRadius: 8, fontFamily: 'Inter,sans-serif', fontSize: 14, zIndex: 9999, boxShadow: '0 4px 20px rgba(0,0,0,0.2)' }}>
+          {toastMsg}
+        </div>
+      )}
+
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
+        <div style={adisp({fontWeight:700,fontSize:28,color:AT.ink})}>Teams</div>
+        {teams.length > 1 && (
+          <select
+            value={selectedTeam?.id ?? ''}
+            onChange={e => setSelectedTeamId(e.target.value)}
+            style={{ fontFamily: 'Inter,sans-serif', fontSize: 13, padding: '8px 12px', border: `1px solid ${AT.border}`, borderRadius: 6, background: AT.bg3, color: AT.ink, cursor: 'pointer' }}
+          >
+            {teams.map(t => (
+              <option key={t.id} value={t.id}>{t.id.slice(0, 8)}… — {t.plan_type ?? 'team'} — {t.seat_count} seats</option>
+            ))}
+          </select>
+        )}
       </div>
-      {teams.length===0?(
-        <div style={{background:AT.bg3,border:`1px solid ${AT.border}`,borderRadius:8,padding:"48px",textAlign:"center"}}>
+
+      {/* Summary cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 28 }}>
+        <StatCard label="Active Teams"    value={teams.length}                                         color={AT.green}/>
+        <StatCard label="Seats Used"      value={totalSeats ? `${totalUsed} / ${totalSeats}` : '0'}/>
+        <StatCard label="Pending Invites" value={totalPending}                                         color={AT.purple}/>
+      </div>
+
+      {teams.length === 0 ? (
+        <div style={{ background: AT.bg3, border: `1px solid ${AT.border}`, borderRadius: 8, padding: '48px', textAlign: 'center' }}>
           <div style={amono({fontSize:11,color:AT.inkMute,marginBottom:8})}>No teams yet</div>
           <div style={asans({fontSize:13,color:AT.inkSoft})}>Teams will appear here once created.</div>
         </div>
-      ):(
-        <div style={{display:"flex",flexDirection:"column",gap:12}}>
-          {teams.map(t=>{
-            const adminMember=t.members.find(m=>m.role==='team_admin')
-            const ownerLabel=adminMember?.display_name||adminMember?.email||t.owner_id?.slice(0,8)+'...'
-            const ownerEmail=adminMember?.email||'—'
-            const expiry=t.access_expiry?new Date(t.access_expiry).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'—'
-            const seatPct=t.seat_count?Math.round((t.seatsUsed/t.seat_count)*100):0
-            return(
-              <div key={t.id} style={{background:AT.bg3,border:`1px solid ${AT.border}`,borderRadius:8,overflow:"hidden"}}>
-                <div style={{padding:"14px 18px",borderBottom:`1px solid ${AT.border}`,display:"flex",alignItems:"flex-start",gap:20,flexWrap:"wrap"}}>
-                  <div style={{flex:"1 1 200px",minWidth:0}}>
-                    <div style={asans({fontSize:14,fontWeight:600,color:AT.ink,marginBottom:2})}>{ownerLabel}</div>
-                    <div style={amono({fontSize:10,color:AT.inkMute})}>{ownerEmail}</div>
-                  </div>
-                  <div style={{display:"flex",gap:20,flexWrap:"wrap",alignItems:"flex-start"}}>
-                    <div>
-                      <div style={amono({fontSize:8,letterSpacing:"0.12em",textTransform:"uppercase",color:AT.inkMute,marginBottom:3})}>Tier</div>
-                      <div style={amono({fontSize:12,color:AT.ink})}>{t.tier||'—'}</div>
-                    </div>
-                    <div>
-                      <div style={amono({fontSize:8,letterSpacing:"0.12em",textTransform:"uppercase",color:AT.inkMute,marginBottom:3})}>Seats</div>
-                      <div style={{display:"flex",alignItems:"center",gap:6}}>
-                        <div style={{width:60,height:5,background:AT.border,borderRadius:3,overflow:"hidden"}}>
-                          <div style={{width:`${seatPct}%`,height:5,background:seatPct>=100?AT.red:AT.green,borderRadius:3}}/>
-                        </div>
-                        <span style={amono({fontSize:11,color:AT.ink})}>{t.seatsUsed} / {t.seat_count}</span>
-                      </div>
-                    </div>
-                    <div>
-                      <div style={amono({fontSize:8,letterSpacing:"0.12em",textTransform:"uppercase",color:AT.inkMute,marginBottom:3})}>Expires</div>
-                      <div style={amono({fontSize:11,color:AT.ink})}>{expiry}</div>
-                    </div>
-                    {t.pendingCount>0&&(
-                      <div>
-                        <div style={amono({fontSize:8,letterSpacing:"0.12em",textTransform:"uppercase",color:AT.inkMute,marginBottom:3})}>Pending</div>
-                        <div style={amono({fontSize:11,color:AT.accent})}>{t.pendingCount} invite{t.pendingCount!==1?'s':''}</div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                {t.members.length>0?(
-                  <div>
-                    {t.members.map((m,i)=>(
-                      <div key={m.user_id||i} style={{display:"flex",alignItems:"center",gap:12,padding:"9px 18px",borderBottom:i<t.members.length-1?`1px solid ${AT.border}`:"none",background:i%2===0?"transparent":AT.bg2}}>
-                        <div style={{width:22,height:22,borderRadius:"50%",background:AT.accent+"22",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:AF.mono,fontSize:8,color:AT.accent,flexShrink:0}}>
-                          {(m.display_name||m.email||'?')[0].toUpperCase()}
-                        </div>
-                        <div style={{flex:1,minWidth:0}}>
-                          <div style={asans({fontSize:12,color:AT.ink,fontWeight:m.role==='team_admin'?600:400})}>
-                            {m.display_name||m.email||m.user_id?.slice(0,12)+'...'}
-                          </div>
-                          {m.display_name&&m.email&&<div style={amono({fontSize:10,color:AT.inkMute})}>{m.email}</div>}
-                        </div>
-                        <div style={amono({fontSize:9,color:m.role==='team_admin'?AT.green:AT.inkMute,textTransform:"uppercase",letterSpacing:"0.1em"})}>
-                          {m.role==='team_admin'?'Admin':'Member'}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ):(
-                  <div style={{padding:"12px 18px"}}>
-                    <span style={amono({fontSize:11,color:AT.inkMute})}>No members yet</span>
-                  </div>
-                )}
+      ) : (
+        <div>
+          {/* Selected team detail */}
+          <div style={{ background: AT.bg3, border: `1px solid ${AT.border}`, borderRadius: 8, padding: '24px 28px', marginBottom: 24 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
+              <div>
+                <div style={amono({fontSize:9,letterSpacing:'0.2em',textTransform:'uppercase',color:AT.inkMute,marginBottom:6})}>Team ID</div>
+                <div style={amono({fontSize:13,color:AT.ink})}>{selectedTeam?.id}</div>
+                <div style={asans({fontSize:12,color:AT.inkMute,marginTop:4})}>Owner: {selectedTeam?.owner_id}</div>
               </div>
-            )
-          })}
+              <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+                {[
+                  ['Plan',       planLabel],
+                  ['Price/Seat', pricePerSeat ? `$${pricePerSeat}` : '—'],
+                  ['Total Paid', totalPrice   ? `$${totalPrice}`   : '—'],
+                  ['Expires',    dateStr(selectedTeam?.access_expiry)],
+                  ['Seats',      `${usedSeats} / ${maxSeats} used`],
+                ].map(([lbl, val]) => (
+                  <div key={lbl}>
+                    <div style={amono({fontSize:8,letterSpacing:'0.16em',textTransform:'uppercase',color:AT.inkMute,marginBottom:4})}>{lbl}</div>
+                    <div style={asans({fontSize:14,fontWeight:600,color:AT.ink})}>{val}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Seat progress bar + assign button */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ flex: 1, background: AT.border, borderRadius: 99, height: 6, overflow: 'hidden' }}>
+                <div style={{ width: `${seatPct}%`, background: seatPct >= 100 ? AT.red : AT.green, height: '100%', borderRadius: 99, transition: 'width 0.4s' }} />
+              </div>
+              <span style={asans({fontSize:12,color:AT.inkMute,whiteSpace:'nowrap'})}>
+                {availSeats} seat{availSeats !== 1 ? 's' : ''} available
+              </span>
+              <button
+                onClick={() => setShowInviteModal(true)}
+                style={{ fontFamily: 'Playfair Display,serif', fontWeight: 700, fontSize: 13, background: AT.accent, color: '#fff', border: 'none', borderRadius: 6, padding: '8px 16px', cursor: 'pointer' }}
+              >
+                + Assign Seat
+              </button>
+            </div>
+          </div>
+
+          {/* Pending invites */}
+          {pendingInvites.length > 0 && (
+            <div style={{ marginBottom: 24 }}>
+              <div style={amono({fontSize:9,letterSpacing:'0.18em',textTransform:'uppercase',color:AT.inkMute,marginBottom:12})}>
+                Pending Invitations ({pendingInvites.length})
+              </div>
+              <div style={{ background: AT.bg3, border: `1px solid ${AT.border}`, borderRadius: 8, overflow: 'hidden' }}>
+                {pendingInvites.map((inv, i) => (
+                  <div key={inv.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 20px', borderBottom: i < pendingInvites.length - 1 ? `1px solid ${AT.border}` : 'none' }}>
+                    <div>
+                      <div style={asans({fontSize:14,color:AT.ink})}>{inv.email}</div>
+                      <div style={asans({fontSize:12,color:AT.inkMute,marginTop:2})}>
+                        Sent {dateStr(inv.invited_at)} · Expires {dateStr(inv.expires_at)}
+                      </div>
+                    </div>
+                    <span style={{ background: '#fff7e6', color: '#b86a00', fontFamily: 'JetBrains Mono,monospace', fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', padding: '3px 8px', borderRadius: 4, fontWeight: 600 }}>Pending</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Members table */}
+          <div>
+            <div style={amono({fontSize:9,letterSpacing:'0.18em',textTransform:'uppercase',color:AT.inkMute,marginBottom:12})}>
+              Members ({allMembers.length})
+            </div>
+
+            {allMembers.length === 0 ? (
+              <div style={{ background: AT.bg3, border: `1px dashed ${AT.border}`, borderRadius: 8, padding: '36px', textAlign: 'center' }}>
+                <span style={asans({fontSize:14,color:AT.inkMute})}>No members yet. Use "Assign Seat" to send invitations.</span>
+              </div>
+            ) : (
+              <div style={{ background: AT.bg3, border: `1px solid ${AT.border}`, borderRadius: 8, overflow: 'hidden' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 110px 110px 110px', padding: '10px 20px', background: AT.bg2, borderBottom: `1px solid ${AT.border}` }}>
+                  {['Member', 'License', 'Status', 'Joined', 'Exam Access', 'Actions'].map(h => (
+                    <div key={h} style={amono({fontSize:9,letterSpacing:'0.16em',textTransform:'uppercase',color:AT.inkMute})}>{h}</div>
+                  ))}
+                </div>
+
+                {allMembers.map((m, i) => {
+                  const isLast     = i === allMembers.length - 1
+                  const deactivated = m.status === 'deactivated'
+                  const name       = m.display_name || m.email || (m.user_id?.slice(0, 8) + '…')
+                  return (
+                    <div key={m.id} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 110px 110px 110px', padding: '14px 20px', borderBottom: isLast ? 'none' : `1px solid ${AT.border}`, alignItems: 'center', background: deactivated ? AT.bg2 : 'transparent' }}>
+
+                      <div>
+                        <div style={asans({fontSize:14,fontWeight:500,color:deactivated?AT.inkMute:AT.ink})}>{name}</div>
+                        <div style={amono({fontSize:10,color:AT.inkMute})}>{m.email}</div>
+                        {m.role === 'team_admin' && <div style={amono({fontSize:9,color:AT.accent,letterSpacing:'0.1em',textTransform:'uppercase',marginTop:2})}>Admin</div>}
+                        {m.deactivated_at && <div style={asans({fontSize:11,color:AT.red,marginTop:2})}>Deactivated {dateStr(m.deactivated_at)}</div>}
+                      </div>
+
+                      <div style={asans({fontSize:12,color:AT.inkMute})}>
+                        <div>{m.license_type === 'course_exam' ? 'Course + Exam' : 'Course Only'}</div>
+                        {m.member_exam_add_on_paid && <div style={{color:AT.green,fontSize:11,marginTop:2}}>+ $99 add-on</div>}
+                        {m.exam_access_source && m.exam_access_source !== 'none' && (
+                          <div style={amono({fontSize:9,color:AT.inkMute,marginTop:2,textTransform:'uppercase',letterSpacing:'0.1em'})}>{m.exam_access_source.replace(/_/g,' ')}</div>
+                        )}
+                      </div>
+
+                      <div>
+                        <span style={{
+                          background: m.status==='active' ? '#e8f5ee' : m.status==='pending' ? '#fff7e6' : '#fde8ec',
+                          color:      m.status==='active' ? AT.green  : m.status==='pending' ? '#b86a00' : AT.red,
+                          fontFamily: 'JetBrains Mono,monospace', fontSize: 10, letterSpacing: '0.1em',
+                          textTransform: 'uppercase', padding: '3px 8px', borderRadius: 4, fontWeight: 600,
+                        }}>
+                          {m.status}
+                        </span>
+                      </div>
+
+                      <div style={asans({fontSize:12,color:AT.inkMute})}>{dateStr(m.joined_at)}</div>
+
+                      <div style={asans({fontSize:12,color:m.has_exam_access ? AT.green : AT.inkMute})}>
+                        {m.has_exam_access ? '✓ Access' : '✗ None'}
+                      </div>
+
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        {m.status === 'active' && m.role !== 'team_admin' && (
+                          <button
+                            onClick={() => handleDeactivate(m.id, name)}
+                            disabled={actionLoading === m.id}
+                            style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', background: 'none', border: `1px solid ${AT.red}`, borderRadius: 4, padding: '5px 10px', cursor: 'pointer', color: AT.red, opacity: actionLoading === m.id ? 0.5 : 1 }}
+                          >
+                            {actionLoading === m.id ? '…' : 'Remove'}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Invite Modal */}
+      {showInviteModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(22,18,14,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+          <div style={{ background: AT.bg3, borderRadius: 10, padding: 36, maxWidth: 420, width: '100%', boxShadow: '0 8px 40px rgba(0,0,0,0.18)' }}>
+            <div style={amono({fontSize:9,letterSpacing:'0.2em',textTransform:'uppercase',color:AT.accent,marginBottom:10})}>Assign Seat</div>
+            <h3 style={adisp({fontSize:20,fontWeight:700,color:AT.ink,marginBottom:8})}>Invite team member</h3>
+            <p style={asans({fontSize:13,color:AT.inkMute,marginBottom:20,lineHeight:1.5})}>
+              {availSeats > 0
+                ? `${availSeats} seat${availSeats !== 1 ? 's' : ''} available. They will receive an email invitation.`
+                : 'No seats available. Deactivate a member first to free a seat.'}
+            </p>
+            {availSeats > 0 && (
+              <input
+                type="email"
+                value={inviteEmail}
+                onChange={e => { setInviteEmail(e.target.value); setInviteError('') }}
+                placeholder="colleague@company.com"
+                onKeyDown={e => e.key === 'Enter' && handleInvite()}
+                autoFocus
+                style={{ width: '100%', fontFamily: 'Inter,sans-serif', fontSize: 14, padding: '11px 14px', border: `1px solid ${inviteError ? AT.red : AT.border}`, borderRadius: 6, background: AT.bg2, color: AT.ink, boxSizing: 'border-box', marginBottom: inviteError ? 8 : 20, outline: 'none' }}
+              />
+            )}
+            {inviteError && <p style={asans({fontSize:13,color:AT.red,marginBottom:16})}>{inviteError}</p>}
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button
+                onClick={() => { setShowInviteModal(false); setInviteEmail(''); setInviteError('') }}
+                style={{ flex: 1, fontFamily: 'Playfair Display,serif', fontWeight: 600, fontSize: 14, background: AT.bg2, color: AT.ink, border: `1px solid ${AT.border}`, borderRadius: 6, padding: '11px 0', cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              {availSeats > 0 && (
+                <button
+                  onClick={handleInvite}
+                  disabled={inviteLoading}
+                  style={{ flex: 2, fontFamily: 'Playfair Display,serif', fontWeight: 700, fontSize: 14, background: AT.accent, color: '#fff', border: 'none', borderRadius: 6, padding: '11px 0', cursor: inviteLoading ? 'not-allowed' : 'pointer', opacity: inviteLoading ? 0.7 : 1 }}
+                >
+                  {inviteLoading ? 'Sending…' : 'Send Invitation →'}
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -6977,7 +7175,7 @@ function AdminApp({onBack=()=>{}, adminEmail="", isAdmin=false}){
         {route==="revenue"      && isAdmin && <Revenue revenueMonths={adminStats.revenueMonths||[]}/>}
         {route==="content"      && isAdmin && <ContentView moduleStats={adminStats.moduleStats||[]} totalUsers={adminStats.totalUsers||0} usersWithAnyActivity={adminStats.usersWithAnyActivity||0}/>}
         {route==="flags"        && isAdmin && <SupportFlags users={users} setUsers={setUsers} onSelectUser={handleSelectUser}/>}
-        {route==="teams"        && isAdmin && <TeamsView users={users} teams={teams}/>}
+        {route==="teams"        && isAdmin && <TeamsView users={users} teams={teams} onRefresh={loadAdminData}/>}
         {route==="reports"      && isAdmin && <Reports users={users}/>}
       </main>
     </div>
