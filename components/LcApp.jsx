@@ -3425,9 +3425,16 @@ function AccountPage({ user, setUser, setRoute }) {
     }
   }
 
-  const PLAN_LABELS = { free: 'Free', t1: 'LC Preparation Test', t2: 'Full Course', t3: 'Full Course + Exam', team_admin: 'Team Plan', team_member: 'Team Plan' }
+  const PLAN_LABELS = {
+    free: { name: 'Free plan',           sub: 'Limited preview access' },
+    t1:   { name: 'LC Preparation Test', sub: 'Active · Practice exam access' },
+    t2:   { name: 'Full Course',         sub: 'Active · All 12 modules' },
+    t3:   { name: 'Full Course + Exam',  sub: 'Active · Complete access — all modules + practice exam' },
+    team: { name: 'Team License',        sub: 'Active · Team seats' },
+  }
   const planKey = user?.plan || 'free'
-  const planName = PLAN_LABELS[planKey] || 'Free'
+  const _pk = (planKey && planKey.startsWith('team')) ? 'team' : (planKey || 'free')
+  const planInfo = PLAN_LABELS[_pk] || PLAN_LABELS.free
   const isActiveStatus = user?.status === 'active'
   const isPaid = isActiveStatus && planKey !== 'free'
 
@@ -3499,31 +3506,29 @@ function AccountPage({ user, setUser, setRoute }) {
         <div style={{maxWidth:640}}>
           <div style={{background:C.ink,borderRadius:6,padding:"28px 32px",marginBottom:24}}>
             <div style={mono({fontSize:9,letterSpacing:"0.22em",textTransform:"uppercase",color:C.tan,marginBottom:10})}>Current plan</div>
-            <div style={{fontFamily:F.display,fontWeight:700,fontSize:24,color:"#fff",marginBottom:6}}>{planName}</div>
+            <div style={{fontFamily:F.display,fontWeight:700,fontSize:24,color:"#fff",marginBottom:6}}>{planInfo.name}</div>
             <div style={mono({fontSize:10,letterSpacing:"0.14em",color:"rgba(249,244,237,0.5)",marginBottom:18})}>
-              {isPaid ? `Active · ${user?.examAddon ? 'Includes practice exam' : 'Course access'}` : 'No active plan — upgrade to unlock all lessons'}
+              {_pk==='t2'&&user?.examAddon ? 'Active · All 12 modules + practice exam' : planInfo.sub}
             </div>
             {checkoutError && <div style={{fontFamily:F.body,fontSize:13,color:"#f87171",marginBottom:12}}>{checkoutError}</div>}
             <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
-              {planKey==="free"&&(
+              {_pk==='free'&&(
+                <button onClick={()=>startCheckout('t3')} disabled={!!checkoutLoading} style={{fontFamily:F.display,fontWeight:600,fontSize:13,background:C.accent,color:"#fff",border:"none",borderRadius:99,padding:"10px 20px",cursor:"pointer",opacity:checkoutLoading?0.7:1}}>
+                  {checkoutLoading==='t3'?'Opening…':'Get Full Course + Exam — $595 →'}
+                </button>
+              )}
+              {_pk==='t1'&&(
                 <button onClick={()=>startCheckout('t2')} disabled={!!checkoutLoading} style={{fontFamily:F.display,fontWeight:600,fontSize:13,background:C.accent,color:"#fff",border:"none",borderRadius:99,padding:"10px 20px",cursor:"pointer",opacity:checkoutLoading?0.7:1}}>
-                  {checkoutLoading==='t2'?'Opening…':'Get Full Course →'}
+                  {checkoutLoading==='t2'?'Opening…':'Add the Full Course — $395 →'}
                 </button>
               )}
-              {planKey==="free"&&(
-                <button onClick={()=>startCheckout('t3')} disabled={!!checkoutLoading} style={{fontFamily:F.display,fontWeight:600,fontSize:13,background:"none",color:"rgba(249,244,237,0.7)",border:`1px solid rgba(249,244,237,0.3)`,borderRadius:99,padding:"10px 20px",cursor:"pointer",opacity:checkoutLoading?0.7:1}}>
-                  {checkoutLoading==='t3'?'Opening…':'Course + Exam ($595)'}
-                </button>
-              )}
-              {planKey==="t2"&&!user?.examAddon&&(
+              {_pk==='t2'&&(
                 <button onClick={()=>startCheckout('t1')} disabled={!!checkoutLoading} style={{fontFamily:F.display,fontWeight:600,fontSize:13,background:C.accent,color:"#fff",border:"none",borderRadius:99,padding:"10px 20px",cursor:"pointer",opacity:checkoutLoading?0.7:1}}>
-                  {checkoutLoading==='t1'?'Opening…':'Add Practice Exam ($250) →'}
+                  {checkoutLoading==='t1'?'Opening…':'Add the Preparation Test — $250 →'}
                 </button>
               )}
-              {planKey==="t1"&&(
-                <button onClick={()=>startCheckout('t2')} disabled={!!checkoutLoading} style={{fontFamily:F.display,fontWeight:600,fontSize:13,background:C.accent,color:"#fff",border:"none",borderRadius:99,padding:"10px 20px",cursor:"pointer",opacity:checkoutLoading?0.7:1}}>
-                  {checkoutLoading==='t2'?'Opening…':'Upgrade to Full Course →'}
-                </button>
+              {(_pk==='t3'||_pk==='team')&&(
+                <div style={{fontFamily:F.body,fontSize:13,color:"rgba(249,244,237,0.7)",lineHeight:1.6}}>✓ You have full access to all course content and the practice exam.</div>
               )}
             </div>
           </div>
