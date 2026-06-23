@@ -3324,6 +3324,97 @@ function ContinuePage({setRoute, completedLessons=new Set()}) {
 }
 
 
+/* ── FREE-USER PLAN GRID ─────────────────────────────────────── */
+function FreePlanGrid({startCheckout, checkoutLoading, checkoutError}){
+  const loading = !!checkoutLoading
+  const card = {
+    flex:'1 1 240px', minWidth:240, background:'#fff',
+    border:'1px solid '+C.rule, borderRadius:14, padding:'24px 22px',
+    display:'flex', flexDirection:'column'
+  }
+  const priceRow = {display:'flex', alignItems:'baseline', gap:6, margin:'0 0 4px'}
+  const price = {fontFamily:F.display, fontWeight:700, fontSize:34, color:C.ink, lineHeight:1}
+  const priceNote = {fontFamily:F.body, fontSize:12, color:C.inkMute}
+  const planLabel = {...mono({fontSize:10,letterSpacing:'0.2em',textTransform:'uppercase',color:C.accent}), marginBottom:14}
+  const inc = (txt,yes)=>(
+    <div style={{display:'flex',gap:9,alignItems:'flex-start',padding:'5px 0'}}>
+      <span style={{flexShrink:0,marginTop:1,fontSize:13,color:yes?'#2a6048':'#c2b6a6',fontWeight:700}}>{yes?'✓':'✗'}</span>
+      <span style={{fontFamily:F.body,fontSize:13,lineHeight:1.45,color:yes?C.ink:'#a89a8a'}}>{txt}</span>
+    </div>
+  )
+  const ghostBtn = {
+    marginTop:18, fontFamily:F.display, fontWeight:700, fontSize:14,
+    background:'#fff', color:C.ink, border:'1.5px solid '+C.ink,
+    borderRadius:99, padding:'11px 18px', cursor:loading?'wait':'pointer',
+    opacity:loading?0.55:1, width:'100%'
+  }
+  return(
+    <div>
+      <h3 style={{fontFamily:F.display,fontWeight:700,fontSize:22,color:C.ink,margin:'0 0 4px'}}>Choose your path to LC certification</h3>
+      <p style={{fontFamily:F.body,fontSize:13,color:C.inkMute,margin:'0 0 22px'}}>One-time payment. Lifetime access. Pick the half you need — or get both and save $50.</p>
+
+      <div style={{display:'flex',flexWrap:'wrap',gap:16,marginBottom:16}}>
+
+        {/* T1 — LC Preparation Test */}
+        <div style={card}>
+          <div style={planLabel}>LC Preparation Test</div>
+          <div style={priceRow}><span style={price}>$250</span><span style={priceNote}>one-time</span></div>
+          <p style={{fontFamily:F.body,fontSize:12,color:C.inkMute,margin:'6px 0 16px',lineHeight:1.5}}>For those ready to test their knowledge before exam day.</p>
+          <div style={{borderTop:'1px solid '+C.rule,paddingTop:12}}>
+            {inc('180-question exam-style bank',true)}
+            {inc('Full-length timed practice exam',true)}
+            {inc('Detailed answer explanations',true)}
+            {inc('12 course modules / lessons',false)}
+            {inc('CEU certificate',false)}
+          </div>
+          <button disabled={loading} onClick={()=>startCheckout('t1')} style={ghostBtn}>
+            {checkoutLoading==='t1'?'Opening…':'Get the Test →'}
+          </button>
+        </div>
+
+        {/* T2 — Full Course */}
+        <div style={card}>
+          <div style={planLabel}>Full Course</div>
+          <div style={priceRow}><span style={price}>$395</span><span style={priceNote}>one-time</span></div>
+          <p style={{fontFamily:F.body,fontSize:12,color:C.inkMute,margin:'6px 0 16px',lineHeight:1.5}}>The complete curriculum — everything you need to learn the material.</p>
+          <div style={{borderTop:'1px solid '+C.rule,paddingTop:12}}>
+            {inc('All 12 modules · 74 lessons',true)}
+            {inc('24 CEU contact hours',true)}
+            {inc('Downloadable completion certificate',true)}
+            {inc('180-question bank',false)}
+            {inc('Practice exam',false)}
+          </div>
+          <button disabled={loading} onClick={()=>startCheckout('t2')} style={ghostBtn}>
+            {checkoutLoading==='t2'?'Opening…':'Get the Course →'}
+          </button>
+        </div>
+      </div>
+
+      {/* T3 — bundle, dark, full width */}
+      <div style={{position:'relative',background:C.ink,borderRadius:14,padding:'26px 26px',overflow:'hidden'}}>
+        <div style={{position:'absolute',top:18,right:18,background:C.accent,color:C.ink,fontFamily:F.display,fontWeight:700,fontSize:12,borderRadius:99,padding:'5px 13px'}}>★ Save $50</div>
+        <div style={mono({fontSize:10,letterSpacing:'0.22em',textTransform:'uppercase',color:C.accent,marginBottom:8})}>Best value · Complete package</div>
+        <h3 style={{fontFamily:F.display,fontWeight:700,fontSize:24,color:'#fff',margin:'0 0 6px'}}>Full Course + Exam</h3>
+        <div style={{display:'flex',alignItems:'baseline',gap:10,marginBottom:12}}>
+          <span style={{fontFamily:F.display,fontWeight:700,fontSize:36,color:'#fff',lineHeight:1}}>$595</span>
+          <span style={{fontFamily:F.body,fontSize:13,color:'rgba(249,244,237,0.6)',textDecoration:'line-through'}}>$645 separately</span>
+        </div>
+        <p style={{fontFamily:F.body,fontSize:13,color:'rgba(249,244,237,0.85)',lineHeight:1.6,margin:'0 0 18px',maxWidth:560}}>
+          Everything in both plans: all 12 modules and 74 lessons, 24 CEU contact hours, the completion certificate, the full 180-question bank, and the timed practice exam. The complete path from first lesson to exam-ready.
+        </p>
+        <button disabled={loading} onClick={()=>startCheckout('t3')} style={{
+          fontFamily:F.display,fontWeight:700,fontSize:15,background:C.accent,color:C.ink,
+          border:'none',borderRadius:99,padding:'13px 26px',cursor:loading?'wait':'pointer',opacity:loading?0.55:1
+        }}>
+          {checkoutLoading==='t3'?'Opening…':'Get everything →'}
+        </button>
+      </div>
+
+      {checkoutError && <div style={{marginTop:14,fontFamily:F.body,fontSize:13,color:'#b85835'}}>{checkoutError}</div>}
+    </div>
+  )
+}
+
 /* ── ACCOUNT PAGE ────────────────────────────────────────────── */
 function AccountPage({ user, setUser, setRoute }) {
   const [tab,setTab] = useState("profile")
@@ -3510,13 +3601,7 @@ function AccountPage({ user, setUser, setRoute }) {
             <div style={mono({fontSize:10,letterSpacing:"0.14em",color:"rgba(249,244,237,0.5)",marginBottom:18})}>
               {_pk==='t2'&&user?.examAddon ? 'Active · All 12 modules + practice exam' : planInfo.sub}
             </div>
-            {checkoutError && <div style={{fontFamily:F.body,fontSize:13,color:"#f87171",marginBottom:12}}>{checkoutError}</div>}
             <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
-              {_pk==='free'&&(
-                <button onClick={()=>startCheckout('t3')} disabled={!!checkoutLoading} style={{fontFamily:F.display,fontWeight:600,fontSize:13,background:C.accent,color:"#fff",border:"none",borderRadius:99,padding:"10px 20px",cursor:"pointer",opacity:checkoutLoading?0.7:1}}>
-                  {checkoutLoading==='t3'?'Opening…':'Get Full Course + Exam — $595 →'}
-                </button>
-              )}
               {_pk==='t1'&&(
                 <button onClick={()=>startCheckout('t2')} disabled={!!checkoutLoading} style={{fontFamily:F.display,fontWeight:600,fontSize:13,background:C.accent,color:"#fff",border:"none",borderRadius:99,padding:"10px 20px",cursor:"pointer",opacity:checkoutLoading?0.7:1}}>
                   {checkoutLoading==='t2'?'Opening…':'Add the Full Course — $395 →'}
@@ -3532,6 +3617,7 @@ function AccountPage({ user, setUser, setRoute }) {
               )}
             </div>
           </div>
+          {_pk==='free' && <FreePlanGrid startCheckout={startCheckout} checkoutLoading={checkoutLoading} checkoutError={checkoutError} />}
           {isPaid&&(
             <div style={{background:C.paper,border:`1px solid ${C.rule}`,borderRadius:4,padding:"24px 28px"}}>
               <div style={mono({fontSize:9,letterSpacing:"0.18em",textTransform:"uppercase",color:C.inkMute,marginBottom:10})}>Questions about billing?</div>
