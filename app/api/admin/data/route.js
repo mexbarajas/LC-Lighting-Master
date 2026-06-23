@@ -51,7 +51,7 @@ export async function GET(request) {
   const adminClient = createAdminClient()
 
   // ── Team data ────────────────────────────────────────────────────────
-  const { data: allTeams } = await adminClient
+  const { data: rawTeams } = await adminClient
     .from('teams')
     .select(`
       id, owner_id, tier, seat_count, seats_purchased, plan_type,
@@ -67,11 +67,25 @@ export async function GET(request) {
     `)
     .order('created_at', { ascending: false })
 
+  // Normalize nested Supabase keys to the shape the admin portal expects
+  const allTeams = (rawTeams ?? []).map(t => {
+    const members      = t.team_members  ?? []
+    const allInvites   = t.team_invites  ?? []
+    const pendingInvites = allInvites.filter(i => i.status === 'pending')
+    return {
+      ...t,
+      members,
+      pendingInvites,
+      pendingCount: pendingInvites.length,
+      seatsUsed:    members.length + pendingInvites.length,
+    }
+  })
+
   return Response.json({
     subscriptions:      subscriptions      || [],
     progress:           progress           || [],
     communityQuestions: communityQuestions || 0,
     feedbackCount:      feedbackCount      || 0,
-    teams:              allTeams ?? [],
+    teams:              allTeams,
   })
 }
