@@ -6523,7 +6523,7 @@ function SupportFlags({users,setUsers,onSelectUser}){
 }
 
 /* ── TEAMS ─────────────────────────────────────── */
-function TeamsView({users=[], teams=[], onRefresh=()={}}){
+function TeamsView({users=[], teams=[], onRefresh=()=>{}}){
   const [selectedTeamId, setSelectedTeamId] = useState(null)
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [inviteEmail, setInviteEmail] = useState('')
