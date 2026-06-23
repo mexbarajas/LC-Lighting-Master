@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { TEAM_PER_SEAT } from '@/lib/pricing'
 import PricingCard from '@/components/PricingCard'
 import Certificate from '@/components/Certificate'
+import TeamPortal from './TeamPortal'
 
 const supabase = createClient()
 
@@ -3753,7 +3754,7 @@ function ModuleRow({mod,oddCol,setRoute,completedLessons=new Set()}){
 
 
 
-function Sidebar({route, setRoute, user, onSignOut, bookmarks=new Set(), isMobile=false, sidebarOpen=false, setSidebarOpen=()=>{}, openQuestionCount=0, onAdminClick=()=>{}, isAdmin=false, authReady=false}){
+function Sidebar({route, setRoute, user, onSignOut, bookmarks=new Set(), isMobile=false, sidebarOpen=false, setSidebarOpen=()=>{}, openQuestionCount=0, onAdminClick=()=>{}, isAdmin=false, isTeamAdmin=false, authReady=false}){
 
   const nav = [
     {section:"Library", items:[
@@ -3776,6 +3777,9 @@ function Sidebar({route, setRoute, user, onSignOut, bookmarks=new Set(), isMobil
       {glyph:"○",label:"Settings",route:"account"},
       {glyph:"✉",label:"Feedback",route:"feedback"},
     ]},
+    ...(isTeamAdmin ? [{section:"Team", items:[
+      {glyph:"⊛",label:"Team portal",route:"team-portal"},
+    ]}] : []),
     ...(isAdmin ? [{section:"Admin", items:[
       {glyph:"⚙",label:"Admin portal",route:"admin",action:onAdminClick},
     ]}] : []),
@@ -4998,7 +5002,7 @@ function AppShell({user, setUser, onSignOut, completedLessons=new Set(), markLes
       fontFamily:F.body,background:C.cream}}>
       <style>{`@import url('${FONT_URL}');*{box-sizing:border-box}code{font-family:${F.mono};font-size:0.9em;background:rgba(0,0,0,0.06);padding:1px 5px;border-radius:3px}@keyframes bulbPulse{0%,100%{opacity:1;box-shadow:0 0 0 3px rgba(198,90,58,0.2),0 0 10px 2px rgba(198,90,58,0.4)}50%{opacity:0.7;box-shadow:0 0 0 5px rgba(198,90,58,0.1),0 0 16px 4px rgba(198,90,58,0.25)}}@keyframes wave{from{transform:scaleY(0.4)}to{transform:scaleY(1.2)}}`}</style>
       {showUpgrade && <UpgradeModal user={user} onClose={()=>setShowUpgrade(false)} onRefreshSubscription={onRefreshSubscription}/>}
-      <Sidebar route={route} setRoute={setRoute} user={user} onSignOut={onSignOut} bookmarks={bookmarks} isMobile={isMobile} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} openQuestionCount={openQuestionCount} isAdmin={isAdmin} authReady={authReady} onAdminClick={onAdminClick}/>
+      <Sidebar route={route} setRoute={setRoute} user={user} onSignOut={onSignOut} bookmarks={bookmarks} isMobile={isMobile} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} openQuestionCount={openQuestionCount} isAdmin={isAdmin} isTeamAdmin={teamCtx?.role === 'team_admin'} authReady={authReady} onAdminClick={onAdminClick}/>
       {isMobile && sidebarOpen && (
         <div onClick={()=>setSidebarOpen(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",zIndex:999,backdropFilter:"blur(2px)"}}/>
       )}
@@ -5035,6 +5039,7 @@ function AppShell({user, setUser, onSignOut, completedLessons=new Set(), markLes
           {route==="open-questions"  && <CommunityPage setRoute={setRoute} user={user} userSubscription={user?.plan?{plan:user.plan}:null} initialFilter="open"/>}
           {route==="trends"    && <TrendsPage setRoute={setRoute}/>}
           {route==="feedback"  && <FeedbackPage user={user} userSubscription={user?.plan ? {plan:user.plan} : null}/>}
+          {route==="team-portal" && user?.plan==="team_admin" && <TeamPortal />}
           {lessonRef && <LessonPage lessonRef={lessonRef} setRoute={setRoute} user={user} setShowUpgrade={setShowUpgrade} completedLessons={completedLessons} markLessonComplete={markLessonComplete} bookmarks={bookmarks} toggleBookmark={toggleBookmark} isMobile={isMobile}/>}
         </ErrorBoundary>
       </main>
