@@ -48,36 +48,30 @@ export async function GET(request) {
     return new Response(JSON.stringify({ error: 'Database error' }), { status: 500 })
   }
 
-  const admin = createAdminClient()
-  const { data: teams } = await admin
-    .from('teams')
-    .select('id, owner_id, tier, seat_count, access_expiry, created_at')
-    .order('created_at', { ascending: false })
-  const { data: tmembers } = await admin
-    .from('team_members')
-    .select('team_id, user_id, role, display_name, email')
-  const { data: tinvites } = await admin
-    .from('team_invites')
-    .select('id, team_id, email, status')
-    .eq('status', 'pending')
+  const adminClient = createAdminClient()
 
-  const teamsWithMembers = (teams || []).map(t => {
-    const members = (tmembers || []).filter(m => m.team_id === t.id)
-    const pending = (tinvites || []).filter(i => i.team_id === t.id)
-    return {
-      ...t,
-      members,
-      pendingInvites: pending,
-      pendingCount: pending.length,
-      seatsUsed: members.length + pending.length,
-    }
-  })
+  // ── Team data ────────────────────────────────────────────────────────
+  const { data: allTeams } = await adminClient
+    .from('teams')
+    .select(`
+      id, owner_id, tier, seat_count, seats_purchased, plan_type,
+      price_per_seat, total_team_price, access_expiry, stripe_ref, created_at,
+      team_members (
+        id, user_id, email, display_name, role, status, license_type,
+        has_exam_access, exam_access_source, member_exam_add_on_paid,
+        joined_at, deactivated_at
+      ),
+      team_invites (
+        id, email, status, invited_at, expires_at
+      )
+    `)
+    .order('created_at', { ascending: false })
 
   return Response.json({
     subscriptions:      subscriptions      || [],
     progress:           progress           || [],
     communityQuestions: communityQuestions || 0,
     feedbackCount:      feedbackCount      || 0,
-    teams:              teamsWithMembers,
+    teams:              allTeams ?? [],
   })
 }

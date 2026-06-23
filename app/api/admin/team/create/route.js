@@ -19,8 +19,9 @@ export async function POST(req) {
     if (!ownerUserId) return new Response('Missing ownerUserId', { status: 400 })
 
     // Validate plan type
-    if (!TEAM_PLAN_TYPES[planType]) {
-      return new Response(`Invalid planType. Use: ${Object.keys(TEAM_PLAN_TYPES).join(' | ')}`, { status: 400 })
+    const validPlanTypes = ['course_only', 'course_exam']
+    if (!validPlanTypes.includes(planType)) {
+      return new Response(`Invalid planType. Use: ${validPlanTypes.join(' | ')}`, { status: 400 })
     }
 
     // Validate seat count
