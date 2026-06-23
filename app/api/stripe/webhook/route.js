@@ -4,20 +4,50 @@
 //   ✅ charge.refunded             (ADD THIS)
 //   ✅ charge.dispute.created      (ADD THIS)
 
-// CRITICAL: Add unique constraint on stripe_payment_intent in Supabase SQL Editor:
-// ALTER TABLE public.subscriptions
-//   ADD CONSTRAINT uq_stripe_payment_intent UNIQUE (stripe_payment_intent)
-//     WHERE stripe_payment_intent IS NOT NULL;
-// This prevents race condition where two concurrent webhooks create duplicate subscriptions.
-
-// Run in Supabase SQL Editor if not already present:
+// CRITICAL: Run these in Supabase SQL Editor before deploying:
+//
+// 1. subscriptions table — base columns
 // ALTER TABLE public.subscriptions
 //   ADD COLUMN IF NOT EXISTS seats integer DEFAULT 1,
 //   ADD COLUMN IF NOT EXISTS stripe_payment_intent text,
 //   ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now(),
 //   ADD COLUMN IF NOT EXISTS email text;
 //
-// To show real emails in admin Recent Signups, also run:
+// 2. Unique constraint to prevent duplicate webhook processing
+// ALTER TABLE public.subscriptions
+//   ADD CONSTRAINT uq_stripe_payment_intent UNIQUE (stripe_payment_intent)
+//     WHERE stripe_payment_intent IS NOT NULL;
+//
+// 3. teams table — team plan type + pricing columns
+// ALTER TABLE public.teams
+//   ADD COLUMN IF NOT EXISTS plan_type text CHECK (plan_type IN ('course_only','course_exam')) DEFAULT 'course_exam',
+//   ADD COLUMN IF NOT EXISTS price_per_seat integer,
+//   ADD COLUMN IF NOT EXISTS seats_purchased integer,
+//   ADD COLUMN IF NOT EXISTS total_team_price integer;
+//
+// 4. team_members table — per-seat license columns
+// ALTER TABLE public.team_members
+//   ADD COLUMN IF NOT EXISTS license_type text CHECK (license_type IN ('course_only','course_exam')) DEFAULT 'course_exam',
+//   ADD COLUMN IF NOT EXISTS has_exam_access boolean DEFAULT false,
+//   ADD COLUMN IF NOT EXISTS exam_access_source text CHECK (exam_access_source IN ('team_purchase','member_add_on','none')) DEFAULT 'none',
+//   ADD COLUMN IF NOT EXISTS member_exam_add_on_paid boolean DEFAULT false,
+//   ADD COLUMN IF NOT EXISTS member_exam_add_on_payment_id text;
+//
+// 5. Migration: map existing records to the new model
+// UPDATE public.teams SET plan_type = 'course_exam' WHERE plan_type IS NULL;
+// UPDATE public.team_members
+//   SET license_type = 'course_exam', has_exam_access = true, exam_access_source = 'team_purchase'
+//   WHERE license_type IS NULL;
+//
+// 6. Indexes for lookup performance
+// CREATE INDEX IF NOT EXISTS idx_subscriptions_email
+//   ON public.subscriptions(email) WHERE email IS NOT NULL;
+// CREATE INDEX IF NOT EXISTS idx_subscriptions_customer
+//   ON public.subscriptions(stripe_customer_id) WHERE stripe_customer_id IS NOT NULL;
+// CREATE INDEX IF NOT EXISTS idx_subscriptions_payment
+//   ON public.subscriptions(stripe_payment_intent) WHERE stripe_payment_intent IS NOT NULL;
+//
+// 7. Auth trigger to auto-create free subscription on signup
 // CREATE OR REPLACE FUNCTION public.handle_new_user()
 // RETURNS trigger AS $$
 // BEGIN
@@ -31,39 +61,27 @@
 // CREATE OR REPLACE TRIGGER on_auth_user_created
 //   AFTER INSERT ON auth.users
 //   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
-//
-// Verify:
-// SELECT column_name, data_type
-// FROM information_schema.columns
-// WHERE table_name = 'subscriptions';
-//
-// Run in Supabase SQL Editor to speed up refund lookups:
-// CREATE INDEX IF NOT EXISTS idx_subscriptions_email
-//   ON public.subscriptions(email)
-//   WHERE email IS NOT NULL;
-//
-// CREATE INDEX IF NOT EXISTS idx_subscriptions_customer
-//   ON public.subscriptions(stripe_customer_id)
-//   WHERE stripe_customer_id IS NOT NULL;
-//
-// CREATE INDEX IF NOT EXISTS idx_subscriptions_payment
-//   ON public.subscriptions(stripe_payment_intent)
-//   WHERE stripe_payment_intent IS NOT NULL;
 
 import Stripe from 'stripe'
 import { createServiceClient } from '@/lib/supabase/service'
-import { PLANS, getTeamPerSeat } from '@/lib/pricing'
+import {
+  PLANS,
+  TEAM_PLAN_TYPES,
+  TEAM_MEMBER_EXAM_ADD_ON_PRICE,
+  getTeamPerSeat,
+  MIN_TEAM_SEATS,
+} from '@/lib/pricing'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
-const VALID_PLANS = ['t1', 't2', 't3', 'team', 'exam_addon']
+const VALID_PLANS = ['t1', 't2', 't3', 'team', 'exam_addon', 'team_member_exam_addon']
 
 export async function POST(request) {
   const body = await request.text()
   if (body.length > 65536) {
     return new Response('Payload too large', { status: 413 })
   }
-  const sig  = request.headers.get('stripe-signature')
+  const sig = request.headers.get('stripe-signature')
 
   let event
   try {
@@ -77,22 +95,23 @@ export async function POST(request) {
     const session = event.data.object
 
     console.log('WEBHOOK checkout.session.completed', {
-      user_id: session.metadata?.user_id,
+      user_id:        session.metadata?.user_id,
       customer_email: session.customer_details?.email,
-      customer: session.customer,
+      customer:       session.customer,
       payment_intent: session.payment_intent,
-      amount: session.amount_total,
-      plan: session.metadata?.plan,
+      amount:         session.amount_total,
+      plan:           session.metadata?.plan,
+      plan_type:      session.metadata?.plan_type,
     })
 
-    // Only process paid sessions
     if (session.payment_status !== 'paid') {
       return new Response('Skipped — not paid', { status: 200 })
     }
 
-    let userId = session.metadata?.user_id
-    const plan   = session.metadata?.plan
-    const seats  = parseInt(session.metadata?.seats || '1')
+    let userId    = session.metadata?.user_id
+    const plan    = session.metadata?.plan
+    const planType = session.metadata?.plan_type || null  // populated for team plans
+    const seats   = parseInt(session.metadata?.seats || '1')
 
     if (!plan) {
       console.error('Webhook missing plan metadata:', session.metadata)
@@ -119,27 +138,34 @@ export async function POST(request) {
 
     if (!userId) {
       console.error('Webhook: could not resolve user_id', {
-        metadata: session.metadata,
+        metadata:         session.metadata,
         customer_details: session.customer_details,
       })
       return new Response('Missing metadata', { status: 400 })
     }
 
-    // VALIDATION: Plan must be in VALID_PLANS
     if (!VALID_PLANS.includes(plan)) {
       console.error('Invalid plan in webhook:', plan)
       return new Response('Invalid plan', { status: 400 })
     }
 
-    // VALIDATION: Verify amount_total matches expected plan price
+    // ── AMOUNT VALIDATION ──────────────────────────────────────
     let expectedAmount
     if (plan === 'team') {
-      if (seats < 5 || seats >= 11 || isNaN(seats)) {
+      if (seats < MIN_TEAM_SEATS || seats >= 11 || isNaN(seats)) {
         console.error('Invalid seat count in webhook:', seats)
         return new Response('Invalid seat count', { status: 400 })
       }
-      const tier = getTeamPerSeat(seats)
-      expectedAmount = tier.perSeat * seats * 100 // Convert to cents
+      if (planType && TEAM_PLAN_TYPES[planType]) {
+        // New pricing model (June 2026+)
+        expectedAmount = TEAM_PLAN_TYPES[planType].perSeat * seats * 100
+      } else {
+        // Legacy: orders without plan_type in metadata — use old $360/seat tier
+        const tier = getTeamPerSeat(seats)
+        expectedAmount = tier.perSeat * seats * 100
+      }
+    } else if (plan === 'team_member_exam_addon') {
+      expectedAmount = TEAM_MEMBER_EXAM_ADD_ON_PRICE * 100
     } else {
       const planData = PLANS[plan]
       if (!planData) {
@@ -152,9 +178,10 @@ export async function POST(request) {
     if (session.amount_total !== expectedAmount) {
       console.error('Amount mismatch in webhook:', {
         plan,
+        planType,
         seats,
         expected: expectedAmount,
-        actual: session.amount_total,
+        actual:   session.amount_total,
         customer: session.customer,
       })
       return new Response('Amount mismatch', { status: 400 })
@@ -162,30 +189,34 @@ export async function POST(request) {
 
     // Access expiry = December 31 of current year.
     // If purchased after Nov 1, extend to Dec 31 next year.
-    const now = new Date()
+    const now    = new Date()
     const expiry = new Date(now.getFullYear(), 11, 31, 23, 59, 59)
     if (now.getMonth() >= 10) {
       expiry.setFullYear(expiry.getFullYear() + 1)
     }
 
-    // IDEMPOTENCY: Explicit pre-check — only skip if this payment_intent already
-    // wrote a real (non-free) plan. A null payment_intent row from the auth trigger
-    // must NOT be treated as already processed.
+    // IDEMPOTENCY: skip if this payment_intent was already processed (non-free plan)
     if (session.payment_intent) {
       const { data: existing } = await supabase
         .from('subscriptions')
         .select('stripe_payment_intent, plan')
         .eq('stripe_payment_intent', session.payment_intent)
         .maybeSingle()
-
       if (existing && existing.stripe_payment_intent && existing.plan !== 'free') {
         console.log(`Duplicate webhook ignored — payment already processed: ${session.payment_intent}`)
         return new Response('Already processed', { status: 200 })
       }
     }
 
-    // Upsert on user_id — always updates the existing row (including free-plan rows
-    // created by the auth trigger) rather than trying to insert a duplicate.
+    // Determine exam_addon value for the subscription upsert
+    let examAddon = false
+    if (plan === 'exam_addon' || plan === 'team_member_exam_addon') {
+      examAddon = true
+    } else if (plan === 'team' && planType && TEAM_PLAN_TYPES[planType]) {
+      examAddon = TEAM_PLAN_TYPES[planType].hasExam
+    }
+
+    // ── UPSERT SUBSCRIPTION ────────────────────────────────────
     const { error: upsertErr } = await supabase
       .from('subscriptions')
       .upsert({
@@ -197,7 +228,7 @@ export async function POST(request) {
         email:                 session.customer_details?.email || session.customer_email || null,
         current_period_end:    expiry.toISOString(),
         seats:                 plan === 'team' ? seats : 1,
-        exam_addon:            plan === 'exam_addon' ? true : false,
+        exam_addon:            examAddon,
         is_admin:              false,
         updated_at:            new Date().toISOString(),
       }, { onConflict: 'user_id' })
@@ -207,18 +238,124 @@ export async function POST(request) {
       return new Response('Database error', { status: 500 })
     }
 
+    // ── POST-PAYMENT SIDE EFFECTS ──────────────────────────────
+
+    if (plan === 'team') {
+      const teamPlan = planType && TEAM_PLAN_TYPES[planType] ? TEAM_PLAN_TYPES[planType] : null
+      const hasExam  = teamPlan?.hasExam ?? true
+      const perSeat  = teamPlan?.perSeat ?? null
+
+      // Check if user already has a team (e.g. admin refreshing/upgrading)
+      const { data: existingMembership } = await supabase
+        .from('team_members')
+        .select('team_id, role')
+        .eq('user_id', userId)
+        .maybeSingle()
+
+      if (existingMembership) {
+        // Update existing team record with new plan_type and pricing
+        const { error: teamUpdErr } = await supabase
+          .from('teams')
+          .update({
+            ...(planType ? { plan_type: planType } : {}),
+            ...(perSeat  ? { price_per_seat: perSeat, seats_purchased: seats, total_team_price: perSeat * seats } : {}),
+            seat_count: seats,
+          })
+          .eq('id', existingMembership.team_id)
+        if (teamUpdErr) console.error('Webhook: team update error:', teamUpdErr)
+
+        // Update all current team members' license info
+        if (planType) {
+          const { error: membersUpdErr } = await supabase
+            .from('team_members')
+            .update({
+              license_type:       planType,
+              has_exam_access:    hasExam,
+              exam_access_source: hasExam ? 'team_purchase' : 'none',
+            })
+            .eq('team_id', existingMembership.team_id)
+          if (membersUpdErr) console.error('Webhook: team_members license update error:', membersUpdErr)
+        }
+      } else {
+        // Self-service: create team + set purchaser as team_admin
+        const { data: subData } = await supabase
+          .from('subscriptions')
+          .select('email')
+          .eq('user_id', userId)
+          .maybeSingle()
+        const ownerEmail = subData?.email || session.customer_details?.email || ''
+        const domain     = ownerEmail.includes('@') ? ownerEmail.split('@')[1].split('.')[0] : null
+        const teamName   = domain
+          ? domain.charAt(0).toUpperCase() + domain.slice(1) + ' Team'
+          : 'New Team'
+
+        const { data: newTeam, error: teamInsErr } = await supabase
+          .from('teams')
+          .insert({
+            name:              teamName,
+            owner_id:          userId,
+            tier:              hasExam ? 't3' : 't2',
+            plan_type:         planType || 'course_exam',
+            seat_count:        seats,
+            seats_purchased:   seats,
+            price_per_seat:    perSeat,
+            total_team_price:  perSeat ? perSeat * seats : null,
+            access_expiry:     expiry.toISOString(),
+          })
+          .select('id')
+          .single()
+
+        if (teamInsErr || !newTeam) {
+          console.error('Webhook: team create error:', teamInsErr)
+        } else {
+          const { error: memberInsErr } = await supabase
+            .from('team_members')
+            .insert({
+              team_id:           newTeam.id,
+              user_id:           userId,
+              role:              'team_admin',
+              license_type:      planType || 'course_exam',
+              has_exam_access:   hasExam,
+              exam_access_source: hasExam ? 'team_purchase' : 'none',
+            })
+          if (memberInsErr) console.error('Webhook: team_admin member insert error:', memberInsErr)
+
+          // Also update the subscription plan to team_admin
+          await supabase
+            .from('subscriptions')
+            .update({ plan: 'team_admin' })
+            .eq('user_id', userId)
+        }
+      }
+    }
+
+    if (plan === 'team_member_exam_addon') {
+      // Grant exam access in team_members — this is the authoritative server-side grant
+      const { error: addonErr } = await supabase
+        .from('team_members')
+        .update({
+          has_exam_access:             true,
+          exam_access_source:          'member_add_on',
+          member_exam_add_on_paid:     true,
+          member_exam_add_on_payment_id: session.payment_intent || null,
+        })
+        .eq('user_id', userId)
+      if (addonErr) console.error('Webhook: team_member exam addon update error:', addonErr)
+    }
+
     console.log('✓ Webhook processed:', {
       userId,
       plan,
+      planType,
       seats,
-      customer: session.customer,
+      customer:      session.customer,
       paymentIntent: session.payment_intent,
     })
   }
 
-  // ── REFUND HANDLER ────────────────────────────────────
+  // ── REFUND HANDLER ─────────────────────────────────────────
   if (event.type === 'charge.refunded') {
-    const charge = event.data.object
+    const charge       = event.data.object
     const isFullRefund = charge.amount_refunded >= charge.amount
 
     console.log('Refund event:', {
@@ -234,8 +371,8 @@ export async function POST(request) {
       return new Response('Partial refund — no action', { status: 200 })
     }
 
-    const supabase = createServiceClient()
-    let updated = false
+    const supabase    = createServiceClient()
+    let updated       = false
     const revokePayload = {
       plan:               'free',
       status:             'refunded',
@@ -289,7 +426,7 @@ export async function POST(request) {
         }
       } else if (candidates && candidates.length > 1) {
         console.warn('⚠ Refund: email match is ambiguous (multiple users), skipping email lookup', {
-          email: charge.receipt_email,
+          email:   charge.receipt_email,
           matches: candidates.length,
         })
       }
@@ -306,9 +443,9 @@ export async function POST(request) {
     }
   }
 
-  // ── DISPUTE / CHARGEBACK HANDLER ─────────────────────
+  // ── DISPUTE / CHARGEBACK HANDLER ────────────────────────────
   if (event.type === 'charge.dispute.created') {
-    const dispute = event.data.object
+    const dispute    = event.data.object
     const customerId = dispute.customer
 
     if (customerId) {

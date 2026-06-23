@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
+import { TEAM_PLAN_TYPES } from '@/lib/pricing'
 import { NextResponse } from 'next/server'
 
 const ADMIN_EMAIL = 'admin@luxartmedia.com'
@@ -14,8 +15,13 @@ export async function POST(req) {
 
     let body
     try { body = await req.json() } catch { body = {} }
-    const { ownerUserId, seatCount } = body
+    const { ownerUserId, seatCount, planType = 'course_exam' } = body
     if (!ownerUserId) return new Response('Missing ownerUserId', { status: 400 })
+
+    // Validate plan type
+    if (!TEAM_PLAN_TYPES[planType]) {
+      return new Response(`Invalid planType. Use: ${Object.keys(TEAM_PLAN_TYPES).join(' | ')}`, { status: 400 })
+    }
 
     // Validate seat count
     let seats = 0
@@ -48,16 +54,22 @@ export async function POST(req) {
         ownerEmail.split('@')[1].split('.')[0].slice(1) + ' Team'
       : 'New Team'
 
-    const accessExpiry = new Date(new Date().getFullYear(), 11, 31).toISOString()
+    const accessExpiry   = new Date(new Date().getFullYear(), 11, 31).toISOString()
+    const hasExam        = TEAM_PLAN_TYPES[planType].hasExam
+    const pricePerSeat   = TEAM_PLAN_TYPES[planType].perSeat
 
     const { data: team, error: teamErr } = await admin
       .from('teams')
       .insert({
-        name: teamName,
-        owner_id: ownerUserId,
-        tier: 't2',
-        seat_count: Number(seatCount),
-        access_expiry: accessExpiry,
+        name:            teamName,
+        owner_id:        ownerUserId,
+        tier:            hasExam ? 't3' : 't2',
+        plan_type:       planType,
+        seat_count:      seats,
+        seats_purchased: seats,
+        price_per_seat:  pricePerSeat,
+        total_team_price: pricePerSeat * seats,
+        access_expiry:   accessExpiry,
       })
       .select('id')
       .single()
@@ -69,7 +81,14 @@ export async function POST(req) {
 
     const { error: memberErr } = await admin
       .from('team_members')
-      .insert({ team_id: team.id, user_id: ownerUserId, role: 'team_admin' })
+      .insert({
+        team_id:           team.id,
+        user_id:           ownerUserId,
+        role:              'team_admin',
+        license_type:      planType,
+        has_exam_access:   hasExam,
+        exam_access_source: hasExam ? 'team_purchase' : 'none',
+      })
 
     if (memberErr) {
       console.error('[admin/team/create] member insert error:', memberErr)
@@ -80,7 +99,7 @@ export async function POST(req) {
     await admin
       .from('subscriptions')
       .upsert(
-        { user_id: ownerUserId, plan: 'team_admin', status: 'active' },
+        { user_id: ownerUserId, plan: 'team_admin', status: 'active', exam_addon: hasExam },
         { onConflict: 'user_id' }
       )
 

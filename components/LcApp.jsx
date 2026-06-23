@@ -12,10 +12,12 @@ async function loadTeamContext() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { onTeam: false }
   const { data: membership } = await supabase
-    .from('team_members').select('team_id, role').eq('user_id', user.id).maybeSingle()
+    .from('team_members')
+    .select('team_id, role, license_type, has_exam_access, member_exam_add_on_paid')
+    .eq('user_id', user.id).maybeSingle()
   if (!membership) return { onTeam: false }
   const { data: team } = await supabase
-    .from('teams').select('id, name, tier, seat_count, access_expiry, owner_id').eq('id', membership.team_id).single()
+    .from('teams').select('id, name, tier, plan_type, seat_count, access_expiry, owner_id').eq('id', membership.team_id).single()
   const { data: members } = await supabase.rpc('team_member_progress')
   const { data: invites } = await supabase
     .from('team_invites').select('id, email, status, invited_at, expires_at')
@@ -29,6 +31,11 @@ async function loadTeamContext() {
     seatsUsed: (members?.length || 0) + (invites?.length || 0),
     seatsTotal: team?.seat_count || 0,
     accessActive,
+    myLicense: {
+      licenseType:        membership.license_type || 'course_exam',
+      hasExamAccess:      membership.has_exam_access || false,
+      memberExamAddOnPaid: membership.member_exam_add_on_paid || false,
+    },
   }
 }
 
@@ -953,12 +960,16 @@ function ExamSection({onSignUp}){
 
 /* ── PRICING ── */
 function Pricing({onSignUp}){
-  const T1_PRICE = 250, T2_PRICE = 395, T3_PRICE = 595, TEAM_PER_SEAT = 360
+  const T1_PRICE = 250, T2_PRICE = 395, T3_PRICE = 595
+  const TEAM_COURSE_ONLY = 349, TEAM_COURSE_EXAM = 450
 
   const [seats, setSeats] = useState(5)
+  const [teamPlanType, setTeamPlanType] = useState('course_exam')
   const teamContactUs = seats >= 11
-  const teamTotal = teamContactUs ? null : seats * TEAM_PER_SEAT
-  const teamSavings = teamContactUs ? null : seats * T3_PRICE - teamTotal
+  const teamPerSeat   = teamPlanType === 'course_only' ? TEAM_COURSE_ONLY : TEAM_COURSE_EXAM
+  const teamRefPrice  = teamPlanType === 'course_only' ? T2_PRICE : T3_PRICE
+  const teamTotal     = teamContactUs ? null : seats * teamPerSeat
+  const teamSavings   = teamContactUs ? null : seats * teamRefPrice - teamTotal
 
   const [teamTab, setTeamTab] = useState("individual")
 
@@ -1017,7 +1028,7 @@ function Pricing({onSignUp}){
                 {label}
                 {val==="team"&&<span style={{marginLeft:8,background:C.forest,color:"#fff",
                   fontFamily:F.mono,fontSize:9,fontWeight:700,letterSpacing:"0.08em",
-                  padding:"2px 7px",borderRadius:99}}>Save 39%+</span>}
+                  padding:"2px 7px",borderRadius:99}}>Team pricing</span>}
               </button>
             ))}
           </div>
@@ -1160,23 +1171,35 @@ function Pricing({onSignUp}){
                   </div>
                 </div>
 
-                {/* Pricing tiers legend */}
-                <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:24}}>
-                  {[
-                    {range:"5–10 seats",price:"$360/seat",active:seats<=10},
-                    {range:"11+ seats",price:"Contact us",active:seats>=11},
-                  ].map(tier=>(
-                    <div key={tier.range} style={{display:"flex",alignItems:"center",
-                      justifyContent:"space-between",padding:"6px 10px",borderRadius:6,
-                      background:tier.active?"rgba(198,90,58,0.2)":"rgba(255,255,255,0.03)",
-                      border:`1px solid ${tier.active?C.accent+"60":"rgba(255,255,255,0.06)"}`,
-                      transition:"all 0.2s"}}>
-                      <span style={{fontFamily:F.mono,fontSize:11,
-                        color:tier.active?"#fff":"rgba(249,244,237,0.4)"}}>{tier.range}</span>
-                      <span style={{fontFamily:F.display,fontWeight:700,fontSize:13,
-                        color:tier.active?C.accent:"rgba(249,244,237,0.3)"}}>{tier.price}</span>
-                    </div>
-                  ))}
+                {/* Plan type selector */}
+                <div style={{marginBottom:20}}>
+                  <div style={{fontFamily:F.mono,fontSize:9,letterSpacing:"0.18em",textTransform:"uppercase",color:"rgba(249,244,237,0.38)",marginBottom:10}}>Plan type</div>
+                  <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                    {[
+                      {type:"course_exam",label:"Course + Exam",price:`$${TEAM_COURSE_EXAM}/seat`,desc:"Exam included for every member"},
+                      {type:"course_only",label:"Course Only",price:`$${TEAM_COURSE_ONLY}/seat`,desc:"Members can add exam access for $99"},
+                    ].map(opt=>(
+                      <div key={opt.type} onClick={()=>setTeamPlanType(opt.type)}
+                        style={{display:"flex",alignItems:"center",justifyContent:"space-between",
+                          padding:"10px 12px",borderRadius:8,cursor:"pointer",
+                          background:teamPlanType===opt.type?"rgba(198,90,58,0.18)":"rgba(255,255,255,0.03)",
+                          border:`1px solid ${teamPlanType===opt.type?C.accent+"70":"rgba(255,255,255,0.08)"}`,
+                          transition:"all 0.15s"}}>
+                        <div>
+                          <div style={{fontFamily:F.display,fontWeight:600,fontSize:13,
+                            color:teamPlanType===opt.type?"#fff":"rgba(249,244,237,0.55)"}}>{opt.label}</div>
+                          <div style={{fontFamily:F.mono,fontSize:10,color:"rgba(249,244,237,0.32)",marginTop:2}}>{opt.desc}</div>
+                        </div>
+                        <div style={{display:"flex",alignItems:"center",gap:8}}>
+                          <span style={{fontFamily:F.display,fontWeight:700,fontSize:13,
+                            color:teamPlanType===opt.type?C.accent:"rgba(249,244,237,0.38)"}}>{opt.price}</span>
+                          <div style={{width:13,height:13,borderRadius:"50%",flexShrink:0,
+                            border:`2px solid ${teamPlanType===opt.type?C.accent:"rgba(255,255,255,0.22)"}`,
+                            background:teamPlanType===opt.type?C.accent:"transparent"}}/>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
                 {!teamContactUs?(
@@ -1186,7 +1209,7 @@ function Pricing({onSignUp}){
                       fontWeight:700,fontSize:14,cursor:"pointer",transition:"opacity 0.15s"}}
                     onMouseEnter={e=>e.currentTarget.style.opacity="0.88"}
                     onMouseLeave={e=>e.currentTarget.style.opacity="1"}>
-                    Start team plan — ${teamTotal?.toLocaleString()} →
+                    {teamPlanType==="course_only"?"Course Only":"Course + Exam"} — {seats} seats · ${teamTotal?.toLocaleString()} →
                   </button>
                 ):(
                   <a href="mailto:admin@luxartmedia.com?subject=Team%20Plan%20Inquiry"
@@ -1206,20 +1229,23 @@ function Pricing({onSignUp}){
                 <div style={{fontFamily:F.mono,fontSize:9,letterSpacing:"0.22em",
                   textTransform:"uppercase",color:C.inkMute,marginBottom:6}}>What's included</div>
                 <div style={{fontFamily:F.display,fontWeight:700,fontSize:16,color:C.ink,marginBottom:20}}>
-                  Every seat gets everything.
+                  {teamPlanType==="course_only"?"What every seat includes.":"Every seat gets everything."}
                 </div>
 
-                {/* Per-member access */}
+                {/* Per-member access — varies by plan type */}
                 <div style={{marginBottom:20}}>
                   <div style={{fontFamily:F.display,fontWeight:600,fontSize:12,
                     color:C.inkMute,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:10}}>
                     Per member
                   </div>
-                  {["All 12 modules · 74 lessons","Audio narration every lesson","LC practice exam · 50 questions","Unlimited exam attempts","Bookmarks, notes & progress tracking","Certificate of completion","24 CEU credit hours"].map((item,i,arr)=>(
+                  {(teamPlanType==="course_only"
+                    ? ["All 12 modules · 74 lessons","Audio narration every lesson","Bookmarks, notes & progress tracking","Certificate of completion","24 CEU credit hours","Exam add-on available for $99/member"]
+                    : ["All 12 modules · 74 lessons","Audio narration every lesson","LC practice exam · 180 questions","Up to 5 exam attempts","Bookmarks, notes & progress tracking","Certificate of completion","24 CEU credit hours"]
+                  ).map((item,i,arr)=>(
                     <div key={i} style={{display:"flex",alignItems:"flex-start",gap:8,padding:"5px 0",
                       borderBottom:i<arr.length-1?`1px solid ${C.rule}`:"none"}}>
-                      <span style={{color:C.forest,fontSize:12,flexShrink:0}}>✓</span>
-                      <span style={{fontFamily:F.display,fontSize:13,color:C.inkSoft,lineHeight:1.5}}>{item}</span>
+                      <span style={{color:teamPlanType==="course_only"&&i===arr.length-1?C.inkMute:C.forest,fontSize:12,flexShrink:0}}>{teamPlanType==="course_only"&&i===arr.length-1?"↳":"✓"}</span>
+                      <span style={{fontFamily:F.display,fontSize:13,color:teamPlanType==="course_only"&&i===arr.length-1?C.inkMute:C.inkSoft,lineHeight:1.5,fontStyle:teamPlanType==="course_only"&&i===arr.length-1?"italic":"normal"}}>{item}</span>
                     </div>
                   ))}
                 </div>
@@ -1245,12 +1271,12 @@ function Pricing({onSignUp}){
                     border:`1px solid ${C.forest}`,borderRadius:10,padding:"14px 16px"}}>
                     <div style={{fontFamily:F.display,fontWeight:700,fontSize:13,
                       color:C.forest,marginBottom:4}}>
-                      vs. {seats} individual Full Course + Exam plans
+                      vs. {seats} individual {teamPlanType==="course_only"?"Full Course":"Full Course + Exam"} plans
                     </div>
                     <div style={{display:"flex",alignItems:"baseline",gap:10}}>
                       <span style={{fontFamily:F.mono,fontSize:11,
                         color:C.inkMute,textDecoration:"line-through"}}>
-                        ${(seats*T3_PRICE).toLocaleString()}
+                        ${(seats*teamRefPrice).toLocaleString()}
                       </span>
                       <span style={{fontFamily:F.display,fontWeight:700,fontSize:18,color:C.forest}}>
                         ${teamTotal?.toLocaleString()}
@@ -3437,6 +3463,19 @@ function AccountPage({ user, setUser, setRoute }) {
   const [pwMsg,setPwMsg] = useState('')
   const [checkoutLoading,setCheckoutLoading] = useState(null)
   const [checkoutError,setCheckoutError] = useState(null)
+  const [teamMemberLicense,setTeamMemberLicense] = useState(null)
+
+  useEffect(() => {
+    if ((user?.plan === 'team_member') && tab === 'billing') {
+      supabase.auth.getUser().then(({ data: { user: au } }) => {
+        if (!au) return
+        supabase.from('team_members')
+          .select('license_type, has_exam_access, member_exam_add_on_paid')
+          .eq('user_id', au.id).maybeSingle()
+          .then(({ data }) => setTeamMemberLicense(data))
+      })
+    }
+  }, [user?.plan, tab])
 
   useEffect(() => {
     ;(async () => {
@@ -3497,14 +3536,14 @@ function AccountPage({ user, setUser, setRoute }) {
     }
   }
 
-  async function startCheckout(plan) {
+  async function startCheckout(plan, opts = {}) {
     setCheckoutLoading(plan)
     setCheckoutError(null)
     try {
       const res = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan }),
+        body: JSON.stringify({ plan, ...opts }),
       })
       const data = await res.json()
       if (data.url) { window.location.href = data.url }
@@ -3613,7 +3652,22 @@ function AccountPage({ user, setUser, setRoute }) {
                 </button>
               )}
               {(_pk==='t3'||_pk==='team')&&(
-                <div style={{fontFamily:F.body,fontSize:13,color:"rgba(249,244,237,0.7)",lineHeight:1.6}}>✓ You have full access to all course content and the practice exam.</div>
+                <>
+                  {planKey==='team_member'&&teamMemberLicense?.license_type==='course_only'&&!teamMemberLicense?.has_exam_access?(
+                    <div style={{fontFamily:F.body,fontSize:13,color:"rgba(249,244,237,0.8)",lineHeight:1.7}}>
+                      Because you are part of a team license, you can add exam access for $99.
+                      <div style={{marginTop:10}}>
+                        <button onClick={()=>startCheckout('team_member_exam_addon')} disabled={!!checkoutLoading}
+                          style={{fontFamily:F.display,fontWeight:700,fontSize:13,background:C.accent,color:"#fff",
+                            border:"none",borderRadius:99,padding:"10px 20px",cursor:"pointer",opacity:checkoutLoading?0.7:1}}>
+                          {checkoutLoading==='team_member_exam_addon'?'Opening…':'Add Exam Access — $99 →'}
+                        </button>
+                      </div>
+                    </div>
+                  ):(
+                    <div style={{fontFamily:F.body,fontSize:13,color:"rgba(249,244,237,0.7)",lineHeight:1.6}}>✓ You have full access to all course content and the practice exam.</div>
+                  )}
+                </>
               )}
             </div>
           </div>

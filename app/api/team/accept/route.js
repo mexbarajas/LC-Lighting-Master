@@ -55,9 +55,32 @@ export async function POST(req) {
 
     if (existingMember) return new Response('Already a team member', { status: 409 })
 
+    // Fetch team's plan_type to set the correct license on the new member
+    const { data: team } = await admin
+      .from('teams')
+      .select('plan_type, access_expiry')
+      .eq('id', invite.team_id)
+      .maybeSingle()
+
+    // Default to course_exam for teams created before June 2026 (no plan_type set)
+    const licenseType = team?.plan_type || 'course_exam'
+    const hasExam     = licenseType === 'course_exam'
+
+    // Verify team access hasn't expired
+    if (team?.access_expiry && new Date(team.access_expiry) < new Date()) {
+      return new Response('This team license has expired.', { status: 403 })
+    }
+
     const { error: memberErr } = await admin
       .from('team_members')
-      .insert({ team_id: invite.team_id, user_id: user.id, role: 'team_member' })
+      .insert({
+        team_id:           invite.team_id,
+        user_id:           user.id,
+        role:              'team_member',
+        license_type:      licenseType,
+        has_exam_access:   hasExam,
+        exam_access_source: hasExam ? 'team_purchase' : 'none',
+      })
 
     if (memberErr) {
       console.error('[team/accept] insert error:', memberErr)
@@ -67,7 +90,12 @@ export async function POST(req) {
     await admin
       .from('subscriptions')
       .upsert(
-        { user_id: user.id, plan: 'team_member', status: 'active' },
+        {
+          user_id:    user.id,
+          plan:       'team_member',
+          status:     'active',
+          exam_addon: hasExam,
+        },
         { onConflict: 'user_id' }
       )
 

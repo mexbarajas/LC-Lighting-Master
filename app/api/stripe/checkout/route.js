@@ -8,12 +8,18 @@
 
 import Stripe from 'stripe'
 import { createClient } from '@/lib/supabase/server'
-import { PLANS, getTeamPerSeat } from '@/lib/pricing'
+import { createAdminClient } from '@/lib/supabase/admin'
+import {
+  PLANS,
+  TEAM_PLAN_TYPES,
+  TEAM_MEMBER_EXAM_ADD_ON_PRICE,
+  MIN_TEAM_SEATS,
+} from '@/lib/pricing'
 import { checkOrigin, originError } from '@/lib/csrf'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 
-const VALID_PLANS = ['t1', 't2', 't3', 'team', 'exam_addon']
+const VALID_PLANS = ['t1', 't2', 't3', 'team', 'exam_addon', 'team_member_exam_addon']
 
 // Stripe Price IDs for individual plans — set in Vercel env vars
 const PRICE_IDS = {
@@ -39,7 +45,7 @@ export async function POST(request) {
     return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400 })
   }
 
-  const { plan, seats } = body
+  const { plan, seats, planType } = body
   if (!plan || !VALID_PLANS.includes(plan)) {
     return new Response(JSON.stringify({ error: 'Invalid plan' }), { status: 400 })
   }
@@ -55,13 +61,19 @@ export async function POST(request) {
   const email = user.email || ''
 
   // Build line item
-  let unitAmount, productName, quantity
+  let unitAmount, productName, quantity, extraMetadata = {}
 
   if (plan === 'team') {
-    const seatCount = parseInt(seats) || 0
-    if (seatCount < 5) {
+    // ── TEAM PLAN CHECKOUT ──────────────────────────────────────
+    if (!TEAM_PLAN_TYPES[planType]) {
       return new Response(JSON.stringify({
-        error: 'Minimum 5 seats for team license. For individual access see our standard plans.',
+        error: 'Choose a team plan type: course_only ($349/seat) or course_exam ($450/seat).',
+      }), { status: 400 })
+    }
+    const seatCount = parseInt(seats) || 0
+    if (seatCount < MIN_TEAM_SEATS) {
+      return new Response(JSON.stringify({
+        error: `Minimum ${MIN_TEAM_SEATS} seats for team license. For individual access see our standard plans.`,
       }), { status: 400 })
     }
     if (seatCount >= 11) {
@@ -69,25 +81,61 @@ export async function POST(request) {
         error: 'For 11+ seats please contact admin@luxartmedia.com for a custom quote.',
       }), { status: 400 })
     }
-    const tier = getTeamPerSeat(seatCount)
-    unitAmount = tier.perSeat * 100
-    productName = `Team License (${tier.label})`
-    quantity = seatCount
+    unitAmount    = TEAM_PLAN_TYPES[planType].perSeat * 100
+    productName   = `Team License — ${TEAM_PLAN_TYPES[planType].name}`
+    quantity      = seatCount
+    extraMetadata = { plan_type: planType }
+
+  } else if (plan === 'team_member_exam_addon') {
+    // ── TEAM MEMBER EXAM ADD-ON ($99) ───────────────────────────
+    // Server-side eligibility: active team member with course_only license, no exam access yet
+    const admin = createAdminClient()
+    const { data: membership } = await admin
+      .from('team_members')
+      .select('team_id, license_type, has_exam_access, member_exam_add_on_paid')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (!membership) {
+      return new Response(JSON.stringify({ error: 'Not a team member.' }), { status: 403 })
+    }
+    if (membership.license_type !== 'course_only') {
+      return new Response(JSON.stringify({ error: 'Exam access is already included in your team license.' }), { status: 400 })
+    }
+    if (membership.has_exam_access || membership.member_exam_add_on_paid) {
+      return new Response(JSON.stringify({ error: 'You already have exam access.' }), { status: 400 })
+    }
+
+    // Verify the team is still active
+    const { data: team } = await admin
+      .from('teams')
+      .select('access_expiry')
+      .eq('id', membership.team_id)
+      .maybeSingle()
+    if (!team || new Date(team.access_expiry) < new Date()) {
+      return new Response(JSON.stringify({ error: 'Your team license is inactive or expired.' }), { status: 403 })
+    }
+
+    unitAmount  = TEAM_MEMBER_EXAM_ADD_ON_PRICE * 100
+    productName = 'Team Member Exam Add-On'
+    quantity    = 1
+
   } else {
+    // ── INDIVIDUAL PLANS ────────────────────────────────────────
     const planData = PLANS[plan]
     if (!planData) {
       return new Response(JSON.stringify({ error: 'Invalid plan' }), { status: 400 })
     }
-    unitAmount = planData.amount
+    unitAmount  = planData.amount
     productName = planData.name
-    quantity = 1
+    quantity    = 1
     // Student discounts applied manually via Stripe coupon codes sent by email
   }
 
   const appUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://lightingmasterlc.com'
 
   // Use a pre-created Stripe Price ID for t1/t2/t3 if available, otherwise fall back
-  // to dynamic price_data (used for team plans and exam_addon which have no Price ID)
+  // to dynamic price_data (used for team plans, exam_addon, team_member_exam_addon)
   const priceId = PRICE_IDS[plan]
   const lineItem = priceId
     ? { price: priceId, quantity }
@@ -99,9 +147,10 @@ export async function POST(request) {
       mode: 'payment',
       customer_email: email,
       metadata: {
-        user_id: user.id,
+        user_id:  user.id,
         plan,
-        seats: seats ? String(seats) : '1',
+        seats:    seats ? String(seats) : '1',
+        ...extraMetadata,
       },
       line_items: [lineItem],
       success_url: `${appUrl}/?purchase=success&plan=${plan}`,
