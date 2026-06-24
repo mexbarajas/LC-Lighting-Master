@@ -19,35 +19,48 @@ const C = {
 function JoinPageInner() {
   const params = useSearchParams()
   const router = useRouter()
-  const token = params.get('token')
+  const token     = params.get('token')
+  const confirmed = params.get('confirmed') === 'true'
 
   const [status, setStatus] = useState<'loading' | 'ready' | 'accepting' | 'done' | 'error'>('loading')
   const [user, setUser] = useState<{ email: string } | null>(null)
   const [errorMsg, setErrorMsg] = useState('')
 
+  async function acceptInvite() {
+    setStatus('accepting')
+    try {
+      const res = await fetch('/api/team/accept', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+      })
+      if (res.ok) {
+        setStatus('done')
+        setTimeout(() => router.push('/'), 2500)
+      } else {
+        let msg = 'Something went wrong. Please try again.'
+        try { const d = await res.json(); msg = d.error || msg } catch {}
+        setStatus('error')
+        setErrorMsg(msg)
+      }
+    } catch {
+      setStatus('error')
+      setErrorMsg('Network error. Please try again.')
+    }
+  }
+
   useEffect(() => {
     if (!token) { setStatus('error'); setErrorMsg('No invite token found. Check your email link.'); return }
     supabase.auth.getUser().then(({ data: { user: u } }) => {
       setUser(u ? { email: u.email ?? '' } : null)
-      setStatus('ready')
+      if (u && confirmed) {
+        // User just confirmed their email — auto-accept without requiring button click
+        acceptInvite()
+      } else {
+        setStatus('ready')
+      }
     })
-  }, [token])
-
-  async function acceptInvite() {
-    setStatus('accepting')
-    const res = await fetch('/api/team/accept', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token }),
-    })
-    if (res.ok) {
-      setStatus('done')
-      setTimeout(() => router.push('/'), 2500)
-    } else {
-      setStatus('error')
-      setErrorMsg(await res.text())
-    }
-  }
+  }, [token, confirmed])
 
   const containerStyle: React.CSSProperties = {
     minHeight: '100vh',

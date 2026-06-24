@@ -12,7 +12,12 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient()
     const { error } = await supabase.auth.verifyOtp({ type, token_hash })
     if (!error) {
-      return NextResponse.redirect(`${origin}${next}`)
+      // When confirming email for a team invite, append ?confirmed=true so the
+      // join page can auto-trigger acceptance without requiring a button click.
+      const redirectPath = next.includes('/team/join')
+        ? (next.includes('?') ? `${next}&confirmed=true` : `${next}?confirmed=true`)
+        : next
+      return NextResponse.redirect(`${origin}${redirectPath}`)
     }
     console.error('[auth/confirm] verifyOtp failed:', error.message)
   }
