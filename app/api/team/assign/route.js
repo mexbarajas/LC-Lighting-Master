@@ -10,22 +10,28 @@ export async function POST(req) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { email } = await req.json()
+    const SITE_ADMIN_EMAILS = ['admin@luxartmedia.com', 'mexbarajas@hotmail.com']
+    const isSiteAdmin = SITE_ADMIN_EMAILS.includes(user.email)
+    const body = await req.json()
+    const bodyTeamId = body.team_id
+    const email = body.email
     const normalizedEmail = email?.toLowerCase().trim()
     if (!normalizedEmail) return NextResponse.json({ error: 'Email is required' }, { status: 400 })
 
-    // Caller must be team_admin
-    const { data: callerMembership } = await supabase
-      .from('team_members')
-      .select('team_id, role')
-      .eq('user_id', user.id)
-      .single()
-
-    if (!callerMembership || callerMembership.role !== 'team_admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    let teamId
+    if (isSiteAdmin && bodyTeamId) {
+      teamId = bodyTeamId
+    } else {
+      const { data: callerMembership } = await supabase
+        .from('team_members')
+        .select('team_id, role')
+        .eq('user_id', user.id)
+        .maybeSingle()
+      if (!callerMembership || (callerMembership.role !== 'team_admin' && !isSiteAdmin)) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
+      teamId = callerMembership.team_id
     }
-
-    const teamId = callerMembership.team_id
     const adminClient = createAdminClient()
 
     // ── Fetch team to check seat availability ─────────────────────────────

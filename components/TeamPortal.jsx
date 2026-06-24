@@ -109,7 +109,7 @@ function DeactivateModal({ member, onConfirm, onCancel, loading }) {
 }
 
 // ── Assign Modal ──────────────────────────────────────────────────────────────
-function AssignModal({ onClose, onSuccess, availableSeats }) {
+function AssignModal({ onClose, onSuccess, availableSeats, teamId }) {
   const [email, setEmail]       = useState('')
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState('')
@@ -127,7 +127,7 @@ function AssignModal({ onClose, onSuccess, availableSeats }) {
       const res = await fetch('/api/team/assign', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: trimmed }),
+        body: JSON.stringify({ email: trimmed, ...(teamId ? { team_id: teamId } : {}) }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -305,7 +305,7 @@ function MemberDrawer({ member, onClose }) {
 }
 
 // ── Main TeamPortal Component ─────────────────────────────────────────────────
-export default function TeamPortal() {
+export default function TeamPortal({ teamId = null, isAdminView = false }) {
   const [stats, setStats]               = useState(null)
   const [members, setMembers]           = useState([])
   const [loading, setLoading]           = useState(true)
@@ -327,9 +327,10 @@ export default function TeamPortal() {
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
+      const q = teamId ? `?team_id=${teamId}` : ''
       const [statsRes, membersRes] = await Promise.all([
-        fetch('/api/team/stats'),
-        fetch('/api/team/members'),
+        fetch(`/api/team/stats${q}`),
+        fetch(`/api/team/members${q}`),
       ])
       const [statsData, membersData] = await Promise.all([
         statsRes.json(),
@@ -346,7 +347,7 @@ export default function TeamPortal() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [teamId])
 
   useEffect(() => { loadData() }, [loadData])
 
@@ -584,6 +585,20 @@ export default function TeamPortal() {
                           Remove
                         </button>
                       )}
+                      {isAdminView && m.status === 'deactivated' && (
+                        <button
+                          onClick={async () => {
+                            if (!confirm(`Reactivate ${m.display_name || m.email}?`)) return
+                            const res = await fetch(`/api/team/members/${m.member_id}/reactivate`, { method: 'POST' })
+                            let d = {}; try { d = await res.json() } catch {}
+                            if (!res.ok) showToast(d.error || 'Failed to reactivate.')
+                            else { showToast('Member reactivated.'); loadData() }
+                          }}
+                          style={{ fontFamily: F.mono, fontSize: 10, letterSpacing: '0.1em', background: 'none', border: '1px solid #2a6048', borderRadius: 4, padding: '5px 10px', cursor: 'pointer', color: '#2a6048' }}
+                        >
+                          Reactivate
+                        </button>
+                      )}
                     </div>
                   </div>
                 )
@@ -597,6 +612,7 @@ export default function TeamPortal() {
       {showAssign && (
         <AssignModal
           availableSeats={availableSeats}
+          teamId={teamId}
           onClose={() => setShowAssign(false)}
           onSuccess={(msg) => { setShowAssign(false); showToast(msg); loadData() }}
         />

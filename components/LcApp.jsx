@@ -7080,6 +7080,7 @@ function AdminApp({onBack=()=>{}, adminEmail="", isAdmin=false}){
   const [route, setRoute] = useState("overview")
   const [users, setUsers] = useState([])
   const [teams, setTeams] = useState([])
+  const [adminSelectedTeamId, setAdminSelectedTeamId] = useState(null)
   const [selectedUser, setSelectedUser] = useState(null)
   const [dataError, setDataError] = useState(null)
   const [adminStats, setAdminStats] = useState({
@@ -7197,6 +7198,7 @@ function AdminApp({onBack=()=>{}, adminEmail="", isAdmin=false}){
         }
       }))
       setTeams(rawTeams||[])
+      setAdminSelectedTeamId(prev => prev ?? rawTeams?.[0]?.id ?? null)
     }catch(e){
       console.error("loadAdminData:",e)
       setDataError(e.message||"Failed to load admin data")
@@ -7257,7 +7259,30 @@ function AdminApp({onBack=()=>{}, adminEmail="", isAdmin=false}){
         {route==="revenue"      && isAdmin && <Revenue revenueMonths={adminStats.revenueMonths||[]}/>}
         {route==="content"      && isAdmin && <ContentView moduleStats={adminStats.moduleStats||[]} totalUsers={adminStats.totalUsers||0} usersWithAnyActivity={adminStats.usersWithAnyActivity||0}/>}
         {route==="flags"        && isAdmin && <SupportFlags users={users} setUsers={setUsers} onSelectUser={handleSelectUser}/>}
-        {route==="teams"        && isAdmin && <TeamsView users={users} teams={teams} onRefresh={loadAdminData}/>}
+        {route==="teams" && isAdmin && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
+              <h2 style={{ fontFamily: 'Playfair Display,serif', fontSize: 28, fontWeight: 700, color: '#16120e', margin: 0 }}>Teams</h2>
+              {teams.length > 1 && (
+                <select
+                  value={adminSelectedTeamId ?? ''}
+                  onChange={e => setAdminSelectedTeamId(e.target.value)}
+                  style={{ fontFamily: 'Inter,sans-serif', fontSize: 13, padding: '9px 14px', border: '1px solid #e4d9ca', borderRadius: 6, background: '#fdfaf6', color: '#16120e', cursor: 'pointer', minWidth: 260 }}
+                >
+                  {teams.map(t => (
+                    <option key={t.id} value={t.id}>
+                      {t.id.slice(0,8).toUpperCase()} — {t.plan_type === 'course_only' ? 'Course Only' : 'Course + Exam'} — {t.seat_count} seats
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+            {teams.length === 0
+              ? <div style={{ padding: 40, textAlign: 'center', fontFamily: 'Inter,sans-serif', color: '#6b5f52' }}>No teams yet.</div>
+              : <TeamPortal key={adminSelectedTeamId} teamId={adminSelectedTeamId} isAdminView={true} />
+            }
+          </div>
+        )}
         {route==="reports"      && isAdmin && <Reports users={users}/>}
       </main>
     </div>
