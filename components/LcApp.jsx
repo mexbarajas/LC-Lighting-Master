@@ -2526,7 +2526,9 @@ function ExamPage({ setRoute, user, userSubscription }) {
   }
 
   // ── PAYWALL ──
-  if (!canAccess) return (
+  // Active team members always have access — never show paywall
+  const isActiveTeamMember = plan === 'team_member' && userSubscription?.status === 'active'
+  if (!canAccess && !isActiveTeamMember) return (
     <div style={{padding:'60px 36px',maxWidth:520}}>
       <div style={mono({fontSize:9,letterSpacing:'0.18em',textTransform:'uppercase',color:C.accent,marginBottom:12})}>Practice Exam</div>
       <h2 style={{fontFamily:F.display,fontWeight:700,fontSize:28,color:C.ink,margin:'0 0 16px'}}>Unlock the Practice Exam</h2>
@@ -5432,11 +5434,21 @@ function LearnerRoot({isAdmin=false, authReady=false, onAdminClick=()=>{}}){
     setPage("landing")
   }
 
+  // Team member access — checked BEFORE subscription gate
+  const isActiveTeamMember = !!(teamCtx?.onTeam && teamCtx?.accessActive && teamCtx?.role === 'team_member')
+  const teamHasExam        = isActiveTeamMember && (teamCtx?.myLicense?.hasExamAccess === true)
+  const teamLicenseType    = teamCtx?.myLicense?.licenseType  // 'course_only' or 'course_exam'
+
+  // Effective plan for access control (team_admin/team_member preserved for dashboard routing)
   const effectivePlan = teamCtx?.onTeam
     ? (teamCtx.role==='team_admin' ? 'team_admin' : 'team_member')
     : user?.plan
+  // Effective exam access: derive from team license for team members, else individual subscription
+  const effectiveExamAccess = isActiveTeamMember
+    ? teamHasExam
+    : (user?.examAddon || ['t2','t3'].includes(user?.plan))
   const effectiveUser = user && teamCtx?.onTeam
-    ? {...user, plan:effectivePlan, accessActive:teamCtx.accessActive}
+    ? {...user, plan:effectivePlan, accessActive:teamCtx.accessActive, examAddon:effectiveExamAccess}
     : user
 
   return(
