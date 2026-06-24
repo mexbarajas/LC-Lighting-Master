@@ -3471,7 +3471,7 @@ function FreePlanGrid({startCheckout, checkoutLoading, checkoutError}){
 }
 
 /* ── ACCOUNT PAGE ────────────────────────────────────────────── */
-function AccountPage({ user, setUser, setRoute, teamCtx }) {
+function AccountPage({ user, setUser, setRoute, teamMembership }) {
   const [tab,setTab] = useState("profile")
   const [form,setForm] = useState({
     firstName: '',
@@ -3596,7 +3596,7 @@ function AccountPage({ user, setUser, setRoute, teamCtx }) {
   const planInfo = PLAN_LABELS[_pk] || PLAN_LABELS.free
   const isActiveStatus = user?.status === 'active'
   const isPaid = isActiveStatus && planKey !== 'free'
-  const isTeamAdmin = teamCtx?.role === 'team_admin' && teamCtx?.accessActive
+  const isTeamAdmin = teamMembership?.role === 'team_admin' && teamMembership?.status === 'active'
 
   const tabs = [
     ["profile","Profile"],
@@ -4988,7 +4988,7 @@ function TrendsPage({ setRoute }) {
   )
 }
 
-function AppShell({user, setUser, onSignOut, completedLessons=new Set(), markLessonComplete=async()=>{}, bookmarks=new Set(), toggleBookmark=async()=>{}, isAdmin=false, authReady=false, onAdminClick=()=>{}, teamCtx=null, onTeamRefresh=()=>{}, onRefreshSubscription=async()=>{}}){
+function AppShell({user, setUser, onSignOut, completedLessons=new Set(), markLessonComplete=async()=>{}, bookmarks=new Set(), toggleBookmark=async()=>{}, isAdmin=false, authReady=false, onAdminClick=()=>{}, teamCtx=null, onTeamRefresh=()=>{}, onRefreshSubscription=async()=>{}, teamMembership=null}){
   const [route, setRoute] = useState("home")
   const [showUpgrade, setShowUpgrade] = useState(false)
   const isMobile = useIsMobile()
@@ -5049,7 +5049,7 @@ function AppShell({user, setUser, onSignOut, completedLessons=new Set(), markLes
           {route==="continue"  && <ContinuePage setRoute={setRoute} completedLessons={completedLessons}/>}
           {route==="exam"      && <ExamPage setRoute={setRoute} user={user} userSubscription={user?.plan ? {plan:user.plan,exam_addon:user.examAddon||false,status:user.status||'active'} : null} isMobile={isMobile}/>}
           {route==="cert"      && <CertPage setRoute={setRoute} user={user} completedLessons={completedLessons} userSubscription={user?.plan ? {plan:user.plan,current_period_end:null} : null}/>}
-          {route==="account"   && <AccountPage user={user} setUser={setUser} setRoute={setRoute} teamCtx={teamCtx}/>}
+          {route==="account"   && <AccountPage user={user} setUser={setUser} setRoute={setRoute} teamMembership={teamMembership}/>}
           {route==="community"       && <CommunityPage setRoute={setRoute} user={user} userSubscription={user?.plan?{plan:user.plan}:null}/>}
           {route==="open-questions"  && <CommunityPage setRoute={setRoute} user={user} userSubscription={user?.plan?{plan:user.plan}:null} initialFilter="open"/>}
           {route==="trends"    && <TrendsPage setRoute={setRoute}/>}
@@ -5310,6 +5310,7 @@ function LearnerRoot({isAdmin=false, authReady=false, onAdminClick=()=>{}}){
   const [sessionConflict, setSessionConflict] = useState(null)
   const [purchaseSuccess, setPurchaseSuccess] = useState(null)
   const [teamCtx, setTeamCtx] = useState(null)
+  const [teamMembership, setTeamMembership] = useState(null)
 
   async function loadSubscription(){
     const { data:{ session } } = await supabase.auth.getSession()
@@ -5400,6 +5401,13 @@ function LearnerRoot({isAdmin=false, authReady=false, onAdminClick=()=>{}}){
   useEffect(()=>{
     if(!user?.id) return
     loadTeamContext().then(ctx=>setTeamCtx(ctx))
+    // Fetch team membership directly — used for isTeamAdmin check (avoids accessActive dependency)
+    supabase
+      .from('team_members')
+      .select('id, team_id, role, status, license_type, has_exam_access')
+      .eq('user_id', user.id)
+      .maybeSingle()
+      .then(({ data }) => { if (data) setTeamMembership(data) })
   },[user?.id])
 
   const refreshTeamCtx=useCallback(()=>{
@@ -5442,6 +5450,7 @@ function LearnerRoot({isAdmin=false, authReady=false, onAdminClick=()=>{}}){
     await supabase.auth.signOut()
     setUser(null)
     setTeamCtx(null)
+    setTeamMembership(null)
     setCompletedLessons(new Set())
     setBookmarks(new Set())
     setPage("landing")
@@ -5518,7 +5527,7 @@ function LearnerRoot({isAdmin=false, authReady=false, onAdminClick=()=>{}}){
       )}
 
       {page==="app"&&(
-        <AppShell user={effectiveUser} setUser={setUser} onSignOut={handleSignOut} completedLessons={completedLessons} markLessonComplete={markLessonComplete} bookmarks={bookmarks} toggleBookmark={toggleBookmark} isAdmin={isAdmin} authReady={authReady} onAdminClick={onAdminClick} teamCtx={teamCtx} onTeamRefresh={refreshTeamCtx} onRefreshSubscription={refreshSubscription}/>
+        <AppShell user={effectiveUser} setUser={setUser} onSignOut={handleSignOut} completedLessons={completedLessons} markLessonComplete={markLessonComplete} bookmarks={bookmarks} toggleBookmark={toggleBookmark} isAdmin={isAdmin} authReady={authReady} onAdminClick={onAdminClick} teamCtx={teamCtx} onTeamRefresh={refreshTeamCtx} onRefreshSubscription={refreshSubscription} teamMembership={teamMembership}/>
       )}
     </>
   )
