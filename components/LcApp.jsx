@@ -6570,9 +6570,16 @@ function TeamsView({users=[], teams=[], onRefresh=()=>{}}){
       const res = await fetch('/api/admin/team/invite', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ team_id: selectedTeam.id, email }),
+        body: JSON.stringify({
+          teamId: selectedTeam?.id,
+          team_id: selectedTeam?.id,
+          email: email,
+          invited_by: 'admin',
+        }),
       })
-      const d = await res.json()
+      // Safely parse — route may return non-JSON on error
+      let d = {}
+      try { d = await res.json() } catch { d = { error: 'Server error — check Vercel logs' } }
       if (!res.ok) { setInviteError(d.error || 'Failed to send invite.'); setInviteLoading(false); return }
       showToast(`Invitation sent to ${email}`)
       setShowInviteModal(false); setInviteEmail('')
@@ -6635,9 +6642,23 @@ function TeamsView({users=[], teams=[], onRefresh=()=>{}}){
           <div style={{ background: AT.bg3, border: `1px solid ${AT.border}`, borderRadius: 8, padding: '24px 28px', marginBottom: 24 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
               <div>
-                <div style={amono({fontSize:9,letterSpacing:'0.2em',textTransform:'uppercase',color:AT.inkMute,marginBottom:6})}>Team ID</div>
-                <div style={amono({fontSize:13,color:AT.ink})}>{selectedTeam?.id}</div>
-                <div style={asans({fontSize:12,color:AT.inkMute,marginTop:4})}>Owner: {selectedTeam?.owner_id}</div>
+                <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#6b5f52', marginBottom: 6 }}>Team ID</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 13, background: '#f5f0e8', border: '1px solid #e4d9ca', borderRadius: 6, padding: '6px 12px', color: '#16120e', letterSpacing: '0.04em' }}>
+                    {(selectedTeam?.id ?? '').slice(0,8).toUpperCase()}
+                    <span style={{ color: '#c8b8a8' }}>···</span>
+                    {(selectedTeam?.id ?? '').slice(-4).toUpperCase()}
+                  </div>
+                  <button
+                    onClick={() => navigator.clipboard.writeText(selectedTeam?.id ?? '').then(() => showToast('Team ID copied'))}
+                    style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, letterSpacing: '0.14em', textTransform: 'uppercase', padding: '6px 11px', border: '1px solid #e4d9ca', borderRadius: 5, background: 'transparent', color: '#6b5f52', cursor: 'pointer' }}
+                  >
+                    ⎘ Copy
+                  </button>
+                </div>
+                <div style={{ fontFamily: 'Inter,sans-serif', fontSize: 11, color: '#b8a898', marginTop: 4 }}>
+                  Owner: {(selectedTeam?.owner_id ?? '').slice(0,8)}…
+                </div>
               </div>
               <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
                 {[
