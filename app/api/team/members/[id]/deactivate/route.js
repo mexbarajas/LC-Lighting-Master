@@ -42,6 +42,19 @@ export async function POST(req, { params }) {
 
     if (error) throw error
 
+    // ── Revert subscription when member is deactivated ────────────────────
+    await adminClient
+      .from('subscriptions')
+      .upsert(
+        {
+          user_id:    target.user_id,
+          plan:       'free',
+          exam_addon: false,
+          status:     'active',
+        },
+        { onConflict: 'user_id' }
+      )
+
     console.log(`[team/deactivate] member ${params.id} deactivated by ${user.id}`)
     return NextResponse.json({ success: true })
   } catch (err) {

@@ -100,6 +100,28 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Failed to activate license: ' + memberErr.message }, { status: 500 })
     }
 
+    // ── Sync subscriptions so existing plan gate grants correct access ─────
+    // course_exam team → t3 (course + exam), course_only team → t2 (course)
+    const teamPlan    = planType === 'course_exam' ? 't3' : 't2'
+    const teamExamAddon = planType === 'course_exam'
+
+    const { error: subErr } = await admin
+      .from('subscriptions')
+      .upsert(
+        {
+          user_id:    user.id,
+          plan:       teamPlan,
+          exam_addon: teamExamAddon,
+          status:     'active',
+        },
+        { onConflict: 'user_id' }
+      )
+
+    if (subErr) {
+      // Non-fatal — member record exists, subscription sync failed
+      console.error('[team/accept] subscription sync failed (non-fatal):', subErr)
+    }
+
     // ── Mark invite as accepted ───────────────────────────────────────────
     await admin
       .from('team_invites')
