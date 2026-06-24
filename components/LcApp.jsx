@@ -6634,6 +6634,19 @@ function TeamsView({users=[], teams=[], onRefresh=()=>{}}){
     finally { setActionLoading('') }
   }
 
+  async function handleReactivate(memberId, memberName) {
+    if (!confirm(`Reactivate ${memberName}? This restores their course and exam access and consumes a seat.`)) return
+    setActionLoading(memberId)
+    try {
+      const res = await fetch(`/api/team/members/${memberId}/reactivate`, { method: 'POST' })
+      let d = {}
+      try { d = await res.json() } catch {}
+      if (!res.ok) { showToast(d.error || 'Failed to reactivate.') }
+      else { showToast(`${memberName} reactivated.`); await onRefresh() }
+    } catch { showToast('Network error.') }
+    finally { setActionLoading('') }
+  }
+
   return (
     <div>
       {toastMsg && (
@@ -6814,6 +6827,15 @@ function TeamsView({users=[], teams=[], onRefresh=()=>{}}){
                             style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', background: 'none', border: `1px solid ${AT.red}`, borderRadius: 4, padding: '5px 10px', cursor: 'pointer', color: AT.red, opacity: actionLoading === m.id ? 0.5 : 1 }}
                           >
                             {actionLoading === m.id ? '…' : 'Remove'}
+                          </button>
+                        )}
+                        {m.status === 'deactivated' && (
+                          <button
+                            onClick={() => handleReactivate(m.id, name)}
+                            disabled={actionLoading === m.id}
+                            style={{ fontFamily: 'JetBrains Mono,monospace', fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', background: 'none', border: '1px solid #2a6048', borderRadius: 4, padding: '5px 10px', cursor: 'pointer', color: '#2a6048', opacity: actionLoading === m.id ? 0.5 : 1 }}
+                          >
+                            {actionLoading === m.id ? '…' : 'Reactivate'}
                           </button>
                         )}
                       </div>
