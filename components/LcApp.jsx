@@ -3471,7 +3471,7 @@ function FreePlanGrid({startCheckout, checkoutLoading, checkoutError}){
 }
 
 /* ── ACCOUNT PAGE ────────────────────────────────────────────── */
-function AccountPage({ user, setUser, setRoute }) {
+function AccountPage({ user, setUser, setRoute, teamCtx }) {
   const [tab,setTab] = useState("profile")
   const [form,setForm] = useState({
     firstName: '',
@@ -3596,8 +3596,13 @@ function AccountPage({ user, setUser, setRoute }) {
   const planInfo = PLAN_LABELS[_pk] || PLAN_LABELS.free
   const isActiveStatus = user?.status === 'active'
   const isPaid = isActiveStatus && planKey !== 'free'
+  const isTeamAdmin = teamCtx?.role === 'team_admin' && teamCtx?.accessActive
 
-  const tabs = [["profile","Profile"],["billing","Billing"]]
+  const tabs = [
+    ["profile","Profile"],
+    ["billing","Billing"],
+    ...(isTeamAdmin ? [["team","Manage Team"]] : []),
+  ]
   return (
     <div style={{padding:"0 36px 48px"}}>
       <PageHead eyebrow="Account" title="Account &" em="billing."/>
@@ -3709,6 +3714,12 @@ function AccountPage({ user, setUser, setRoute }) {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {tab==="team" && isTeamAdmin && (
+        <div style={{margin:"0 -36px"}}>
+          <TeamPortal />
         </div>
       )}
 
@@ -5038,7 +5049,7 @@ function AppShell({user, setUser, onSignOut, completedLessons=new Set(), markLes
           {route==="continue"  && <ContinuePage setRoute={setRoute} completedLessons={completedLessons}/>}
           {route==="exam"      && <ExamPage setRoute={setRoute} user={user} userSubscription={user?.plan ? {plan:user.plan,exam_addon:user.examAddon||false,status:user.status||'active'} : null} isMobile={isMobile}/>}
           {route==="cert"      && <CertPage setRoute={setRoute} user={user} completedLessons={completedLessons} userSubscription={user?.plan ? {plan:user.plan,current_period_end:null} : null}/>}
-          {route==="account"   && <AccountPage user={user} setUser={setUser} setRoute={setRoute}/>}
+          {route==="account"   && <AccountPage user={user} setUser={setUser} setRoute={setRoute} teamCtx={teamCtx}/>}
           {route==="community"       && <CommunityPage setRoute={setRoute} user={user} userSubscription={user?.plan?{plan:user.plan}:null}/>}
           {route==="open-questions"  && <CommunityPage setRoute={setRoute} user={user} userSubscription={user?.plan?{plan:user.plan}:null} initialFilter="open"/>}
           {route==="trends"    && <TrendsPage setRoute={setRoute}/>}
