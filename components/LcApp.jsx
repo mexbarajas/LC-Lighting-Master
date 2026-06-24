@@ -5575,7 +5575,7 @@ const adisp = s => ({fontFamily:AF.display,...(s||{})})
 const STATES=["Florida","California","New York","Texas","Illinois","Washington","Colorado","Georgia","Ohio","Pennsylvania","Arizona","Massachusetts"]
 const COMPANIES=["Gensler","HLB Lighting","AECOM","Arup","WSP","Lumenpulse","Stantec","HDR","Arcadis","Lam Partners","Luxartmedia","Atelier Ten","Self-employed"]
 const PLANS=["free","t1","t2","t3"]
-const A_PLAN_LABELS ={free:"Free",t1:"LC Preparation Test",t2:"Full Course",t3:"Full Course+Exam"}
+const A_PLAN_LABELS ={free:"Free",t1:"Course",t2:"Course+Exam",t3:"Course+Exam"}
 const PLAN_COLORS={free:AT.inkMute,t1:AT.blue,t2:AT.green,t3:AT.purple}
 const STATUS_COLORS={active:AT.green,past_due:AT.amber,canceled:AT.red,trialing:AT.blue,free:AT.inkMute}
 
@@ -6978,16 +6978,16 @@ function Reports({users}){
         </SectionTitle>
         <div style={{overflowX:"auto"}}>
           <TableHeader cols={[{label:"Name",w:"140px"},{label:"Email",w:"200px"},
-            {label:"Company",w:"120px"},{label:"State",w:"100px"},
-            {label:"Plan",w:"100px"},{label:"Status",w:"90px"},
+            {label:"Company",w:"120px"},{label:"State",w:"60px"},
+            {label:"Plan",w:"140px"},{label:"Status",w:"90px"},
             {label:"Progress",w:"80px",right:true},{label:"Revenue",w:"80px",right:true}]}/>
           {users.map((u,i)=>(
             <div key={u.id} style={{display:"grid",
-              gridTemplateColumns:"140px 200px 120px 100px 100px 90px 80px 80px",
+              gridTemplateColumns:"140px 200px 120px 60px 140px 90px 80px 80px",
               gap:0,padding:"8px 16px",
               borderBottom:i<users.length-1?`1px solid ${AT.border}`:"none"}}>
-              <div style={asans({fontSize:12,color:AT.ink})}>{u.firstName} {u.lastName}</div>
-              <div style={amono({fontSize:10,color:AT.inkMute})}>{u.email}</div>
+              <div style={asans({fontSize:12,color:AT.ink,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'})}>{u.firstName} {u.lastName}</div>
+              <div style={amono({fontSize:10,color:AT.inkMute,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'})}>{u.email}</div>
               <div style={amono({fontSize:11,color:AT.inkSoft})}>{u.company}</div>
               <div style={amono({fontSize:11,color:AT.inkSoft})}>{u.state}</div>
               <div><PlanBadge plan={u.plan}/></div>
