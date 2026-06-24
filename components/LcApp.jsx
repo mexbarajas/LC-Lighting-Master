@@ -18,11 +18,11 @@ async function loadTeamContext() {
   let membership, membershipExt = false
   const { data: m1, error: m1Err } = await supabase
     .from('team_members')
-    .select('team_id, role, license_type, has_exam_access, member_exam_add_on_paid')
+    .select('team_id, role, license_type, has_exam_access, member_exam_add_on_paid, status')
     .eq('user_id', user.id).maybeSingle()
   if (m1Err) {
     const { data: m2 } = await supabase
-      .from('team_members').select('team_id, role').eq('user_id', user.id).maybeSingle()
+      .from('team_members').select('team_id, role, status').eq('user_id', user.id).maybeSingle()
     membership = m2
   } else {
     membership = m1
@@ -47,7 +47,7 @@ async function loadTeamContext() {
   const { data: invites } = await supabase
     .from('team_invites').select('id, email, status, invited_at, expires_at')
     .eq('team_id', membership.team_id).eq('status', 'pending')
-  const accessActive = !!team && new Date(team.access_expiry) >= new Date(new Date().toDateString())
+  const accessActive = !!team && membership?.status === 'active' && new Date(team.access_expiry) >= new Date(new Date().toDateString())
   return {
     onTeam: true, team, role: membership.role,
     isOwner: team.owner_id === user.id,
@@ -3120,7 +3120,9 @@ function LessonPage({lessonRef,setRoute,user,setShowUpgrade,completedLessons=new
   const lesson = ALL_LESSONS.find(l=>l.ref===lessonRef)
   const module = MODULES.find(m=>m.n===lesson?.module)
   if (!lesson||!module) return <div style={{padding:"40px 36px",color:C.inkMute}}>Lesson not found.</div>
-  if (isLessonLocked(lessonRef, user)) return <UpgradePrompt onUpgrade={()=>setShowUpgrade(true)} setRoute={setRoute}/>
+  // Team member bypass — active team members always have course access
+  const isActiveTeamMember = (user?.plan === 'team_member' || user?.plan === 'team_admin') && !!user?.accessActive
+  if (!isActiveTeamMember && isLessonLocked(lessonRef, user)) return <UpgradePrompt onUpgrade={()=>setShowUpgrade(true)} setRoute={setRoute}/>
   const idx = module.lessons.findIndex(l=>l.ref===lessonRef)
   const prev = module.lessons[idx-1]
   const next = module.lessons[idx+1]
