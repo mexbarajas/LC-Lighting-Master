@@ -115,16 +115,16 @@ export async function POST(req) {
     // ── Send email via Brevo ─────────────────────────────────────────────
     const inviteUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/team/join?token=${token}`
     try {
-      await fetch('https://api.brevo.com/v3/smtp/email', {
+      const brevoRes = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
         headers: {
-          'api-key': process.env.BREVO_API_KEY,
           'Content-Type': 'application/json',
+          'api-key': process.env.BREVO_API_KEY,
         },
         body: JSON.stringify({
-          sender:      { name: 'LC Lighting Master', email: 'admin@luxartmedia.com' },
-          to:          [{ email }],
-          subject:     'You have been invited to LC Lighting Master',
+          sender: { name: 'LC Lighting Master', email: 'admin@luxartmedia.com' },
+          to: [{ email }],
+          subject: 'You have been invited to LC Lighting Master',
           htmlContent: `
             <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px 24px">
               <h2 style="font-size:22px;color:#16120e;margin:0 0 16px">You have been invited to LC Lighting Master</h2>
@@ -139,9 +139,20 @@ export async function POST(req) {
           `,
         }),
       })
+      if (!brevoRes.ok) {
+        const brevoBody = await brevoRes.text()
+        console.error('[admin/team/invite] Brevo error:', brevoRes.status, brevoBody)
+        throw new Error(`Brevo ${brevoRes.status}: ${brevoBody}`)
+      }
     } catch (emailErr) {
-      // Non-fatal — invite is created, email just didn't send
       console.error('[admin/team/invite] email send failed:', emailErr)
+      // Return success but warn — invite exists, email failed
+      return NextResponse.json({
+        success:    true,
+        invite_id:  invite.id,
+        message:    `Invite created for ${email} but email delivery failed. Check Brevo config.`,
+        email_error: emailErr.message,
+      })
     }
 
     return NextResponse.json({
