@@ -33,11 +33,18 @@ export async function POST(req) {
       .from('subscriptions')
       .select('plan, status, exam_addon')
       .eq('user_id', userId)
-      .single()
+      .maybeSingle()
 
-    const hasPlan  = sub && ['t2', 't3'].includes(sub.plan) && sub.status === 'active'
-    const hasAddon = sub && sub.exam_addon === true && sub.status === 'active'
-    if (!hasPlan && !hasAddon) {
+    const { data: teamMem } = await SERVICE
+      .from('team_members')
+      .select('status, has_exam_access')
+      .eq('user_id', userId)
+      .maybeSingle()
+
+    const planHasExam  = sub && ['t1', 't2', 't3'].includes(sub.plan) && sub.status === 'active'
+    const addonHasExam = sub && sub.exam_addon === true && sub.status === 'active'
+    const teamHasExam  = teamMem?.status === 'active' && teamMem?.has_exam_access === true
+    if (!planHasExam && !addonHasExam && !teamHasExam) {
       return NextResponse.json({ error: 'Exam access required' }, { status: 403 })
     }
 
