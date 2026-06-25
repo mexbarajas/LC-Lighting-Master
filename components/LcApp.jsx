@@ -2538,7 +2538,7 @@ function ExamPage({ setRoute, user, userSubscription }) {
       const res = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: 't2' }),
+        body: JSON.stringify({ plan: 't1' }),
       })
       const d = await res.json()
       if (d.url) {
@@ -2557,13 +2557,13 @@ function ExamPage({ setRoute, user, userSubscription }) {
     <div style={{padding:'60px 36px',maxWidth:520}}>
       <div style={mono({fontSize:9,letterSpacing:'0.18em',textTransform:'uppercase',color:C.accent,marginBottom:12})}>Practice Exam</div>
       <h2 style={{fontFamily:F.display,fontWeight:700,fontSize:28,color:C.ink,margin:'0 0 16px'}}>Unlock the Practice Exam</h2>
-      <p style={{fontFamily:F.body,fontSize:15,color:C.inkMute,lineHeight:1.75,margin:'0 0 28px'}}>{TOTAL_QUESTIONS} questions across 18 NCQLP topic areas. Included with Course + Exam ($395).</p>
+      <p style={{fontFamily:F.body,fontSize:15,color:C.inkMute,lineHeight:1.75,margin:'0 0 28px'}}>{TOTAL_QUESTIONS} questions across 18 NCQLP topic areas. One-time purchase — exam access only.</p>
       <button
         onClick={handleExamPurchase}
         disabled={checkoutLoading}
         style={{fontFamily:F.display,fontWeight:700,fontSize:14,background:C.accent,color:'#fff',border:'none',borderRadius:99,padding:'13px 28px',cursor:checkoutLoading?'not-allowed':'pointer',opacity:checkoutLoading?0.7:1}}
       >
-        {checkoutLoading ? 'Opening checkout…' : 'Get Course + Exam — $395 →'}
+        {checkoutLoading ? 'Opening checkout…' : 'Get Practice Exam — $250 →'}
       </button>
       {checkoutError && <p style={{fontFamily:F.body,fontSize:13,color:C.red,marginTop:12}}>{checkoutError}</p>}
     </div>
