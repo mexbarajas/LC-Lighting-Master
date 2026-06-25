@@ -2321,9 +2321,11 @@ function ExamPage({ setRoute, user, userSubscription }) {
   const [checkoutError, setCheckoutError] = useState(null)
 
   const plan = userSubscription?.plan || 'free'
-  const canAccess =
-    (['t2','t3'].includes(plan) && userSubscription?.status === 'active') ||
-    (userSubscription?.exam_addon === true && userSubscription?.status === 'active')
+  const planHasExam   = ['t1','t2','t3'].includes(plan)
+  const addonHasExam  = userSubscription?.exam_addon === true
+  const teamHasExam   = (plan === 'team_member' || plan === 'team_admin') && addonHasExam
+  const canAccess     =
+    ((planHasExam || addonHasExam || teamHasExam) && userSubscription?.status === 'active')
 
   // Load attempt count
   useEffect(() => {
