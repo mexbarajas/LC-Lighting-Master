@@ -5504,6 +5504,50 @@ function LearnerRoot({isAdmin=false, authReady=false, onAdminClick=()=>{}}){
     ? {...user, plan:effectivePlan, accessActive:teamCtx.accessActive, examAddon:effectiveExamAccess}
     : user
 
+  // ─────────────────────────────────────────────────────────────────────
+  // SINGLE SOURCE OF TRUTH FOR ACCESS CONTROL
+  // Every gate in the app must read from this object. Do not re-derive
+  // access logic anywhere else. See consolidation pass.
+  // ─────────────────────────────────────────────────────────────────────
+  const ACCESS = (() => {
+    const plan = user?.plan ?? 'free'
+    const examAddon = user?.examAddon === true
+
+    // teamCtx.accessActive combines membership.status==='active' AND team expiry check
+    const isTeamMember  = !!(teamCtx?.onTeam && teamCtx?.accessActive)
+    const isTeamAdmin   = isTeamMember && teamCtx?.role === 'team_admin'
+    const teamHasExam   = isTeamMember && teamCtx?.myLicense?.hasExamAccess === true
+    // Both team license types (course_only and course_exam) include the full course
+    const teamHasCourse = isTeamMember
+
+    // Subscription considered valid only when active
+    const subActive = (user?.status ?? 'active') === 'active'
+
+    // COURSE access: t2/t3 (active sub) OR any active team member.
+    // T1 is exam-only — NO course beyond the free first module.
+    const hasCourseAccess =
+      (subActive && ['t2','t3'].includes(plan)) || teamHasCourse
+
+    // EXAM access: t1/t2/t3 (active sub) OR exam add-on OR team-with-exam.
+    const hasExamAccess =
+      (subActive && ['t1','t2','t3'].includes(plan)) ||
+      (subActive && examAddon) ||
+      teamHasExam
+
+    return {
+      plan,
+      isTeamMember,
+      isTeamAdmin,
+      hasCourseAccess,
+      hasExamAccess,
+      // Module 1 is always free for everyone
+      isModuleFree: (moduleNumber) => moduleNumber === 1,
+      // Community: paid individual OR any active team member
+      canPostCommunity:
+        (subActive && ['t1','t2','t3'].includes(plan)) || isTeamMember,
+    }
+  })()
+
   return(
     <>
       <style>{`@import url('${FONT_URL}');*{box-sizing:border-box;margin:0;padding:0}body{background:${C.cream}}a{text-decoration:none}`}</style>
