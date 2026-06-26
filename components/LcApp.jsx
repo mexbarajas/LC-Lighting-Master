@@ -4482,7 +4482,7 @@ function getNextLesson(completedLessons) {
 }
 
 /* ── COMMUNITY KNOWLEDGE HUB ─────────────────────────────── */
-function CommunityPage({ setRoute, user, access, initialFilter = 'All' }) {
+function CommunityPage({ setRoute, user, access, isAdmin = false, initialFilter = 'All' }) {
   const supabase = createClient()
   const isPaid = access?.canPostCommunity ?? false
 
@@ -4509,6 +4509,7 @@ function CommunityPage({ setRoute, user, access, initialFilter = 'All' }) {
   const [answerBody, setAnswerBody] = useState('')
   const [answerAnon, setAnswerAnon] = useState(false)
   const [answerLoading, setAnswerLoading] = useState(false)
+  const [communityTab, setCommunityTab] = useState('open')
 
   useEffect(() => {
     supabase
@@ -4526,15 +4527,13 @@ function CommunityPage({ setRoute, user, access, initialFilter = 'All' }) {
       .order('created_at', { ascending: false })
     if (filterMarket !== 'All') query = query.eq('market', filterMarket)
     if (filterFixture !== 'All') query = query.eq('fixture_type', filterFixture)
-    if (filterStatus === 'Answered') query = query.eq('is_answered', true)
-    if (filterStatus === 'Open') query = query.eq('is_answered', false)
     if (searchQ.trim()) query = query.ilike('title', `%${searchQ}%`)
     const { data } = await query.limit(50)
     setQuestions(data || [])
     setLoading(false)
   }
 
-  useEffect(() => { loadQuestions() }, [filterMarket, filterFixture, filterStatus])
+  useEffect(() => { loadQuestions() }, [filterMarket, filterFixture])
 
   function sortAnswers(list) {
     return [...list].sort((a, b) => {
@@ -4618,11 +4617,22 @@ function CommunityPage({ setRoute, user, access, initialFilter = 'All' }) {
   }
 
   async function acceptAnswer(answerId) {
-    if (!user || user.id !== activeQuestion.user_id) return
+    if (!user || (user.id !== activeQuestion.user_id && !isAdmin)) return
     await supabase.from('community_answers').update({ is_accepted: false }).eq('question_id', activeQuestion.id)
     await supabase.from('community_answers').update({ is_accepted: true }).eq('id', answerId)
     await supabase.from('community_questions').update({ is_answered: true }).eq('id', activeQuestion.id)
+    setActiveQuestion(prev => ({ ...prev, is_answered: true }))
     loadAnswers(activeQuestion.id)
+    loadQuestions()
+  }
+
+  async function unacceptAnswer(answerId) {
+    if (!user || (user.id !== activeQuestion.user_id && !isAdmin)) return
+    await supabase.from('community_answers').update({ is_accepted: false }).eq('id', answerId)
+    await supabase.from('community_questions').update({ is_answered: false }).eq('id', activeQuestion.id)
+    setActiveQuestion(prev => ({ ...prev, is_answered: false }))
+    loadAnswers(activeQuestion.id)
+    loadQuestions()
   }
 
   function displayName(row) {
@@ -4673,6 +4683,10 @@ function CommunityPage({ setRoute, user, access, initialFilter = 'All' }) {
   }
 
   function handleSearch(e) { if (e.key === 'Enter') loadQuestions() }
+
+  const openQuestions    = questions.filter(q => !q.is_answered)
+  const hubQuestions     = questions.filter(q => q.is_answered)
+  const visibleQuestions = communityTab === 'open' ? openQuestions : hubQuestions
 
   if (view === 'ask') return (
     <div style={S.page}>
@@ -4778,8 +4792,12 @@ function CommunityPage({ setRoute, user, access, initialFilter = 'All' }) {
           <p style={{ fontFamily: F.body, fontSize: 14, color: C.ink, lineHeight: 1.75, margin: '0 0 16px' }}>{ans.body}</p>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
             <button onClick={() => toggleVote(ans.id, 'answer')} style={S.voteBtn(userVotes.has(ans.id))}>▲ {ans.vote_count} {ans.vote_count === 1 ? 'vote' : 'votes'}</button>
-            {user?.id === activeQuestion.user_id && !ans.is_accepted && (
-              <button onClick={() => acceptAnswer(ans.id)} style={{ ...S.voteBtn(false), borderColor: C.forest, color: C.forest }}>✓ Accept this answer</button>
+            {(user?.id === activeQuestion.user_id || isAdmin) && (
+              ans.is_accepted ? (
+                <button onClick={() => unacceptAnswer(ans.id)} style={{ fontFamily: F.mono, fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', background: `${C.forest}18`, border: `1px solid ${C.forest}`, borderRadius: 99, padding: '5px 12px', cursor: 'pointer', color: C.forest }}>✓ Accepted · Unaccept</button>
+              ) : (
+                <button onClick={() => acceptAnswer(ans.id)} style={{ ...S.voteBtn(false), borderColor: C.forest, color: C.forest }}>✓ Accept this answer</button>
+              )
             )}
             <span style={mono({ fontSize: 9, color: C.inkMute })}>{displayName(ans)} · {timeAgo(ans.created_at)}</span>
           </div>
@@ -4871,21 +4889,26 @@ function CommunityPage({ setRoute, user, access, initialFilter = 'All' }) {
           <option value="All">All fixture types</option>
           {(FIXTURE_TYPES[filterMarket] || []).map(f => <option key={f} value={f}>{f}</option>)}
         </select>
-        {['All','Open','Answered'].map(s => (
-          <button key={s} onClick={() => setFilterStatus(s)} style={{ fontFamily: F.display, fontWeight: 600, fontSize: 12, borderRadius: 99, padding: '8px 16px', cursor: 'pointer', border: `1px solid ${filterStatus === s ? C.ink : C.rule}`, background: filterStatus === s ? C.ink : 'transparent', color: filterStatus === s ? C.cream : C.inkMute }}>{s}</button>
+      </div>
+      <div style={{ display: 'flex', gap: 0, borderBottom: `1px solid ${C.rule}`, marginBottom: 16 }}>
+        {[['open', `Open Questions (${openQuestions.length})`], ['hub', `Knowledge Hub (${hubQuestions.length})`]].map(([tab, label]) => (
+          <button key={tab} onClick={() => setCommunityTab(tab)} style={{ fontFamily: F.display, fontWeight: 600, fontSize: 14, color: communityTab === tab ? C.ink : C.inkMute, background: 'none', border: 'none', borderBottom: communityTab === tab ? `2px solid ${C.accent}` : '2px solid transparent', padding: '14px 20px 12px', cursor: 'pointer', transition: 'color 140ms' }}>{label}</button>
         ))}
       </div>
+      {communityTab === 'hub' && (
+        <div style={{ fontFamily: F.body, fontSize: 13, color: C.inkMute, marginBottom: 16 }}>Answered questions with an accepted solution.</div>
+      )}
       {loading ? (
         <div style={{ textAlign: 'center', padding: '60px 0', color: C.inkMute, fontFamily: F.mono, fontSize: 12 }}>Loading questions...</div>
-      ) : questions.length === 0 ? (
+      ) : visibleQuestions.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px 0' }}>
           <div style={{ fontSize: 36, marginBottom: 12 }}>◈</div>
-          <div style={{ fontFamily: F.display, fontWeight: 700, fontSize: 18, color: C.ink }}>No questions yet</div>
+          <div style={{ fontFamily: F.display, fontWeight: 700, fontSize: 18, color: C.ink }}>{communityTab === 'open' ? 'No open questions right now.' : 'No answered questions yet.'}</div>
           <div style={{ fontFamily: F.body, fontSize: 14, color: C.inkMute, marginTop: 8 }}>
-            {isPaid ? 'Be the first to ask a question in this category.' : 'Upgrade to a paid plan to post questions.'}
+            {communityTab === 'hub' ? 'Accepted answers appear here.' : isPaid ? 'Be the first to ask a question.' : 'Upgrade to a paid plan to post questions.'}
           </div>
         </div>
-      ) : questions.map(q => (
+      ) : visibleQuestions.map(q => (
         <div key={q.id} style={S.card} onClick={() => openQuestion(q)}
           onMouseEnter={e => e.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.08)'}
           onMouseLeave={e => e.currentTarget.style.boxShadow = 'none'}>
@@ -5059,8 +5082,8 @@ function AppShell({user, setUser, onSignOut, completedLessons=new Set(), markLes
           {route==="exam"      && <ExamPage setRoute={setRoute} user={user} access={access} isMobile={isMobile}/>}
           {route==="cert"      && <CertPage setRoute={setRoute} user={user} completedLessons={completedLessons} userSubscription={user?.plan ? {plan:user.plan,current_period_end:null} : null}/>}
           {route==="account"   && <AccountPage user={user} setUser={setUser} setRoute={setRoute} access={access}/>}
-          {route==="community"       && <CommunityPage setRoute={setRoute} user={user} access={access}/>}
-          {route==="open-questions"  && <CommunityPage setRoute={setRoute} user={user} access={access} initialFilter="open"/>}
+          {route==="community"       && <CommunityPage setRoute={setRoute} user={user} access={access} isAdmin={isAdmin}/>}
+          {route==="open-questions"  && <CommunityPage setRoute={setRoute} user={user} access={access} isAdmin={isAdmin} initialFilter="open"/>}
           {route==="trends"    && <TrendsPage setRoute={setRoute}/>}
           {route==="feedback"  && <FeedbackPage user={user} userSubscription={user?.plan ? {plan:user.plan} : null}/>}
           {route==="team-portal" && access.isTeamAdmin && <TeamPortal />}
