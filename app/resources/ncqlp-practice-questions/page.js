@@ -110,22 +110,36 @@ const questions = [
 ]
 
 export default function Article() {
-  const jsonLd = {
+  const articleJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Article',
     headline: 'NCQLP Practice Questions: 10 Free LC Exam Sample Questions with Answers',
     description: metadata.description,
     url: siteUrl + '/resources/ncqlp-practice-questions',
-    publisher: { '@type': 'Organization', name: 'Luxart LLC', url: siteUrl },
-    author: { '@type': 'Organization', name: 'Luxart LLC' },
+    publisher: { '@type': 'Organization', name: 'LC Lighting Master', url: siteUrl },
+    author: { '@type': 'Organization', name: 'LC Lighting Master' },
     datePublished: '2025-01-01',
     dateModified: '2026-01-01',
     mainEntityOfPage: siteUrl + '/resources/ncqlp-practice-questions',
   }
 
+  const faqJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: questions.map(q => ({
+      '@type': 'Question',
+      name: q.q,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: `Answer: ${q.answer}. ${q.explanation}`,
+      },
+    })),
+  }
+
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
 
       <p style={eyebrow}>Free Practice</p>
       <h1 style={h1Style}>NCQLP Practice Questions: 10 Free LC Exam Sample Questions</h1>

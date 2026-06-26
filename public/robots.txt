@@ -1,11 +1,6 @@
 User-agent: *
 Allow: /
-Allow: /pricing
-Allow: /resources
-Allow: /legal
 Disallow: /dashboard
-Disallow: /login
-Disallow: /reset-password
-Disallow: /api/
-
+Disallow: /api
+Disallow: /admin
 Sitemap: https://lightingmasterlc.com/sitemap.xml

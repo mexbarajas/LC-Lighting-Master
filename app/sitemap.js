@@ -3,7 +3,7 @@ export default function sitemap() {
   const now = new Date().toISOString()
   return [
     { url: base,                                          lastModified: now, changeFrequency: 'weekly',  priority: 1.0 },
-    { url: `${base}/pricing`,                             lastModified: now, changeFrequency: 'monthly', priority: 0.9 },
+    { url: `${base}/pricing`,                             lastModified: now, changeFrequency: 'monthly', priority: 0.7 },
     { url: `${base}/resources`,                           lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${base}/resources/what-is-the-ncqlp-lc-exam`,       lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${base}/resources/ncqlp-exam-dates-2026`,            lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
