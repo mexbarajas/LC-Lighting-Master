@@ -1942,11 +1942,11 @@ function isLessonLocked(lessonRef, user) {
   const plan = user?.plan || 'free'
   const status = user?.status || 'free'
   if (status === 'refunded' || status === 'disputed') return true
+  const moduleNum = parseInt(lessonRef.split('.')[0])
+  if (moduleNum === 1) return false
   if (plan === 't2' || plan === 't3') return false
   if (plan === 'team_admin' || plan === 'team_member') return !user?.accessActive
-  if (plan === 't1') return true
-  const moduleNum = parseInt(lessonRef.split('.')[0])
-  return moduleNum !== 1
+  return true
 }
 
 function getLessonPreview() {
