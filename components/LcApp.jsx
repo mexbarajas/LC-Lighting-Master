@@ -1938,15 +1938,10 @@ function FilamentBar({pct,color,glow,h=5}) {
   )
 }
 
-function isLessonLocked(lessonRef, user) {
-  const plan = user?.plan || 'free'
-  const status = user?.status || 'free'
-  if (status === 'refunded' || status === 'disputed') return true
+function isLessonLocked(lessonRef, access) {
   const moduleNum = parseInt(lessonRef.split('.')[0])
-  if (moduleNum === 1) return false
-  if (plan === 't2' || plan === 't3') return false
-  if (plan === 'team_admin' || plan === 'team_member') return !user?.accessActive
-  return true
+  if (access.isModuleFree(moduleNum)) return false
+  return !access.hasCourseAccess
 }
 
 function getLessonPreview() {
@@ -1954,7 +1949,7 @@ function getLessonPreview() {
 }
 
 /* ── SEARCH PAGE ─────────────────────────────────────────────── */
-function SearchPage({setRoute, user, setShowUpgrade}) {
+function SearchPage({setRoute, user, access, setShowUpgrade}) {
   const [q,setQ] = useState("")
   const [filter,setFilter] = useState("all")
   const results = ALL_LESSONS.filter(l=>{
@@ -1996,7 +1991,7 @@ function SearchPage({setRoute, user, setShowUpgrade}) {
           </div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:1,background:C.rule,border:`1px solid ${C.rule}`,borderRadius:4,overflow:"hidden"}}>
             {p.lessons.map(l=>{
-              const locked = isLessonLocked(l.ref, user)
+              const locked = isLessonLocked(l.ref, access)
               const preview = getLessonPreview(l.ref)
               return (
                 <div key={l.ref} onClick={()=>{ if(locked){ setShowUpgrade(true); return } window.scrollTo({top:0,behavior:'smooth'}); setRoute("lesson-"+l.ref) }}
@@ -2283,7 +2278,7 @@ function CertPage() {
     </div>
   )
 }
-function ExamPage({ setRoute, user, userSubscription }) {
+function ExamPage({ setRoute, user, access }) {
   const supabase = createClient()
 
   const [screen, setScreen] = useState('start')   // start | exam | results | max_attempts
@@ -2320,12 +2315,7 @@ function ExamPage({ setRoute, user, userSubscription }) {
   const [checkoutLoading, setCheckoutLoading] = useState(false)
   const [checkoutError, setCheckoutError] = useState(null)
 
-  const plan = userSubscription?.plan || 'free'
-  const planHasExam   = ['t1','t2','t3'].includes(plan)
-  const addonHasExam  = userSubscription?.exam_addon === true
-  const teamHasExam   = (plan === 'team_member' || plan === 'team_admin') && addonHasExam
-  const canAccess     =
-    ((planHasExam || addonHasExam || teamHasExam) && userSubscription?.status === 'active')
+  const canAccess = access?.hasExamAccess ?? false
 
   // Load attempt count
   useEffect(() => {
@@ -2530,9 +2520,6 @@ function ExamPage({ setRoute, user, userSubscription }) {
   }
 
   // ── PAYWALL ──
-  // Active team members always have access — never show paywall
-  const isActiveTeamMember = plan === 'team_member' && userSubscription?.status === 'active'
-
   async function handleExamPurchase() {
     setCheckoutLoading(true)
     setCheckoutError(null)
@@ -2555,7 +2542,7 @@ function ExamPage({ setRoute, user, userSubscription }) {
     }
   }
 
-  if (!canAccess && !isActiveTeamMember) return (
+  if (!canAccess) return (
     <div style={{padding:'60px 36px',maxWidth:520}}>
       <div style={mono({fontSize:9,letterSpacing:'0.18em',textTransform:'uppercase',color:C.accent,marginBottom:12})}>Practice Exam</div>
       <h2 style={{fontFamily:F.display,fontWeight:700,fontSize:28,color:C.ink,margin:'0 0 16px'}}>Unlock the Practice Exam</h2>
@@ -3128,7 +3115,7 @@ function ModuleCompleteModal({mod, lessonsLearned, onHome, onContinue}){
   )
 }
 
-function LessonPage({lessonRef,setRoute,user,setShowUpgrade,completedLessons=new Set(),markLessonComplete=async()=>{},bookmarks=new Set(),toggleBookmark=async()=>{},isMobile=false}) {
+function LessonPage({lessonRef,setRoute,user,access,setShowUpgrade,completedLessons=new Set(),markLessonComplete=async()=>{},bookmarks=new Set(),toggleBookmark=async()=>{},isMobile=false}) {
   const [showComplete,setShowComplete]=useState(false)
   const [imgFullscreen,setImgFullscreen]=useState(null)
   const [lessonContent,setLessonContent]=useState(null)
@@ -3151,9 +3138,7 @@ function LessonPage({lessonRef,setRoute,user,setShowUpgrade,completedLessons=new
   const lesson = ALL_LESSONS.find(l=>l.ref===lessonRef)
   const module = MODULES.find(m=>m.n===lesson?.module)
   if (!lesson||!module) return <div style={{padding:"40px 36px",color:C.inkMute}}>Lesson not found.</div>
-  // Team member bypass — active team members always have course access
-  const isActiveTeamMember = (user?.plan === 'team_member' || user?.plan === 'team_admin') && !!user?.accessActive
-  if (!isActiveTeamMember && isLessonLocked(lessonRef, user)) return <UpgradePrompt onUpgrade={()=>setShowUpgrade(true)} setRoute={setRoute}/>
+  if (isLessonLocked(lessonRef, access)) return <UpgradePrompt onUpgrade={()=>setShowUpgrade(true)} setRoute={setRoute}/>
   const idx = module.lessons.findIndex(l=>l.ref===lessonRef)
   const prev = module.lessons[idx-1]
   const next = module.lessons[idx+1]
@@ -3502,7 +3487,7 @@ function FreePlanGrid({startCheckout, checkoutLoading, checkoutError}){
 }
 
 /* ── ACCOUNT PAGE ────────────────────────────────────────────── */
-function AccountPage({ user, setUser, setRoute, teamMembership }) {
+function AccountPage({ user, setUser, setRoute, access }) {
   const [tab,setTab] = useState("profile")
   const [form,setForm] = useState({
     firstName: '',
@@ -3627,7 +3612,7 @@ function AccountPage({ user, setUser, setRoute, teamMembership }) {
   const planInfo = PLAN_LABELS[_pk] || PLAN_LABELS.free
   const isActiveStatus = user?.status === 'active'
   const isPaid = isActiveStatus && planKey !== 'free'
-  const isTeamAdmin = teamMembership?.role === 'team_admin' && teamMembership?.status === 'active'
+  const isTeamAdmin = access?.isTeamAdmin ?? false
 
   const tabs = [
     ["profile","Profile"],
@@ -3927,13 +3912,6 @@ function Sidebar({route, setRoute, user, onSignOut, bookmarks=new Set(), isMobil
 /* ── PLAN HELPERS ── */
 const PLAN_LABELS = { free:"Free trial", t1:"LC Preparation Test", t2:"Full Course", t3:"Full Course + Exam", team_admin:"Team Admin", team_member:"Team Member" }
 
-function moduleAccess(plan, modFree, accessActive=true){
-  if(plan==="t3"||plan==="t2") return true
-  if(plan==="team_admin"||plan==="team_member") return !!accessActive
-  if(plan==="t1") return false
-  return modFree
-}
-function examAccess(plan, examAddon){ return plan==="t1"||plan==="t3"||(plan==="t2"&&!!examAddon) }
 
 /* placeholder removed — checkout handled via /api/stripe/checkout */
 
@@ -4504,9 +4482,9 @@ function getNextLesson(completedLessons) {
 }
 
 /* ── COMMUNITY KNOWLEDGE HUB ─────────────────────────────── */
-function CommunityPage({ setRoute, user, userSubscription, initialFilter = 'All' }) {
+function CommunityPage({ setRoute, user, access, initialFilter = 'All' }) {
   const supabase = createClient()
-  const isPaid = ['t1','t2','t3'].includes(userSubscription?.plan || user?.plan)
+  const isPaid = access?.canPostCommunity ?? false
 
   const [view, setView] = useState('list')
   const [questions, setQuestions] = useState([])
@@ -5019,7 +4997,7 @@ function TrendsPage({ setRoute }) {
   )
 }
 
-function AppShell({user, setUser, onSignOut, completedLessons=new Set(), markLessonComplete=async()=>{}, bookmarks=new Set(), toggleBookmark=async()=>{}, isAdmin=false, authReady=false, onAdminClick=()=>{}, teamCtx=null, onTeamRefresh=()=>{}, onRefreshSubscription=async()=>{}, teamMembership=null}){
+function AppShell({user, setUser, onSignOut, completedLessons=new Set(), markLessonComplete=async()=>{}, bookmarks=new Set(), toggleBookmark=async()=>{}, isAdmin=false, authReady=false, onAdminClick=()=>{}, teamCtx=null, onTeamRefresh=()=>{}, onRefreshSubscription=async()=>{}, teamMembership=null, access={}}){
   const [route, setRoute] = useState("home")
   const [showUpgrade, setShowUpgrade] = useState(false)
   const isMobile = useIsMobile()
@@ -5048,7 +5026,7 @@ function AppShell({user, setUser, onSignOut, completedLessons=new Set(), markLes
       fontFamily:F.body,background:C.cream}}>
       <style>{`@import url('${FONT_URL}');*{box-sizing:border-box}code{font-family:${F.mono};font-size:0.9em;background:rgba(0,0,0,0.06);padding:1px 5px;border-radius:3px}@keyframes bulbPulse{0%,100%{opacity:1;box-shadow:0 0 0 3px rgba(198,90,58,0.2),0 0 10px 2px rgba(198,90,58,0.4)}50%{opacity:0.7;box-shadow:0 0 0 5px rgba(198,90,58,0.1),0 0 16px 4px rgba(198,90,58,0.25)}}@keyframes wave{from{transform:scaleY(0.4)}to{transform:scaleY(1.2)}}`}</style>
       {showUpgrade && <UpgradeModal user={user} onClose={()=>setShowUpgrade(false)} onRefreshSubscription={onRefreshSubscription}/>}
-      <Sidebar route={route} setRoute={setRoute} user={user} onSignOut={onSignOut} bookmarks={bookmarks} isMobile={isMobile} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} openQuestionCount={openQuestionCount} isAdmin={isAdmin} isTeamAdmin={teamCtx?.role === 'team_admin'} authReady={authReady} onAdminClick={onAdminClick}/>
+      <Sidebar route={route} setRoute={setRoute} user={user} onSignOut={onSignOut} bookmarks={bookmarks} isMobile={isMobile} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} openQuestionCount={openQuestionCount} isAdmin={isAdmin} isTeamAdmin={access.isTeamAdmin} authReady={authReady} onAdminClick={onAdminClick}/>
       {isMobile && sidebarOpen && (
         <div onClick={()=>setSidebarOpen(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",zIndex:999,backdropFilter:"blur(2px)"}}/>
       )}
@@ -5074,19 +5052,19 @@ function AppShell({user, setUser, onSignOut, completedLessons=new Set(), markLes
           {route==="home"&&user?.plan==="team_admin"  && <TeamAdminDashboard user={user} teamCtx={teamCtx} setRoute={setRoute} onTeamRefresh={onTeamRefresh}/>}
           {route==="home"&&user?.plan==="team_member" && <TeamMemberView user={user} teamCtx={teamCtx} setRoute={setRoute}/>}
           {route==="home"&&user?.plan!=="team_admin"&&user?.plan!=="team_member" && <Dashboard setRoute={setRoute} user={user} completedLessons={completedLessons} isMobile={isMobile}/>}
-          {route==="search"    && <SearchPage setRoute={setRoute} user={user} setShowUpgrade={setShowUpgrade}/>}
+          {route==="search"    && <SearchPage setRoute={setRoute} user={user} access={access} setShowUpgrade={setShowUpgrade}/>}
           {route==="bookmarks" && <BookmarksPage setRoute={setRoute} bookmarks={bookmarks} toggleBookmark={toggleBookmark}/>}
           {route==="notes"     && <NotesPage setRoute={setRoute} user={user}/>}
           {route==="continue"  && <ContinuePage setRoute={setRoute} completedLessons={completedLessons}/>}
-          {route==="exam"      && <ExamPage setRoute={setRoute} user={user} userSubscription={user?.plan ? {plan:user.plan,exam_addon:user.examAddon||false,status:user.status||'active'} : null} isMobile={isMobile}/>}
+          {route==="exam"      && <ExamPage setRoute={setRoute} user={user} access={access} isMobile={isMobile}/>}
           {route==="cert"      && <CertPage setRoute={setRoute} user={user} completedLessons={completedLessons} userSubscription={user?.plan ? {plan:user.plan,current_period_end:null} : null}/>}
-          {route==="account"   && <AccountPage user={user} setUser={setUser} setRoute={setRoute} teamMembership={teamMembership}/>}
-          {route==="community"       && <CommunityPage setRoute={setRoute} user={user} userSubscription={user?.plan?{plan:user.plan}:null}/>}
-          {route==="open-questions"  && <CommunityPage setRoute={setRoute} user={user} userSubscription={user?.plan?{plan:user.plan}:null} initialFilter="open"/>}
+          {route==="account"   && <AccountPage user={user} setUser={setUser} setRoute={setRoute} access={access}/>}
+          {route==="community"       && <CommunityPage setRoute={setRoute} user={user} access={access}/>}
+          {route==="open-questions"  && <CommunityPage setRoute={setRoute} user={user} access={access} initialFilter="open"/>}
           {route==="trends"    && <TrendsPage setRoute={setRoute}/>}
           {route==="feedback"  && <FeedbackPage user={user} userSubscription={user?.plan ? {plan:user.plan} : null}/>}
-          {route==="team-portal" && user?.plan==="team_admin" && <TeamPortal />}
-          {lessonRef && <LessonPage lessonRef={lessonRef} setRoute={setRoute} user={user} setShowUpgrade={setShowUpgrade} completedLessons={completedLessons} markLessonComplete={markLessonComplete} bookmarks={bookmarks} toggleBookmark={toggleBookmark} isMobile={isMobile}/>}
+          {route==="team-portal" && access.isTeamAdmin && <TeamPortal />}
+          {lessonRef && <LessonPage lessonRef={lessonRef} setRoute={setRoute} user={user} access={access} setShowUpgrade={setShowUpgrade} completedLessons={completedLessons} markLessonComplete={markLessonComplete} bookmarks={bookmarks} toggleBookmark={toggleBookmark} isMobile={isMobile}/>}
         </ErrorBoundary>
       </main>
     </div>
@@ -5602,7 +5580,7 @@ function LearnerRoot({isAdmin=false, authReady=false, onAdminClick=()=>{}}){
       )}
 
       {page==="app"&&(
-        <AppShell user={effectiveUser} setUser={setUser} onSignOut={handleSignOut} completedLessons={completedLessons} markLessonComplete={markLessonComplete} bookmarks={bookmarks} toggleBookmark={toggleBookmark} isAdmin={isAdmin} authReady={authReady} onAdminClick={onAdminClick} teamCtx={teamCtx} onTeamRefresh={refreshTeamCtx} onRefreshSubscription={refreshSubscription} teamMembership={teamMembership}/>
+        <AppShell user={effectiveUser} setUser={setUser} onSignOut={handleSignOut} completedLessons={completedLessons} markLessonComplete={markLessonComplete} bookmarks={bookmarks} toggleBookmark={toggleBookmark} isAdmin={isAdmin} authReady={authReady} onAdminClick={onAdminClick} teamCtx={teamCtx} onTeamRefresh={refreshTeamCtx} onRefreshSubscription={refreshSubscription} teamMembership={teamMembership} access={ACCESS}/>
       )}
     </>
   )
