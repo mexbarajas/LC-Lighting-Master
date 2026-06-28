@@ -681,7 +681,6 @@ function AuthModal({mode, onClose, onAuth, initialError=null, onErrorShown=()=>{
 ══════════════════════════════════════════ */
 function Nav({onSignIn,onSignUp}){
   const [scrolled,setScrolled] = useState(false)
-  const [mobileOpen,setMobileOpen] = useState(false)
   useEffect(()=>{
     const h=()=>setScrolled(window.scrollY>60)
     window.addEventListener("scroll",h)
@@ -690,19 +689,14 @@ function Nav({onSignIn,onSignUp}){
   const lc = scrolled?C.inkSoft:"rgba(249,244,237,0.82)"
   const lhb = scrolled?C.creamWarm:"rgba(249,244,237,0.12)"
   const lhc = scrolled?C.ink:"#fff"
-  function handleNavScroll(id){ setMobileOpen(false); scrollTo(id) }
-  const menuBg = scrolled?"rgba(253,250,246,0.98)":"rgba(28,50,40,0.97)"
-  const menuRule = scrolled?C.rule:"rgba(249,244,237,0.1)"
-  const menuText = scrolled?C.ink:"rgba(249,244,237,0.92)"
   return(
     <header style={{position:"fixed",top:0,left:0,right:0,zIndex:100,
       background:scrolled?"rgba(253,250,246,0.97)":"rgba(47,74,63,0.35)",
       backdropFilter:"blur(12px)",
       borderBottom:scrolled?`1px solid ${C.rule}`:"1px solid rgba(249,244,237,0.08)",
       transition:"background 280ms, border-color 280ms"}}>
-      <div className="nav-inner" style={{maxWidth:1180,margin:"0 auto",padding:"0 32px",
+      <div style={{maxWidth:1180,margin:"0 auto",padding:"0 32px",
         display:"flex",alignItems:"center",height:68,gap:32}}>
-        {/* Logo */}
         <div style={{display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
           <img src="/brand/logo-transparent.png" alt="LC Lighting Master"
             style={{width:32,height:32,flexShrink:0,borderRadius:7,
@@ -718,8 +712,7 @@ function Nav({onSignIn,onSignUp}){
             </div>
           </div>
         </div>
-        {/* Desktop nav links */}
-        <nav className="nav-links" style={{display:"flex",alignItems:"center",gap:2,flex:1}}>
+        <nav style={{display:"flex",alignItems:"center",gap:2,flex:1}}>
           {[["Features","features"],["Curriculum","curriculum"],["Pricing","pricing"],["FAQ","faq"]].map(([label,id])=>(
             <button key={label} onClick={()=>scrollTo(id)}
               style={{fontFamily:F.display,fontWeight:600,fontSize:13,color:lc,
@@ -731,8 +724,7 @@ function Nav({onSignIn,onSignUp}){
             </button>
           ))}
         </nav>
-        {/* Desktop auth buttons */}
-        <div className="nav-auth" style={{display:"flex",alignItems:"center",gap:8}}>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
           <button onClick={onSignIn}
             style={{fontFamily:F.display,fontWeight:600,fontSize:13,background:"none",
               border:"none",color:lc,cursor:"pointer",padding:"7px 13px",borderRadius:99,
@@ -745,54 +737,7 @@ function Nav({onSignIn,onSignUp}){
             Try free →
           </Btn>
         </div>
-        {/* Hamburger — mobile only */}
-        <button className="nav-hamburger" onClick={()=>setMobileOpen(o=>!o)}
-          aria-label="Toggle menu"
-          style={{marginLeft:"auto",background:"none",border:"none",cursor:"pointer",
-            padding:"8px",display:"flex",flexDirection:"column",gap:5}}>
-          <span style={{display:"block",width:22,height:2,borderRadius:2,
-            background:scrolled?C.ink:"#fff",
-            transition:"transform 200ms, opacity 200ms",
-            transform:mobileOpen?"rotate(45deg) translate(5px,5px)":"none"}}/>
-          <span style={{display:"block",width:22,height:2,borderRadius:2,
-            background:scrolled?C.ink:"#fff",
-            transition:"opacity 200ms",opacity:mobileOpen?0:1}}/>
-          <span style={{display:"block",width:22,height:2,borderRadius:2,
-            background:scrolled?C.ink:"#fff",
-            transition:"transform 200ms",
-            transform:mobileOpen?"rotate(-45deg) translate(5px,-5px)":"none"}}/>
-        </button>
       </div>
-      {/* Mobile dropdown */}
-      {mobileOpen&&(
-        <div style={{background:menuBg,backdropFilter:"blur(12px)",
-          borderTop:`1px solid ${menuRule}`,padding:"8px 20px 24px"}}>
-          {[["Features","features"],["Curriculum","curriculum"],["Pricing","pricing"],["FAQ","faq"]].map(([label,id])=>(
-            <button key={label} onClick={()=>handleNavScroll(id)}
-              style={{display:"block",width:"100%",textAlign:"left",
-                fontFamily:F.display,fontWeight:600,fontSize:16,color:menuText,
-                padding:"14px 0",background:"none",border:"none",
-                borderBottom:`1px solid ${menuRule}`,cursor:"pointer"}}>
-              {label}
-            </button>
-          ))}
-          <div style={{display:"flex",gap:10,marginTop:20}}>
-            <button onClick={()=>{setMobileOpen(false);onSignIn()}}
-              style={{flex:1,fontFamily:F.display,fontWeight:600,fontSize:14,
-                background:"none",
-                border:`1.5px solid ${scrolled?C.ruleStrong:"rgba(249,244,237,0.35)"}`,
-                color:scrolled?C.ink:"#fff",borderRadius:99,padding:"11px",cursor:"pointer"}}>
-              Sign in
-            </button>
-            <button onClick={()=>{setMobileOpen(false);onSignUp()}}
-              style={{flex:1,fontFamily:F.display,fontWeight:700,fontSize:14,
-                background:C.accent,border:"none",color:"#fff",
-                borderRadius:99,padding:"11px",cursor:"pointer"}}>
-              Try free →
-            </button>
-          </div>
-        </div>
-      )}
     </header>
   )
 }
@@ -884,10 +829,12 @@ function Features(){
             Built by lighting professionals, for lighting professionals.
           </p>
         </div>
-        <div className="features-grid" style={{background:C.rule,
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:1,
           border:`1px solid ${C.rule}`,borderRadius:4,overflow:"hidden"}}>
           {features.map((f,i)=>(
             <div key={i} style={{background:C.paper,padding:"32px 28px",
+              borderRight:i%3<2?`1px solid ${C.rule}`:"none",
+              borderBottom:i<3?`1px solid ${C.rule}`:"none",
               transition:"background 160ms",position:"relative"}}
               onMouseEnter={e=>e.currentTarget.style.background=C.creamWarm}
               onMouseLeave={e=>e.currentTarget.style.background=C.paper}>
@@ -1063,8 +1010,9 @@ function Pricing({onSignUp}){
       id:"t2",label:"Full Course",tag:"Tier 2",price:T2_PRICE,
       badge:"Most popular",badgeColor:C.accent,
       dim:false,dark:false,
-      desc:"All 12 modules structured around the LC exam blueprint. Certificate + 24 CEU hours. Exam not included.",
+      desc:"All 12 modules structured around the LC exam blueprint. Certificate + 24 CEU hours.",
       includes:["All 12 modules · 74 lessons","Audio narration every lesson","Bookmarks & notes hub","Certificate of completion","24 CEU credit hours"],
+      addon:"+ LC Preparation Test add-on for $200",
       cta:"Start Full Course →",
     },
     {
@@ -1173,7 +1121,7 @@ function Pricing({onSignUp}){
               ))}
             </div>
             <p style={{textAlign:"center",fontFamily:F.body,fontSize:13,color:C.inkMute,marginTop:20,lineHeight:1.7}}>
-              All plans include a <strong style={{color:C.inkSoft}}>free trial</strong> — Module 01 in full. No card required.
+              All plans include a <strong style={{color:C.inkSoft}}>free trial</strong> — Module 01 in full + 10 LC practice questions. No card required.
             </p>
           </div>
         )}
@@ -1316,7 +1264,7 @@ function Pricing({onSignUp}){
                     Per member
                   </div>
                   {(teamPlanType==="course_only"
-                    ? ["All 12 modules · 74 lessons","Audio narration every lesson","Bookmarks, notes & progress tracking","Certificate of completion","24 CEU credit hours"]
+                    ? ["All 12 modules · 74 lessons","Audio narration every lesson","Bookmarks, notes & progress tracking","Certificate of completion","24 CEU credit hours","Exam add-on available for $99/member"]
                     : ["All 12 modules · 74 lessons","Audio narration every lesson","LC practice exam · 180 questions","Up to 5 exam attempts","Bookmarks, notes & progress tracking","Certificate of completion","24 CEU credit hours"]
                   ).map((item,i,arr)=>(
                     <div key={i} style={{display:"flex",alignItems:"flex-start",gap:8,padding:"5px 0",
@@ -1385,18 +1333,7 @@ function Testimonials(){
     {name:"Marcus T.",role:"Lighting Designer · Gensler",text:"I've taken a lot of continuing ed courses. This is the only one that actually felt like it was built to make me pass the NCQLP, not just collect CEUs."},
     {name:"Priya K.",role:"Associate, HLB Lighting",text:"The practice exam alone is worth it. The speed timer puts you in the exact headspace of the real test. My score went from 68% to 91% in three sessions."},
     {name:"Sarah L.",role:"Lighting Designer · AECOM",text:"The curriculum structure is exactly what I needed — it covers the IES standards and ASHRAE energy codes in a way that finally made them click. Passed NCQLP on my first attempt."},
-    {name:"James R.",role:"Senior Designer · HOK",text:"I'd been putting off the LC for years because I couldn't find study material that fit my schedule. The audio narration meant I could prep on my commute. Passed on my first try."},
-    {name:"Elena M.",role:"Electrical Engineer · Arup",text:"The topic-by-topic accuracy breakdown after each practice session is a game changer. I knew exactly which IES categories to focus on. Went from 72% to 94% before my test."},
-    {name:"Daniel W.",role:"Lighting Consultant · Independent",text:"Clear, well-organized, and genuinely aligned with what shows up on the exam. The 25-second timer builds the right habits. I can't recommend this enough to anyone sitting for the LC."},
   ]
-  const [page,setPage]=useState(0)
-  const perPage=3
-  const totalPages=Math.ceil(quotes.length/perPage)
-  const visible=quotes.slice(page*perPage,page*perPage+perPage)
-  useEffect(()=>{
-    const t=setInterval(()=>setPage(p=>(p+1)%totalPages),6000)
-    return()=>clearInterval(t)
-  },[totalPages])
   return(
     <section style={{padding:"96px 32px",background:C.creamWarm,borderTop:`1px solid ${C.rule}`}}>
       <div style={{maxWidth:1180,margin:"0 auto"}}>
@@ -1408,7 +1345,7 @@ function Testimonials(){
         </div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:1,
           border:`1px solid ${C.rule}`,borderRadius:4,overflow:"hidden"}}>
-          {visible.map((q,i)=>(
+          {quotes.map((q,i)=>(
             <div key={i} style={{background:C.paper,padding:"32px 28px",
               borderRight:i<2?`1px solid ${C.rule}`:"none"}}>
               <div style={{fontSize:24,color:C.accent,marginBottom:16,fontFamily:F.display,lineHeight:1}}>"</div>
@@ -1427,22 +1364,6 @@ function Testimonials(){
               </div>
             </div>
           ))}
-        </div>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:14,marginTop:28}}>
-          <button onClick={()=>setPage(p=>(p-1+totalPages)%totalPages)}
-            style={{width:36,height:36,borderRadius:"50%",border:`1px solid ${C.rule}`,
-              background:C.paper,cursor:"pointer",display:"flex",alignItems:"center",
-              justifyContent:"center",color:C.inkMute,fontSize:18,lineHeight:1,flexShrink:0}}>‹</button>
-          {Array.from({length:totalPages}).map((_,i)=>(
-            <button key={i} onClick={()=>setPage(i)}
-              style={{width:8,height:8,borderRadius:"50%",border:"none",padding:0,
-                background:i===page?C.accent:C.rule,cursor:"pointer",
-                transition:"background 0.2s",flexShrink:0}}/>
-          ))}
-          <button onClick={()=>setPage(p=>(p+1)%totalPages)}
-            style={{width:36,height:36,borderRadius:"50%",border:`1px solid ${C.rule}`,
-              background:C.paper,cursor:"pointer",display:"flex",alignItems:"center",
-              justifyContent:"center",color:C.inkMute,fontSize:18,lineHeight:1,flexShrink:0}}>›</button>
         </div>
       </div>
     </section>
@@ -1604,7 +1525,7 @@ const LEGAL_DOCS = {
       {h:"1. Our commitment", body:"We want you to feel confident purchasing LC · Lighting Master. If the platform is not right for you, we offer a straightforward refund process. All refund requests should be submitted to admin@luxartmedia.com with your account email and reason."},
       {h:"2. 14-day money-back guarantee — individual plans", body:"Individual subscribers (Tier 1, Tier 2, Tier 3) may request a full refund within 14 days of purchase, no questions asked, provided they have completed fewer than 3 full lessons. Once 3 or more lessons have been completed, the guarantee no longer applies and refunds are issued at our discretion. To claim: email admin@luxartmedia.com within 14 days of purchase with subject line \"Refund Request\"."},
       {h:"3. Team plans", body:"Team plan purchases are refundable within 14 days provided no team members have accessed the platform. Once any seat has been activated (first login by any team member), team plans are non-refundable. If you purchase a team plan and need to cancel before activation, contact admin@luxartmedia.com immediately."},
-      {h:"4. LC Preparation Test (Tier 1)", body:"The LC Preparation Test plan ($250) is refundable within 14 days of purchase if fewer than 2 exam sessions have been started. Once 2 or more sessions have been completed, this plan is non-refundable."},
+      {h:"4. Exam add-on", body:"The practice exam add-on ($200) is refundable within 14 days of purchase if fewer than 2 exam sessions have been started. Once 2 or more sessions have been completed, the add-on is non-refundable."},
       {h:"5. Seasonal and promotional pricing", body:"Purchases made at a promotional or seasonal discount (Early Bird, Last-Minute October pricing) are subject to the same refund terms above. The refund amount is always the amount actually paid, not the standard list price."},
       {h:"6. Renewals and re-purchases", body:"Access expires on December 31 of the year of purchase. If you re-purchase for the following year, refund eligibility resets. If you purchase and your access window has already expired, contact us immediately — we will extend your access or issue a full refund within 24 hours."},
       {h:"7. Chargebacks", body:"We ask that you contact us before initiating a chargeback with your card issuer. Unresolved chargebacks result in immediate account suspension and may affect future purchase eligibility. We respond to all billing disputes within 2 business days."},
@@ -2309,7 +2230,7 @@ function CertPage() {
         {/* LEFT: certificate */}
         <div style={{position:'relative'}}>
           <div style={{pointerEvents:isUnlocked?'auto':'none'}}>
-            <Certificate studentName={isUnlocked ? studentName : ''} issuedDate={isUnlocked ? issuedDate : undefined} />
+            <Certificate studentName={isUnlocked ? studentName : ''} />
           </div>
           {!isUnlocked && (
             <div style={{position:'absolute',inset:0,background:'rgba(248,243,236,0.9)',backdropFilter:'blur(3px)',borderRadius:4,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:10}}>
@@ -2887,7 +2808,7 @@ const LC_MEDIA = {
 
 const LC_AUDIO = {
   "1.1": "https://res.cloudinary.com/dreuglb2j/video/upload/v1782159502/Lesson_101_flxcqt.mp4",
-  "1.2": "https://res.cloudinary.com/dreuglb2j/video/upload/v1782680931/Lesson_102_the_4_photometric_Quantities_of_Light_srwmlq.mp4",
+  "1.2": "https://res.cloudinary.com/dreuglb2j/video/upload/v1780937194/Lesson_102_lrftbl.mp4",
   "1.3": "https://res.cloudinary.com/dreuglb2j/video/upload/v1780937199/Lesson_103_nccty5.mp4",
   "1.4": "https://res.cloudinary.com/dreuglb2j/video/upload/v1780937207/Lesson_104_azebuk.mp4",
   "1.5": "https://res.cloudinary.com/dreuglb2j/video/upload/v1780938829/Lesson_105_ocp78s.mp4",
@@ -3501,7 +3422,7 @@ function FreePlanGrid({startCheckout, checkoutLoading, checkoutError}){
   return(
     <div>
       <h3 style={{fontFamily:F.display,fontWeight:700,fontSize:22,color:C.ink,margin:'0 0 4px'}}>Choose your path to LC certification</h3>
-      <p style={{fontFamily:F.body,fontSize:13,color:C.inkMute,margin:'0 0 22px'}}>One-time payment. Access through Dec 31. Pick the half you need — or get both and save $50.</p>
+      <p style={{fontFamily:F.body,fontSize:13,color:C.inkMute,margin:'0 0 22px'}}>One-time payment. Lifetime access. Pick the half you need — or get both and save $50.</p>
 
       <div style={{display:'flex',flexWrap:'wrap',gap:16,marginBottom:16}}>
 
@@ -3800,7 +3721,7 @@ function AccountPage({ user, setUser, setRoute, access }) {
               )}
             </div>
           </div>
-          {_pk==='free' && <PricingCard userId={user?.id} userEmail={user?.email} />}
+          {_pk==='free' && <FreePlanGrid startCheckout={startCheckout} checkoutLoading={checkoutLoading} checkoutError={checkoutError} />}
           {isPaid&&(
             <div style={{background:C.paper,border:`1px solid ${C.rule}`,borderRadius:4,padding:"24px 28px"}}>
               <div style={mono({fontSize:9,letterSpacing:"0.18em",textTransform:"uppercase",color:C.inkMute,marginBottom:10})}>Questions about billing?</div>
@@ -5608,9 +5529,9 @@ function LearnerRoot({isAdmin=false, authReady=false, onAdminClick=()=>{}}){
     const hasCourseAccess =
       (subActive && ['t2','t3'].includes(plan)) || teamHasCourse
 
-    // EXAM access: t1/t3 only — T2 is course-only, no exam.
+    // EXAM access: t1/t2/t3 (active sub) OR exam add-on OR team-with-exam.
     const hasExamAccess =
-      (subActive && ['t1','t3'].includes(plan)) ||
+      (subActive && ['t1','t2','t3'].includes(plan)) ||
       (subActive && examAddon) ||
       teamHasExam
 
@@ -5730,7 +5651,7 @@ const adisp = s => ({fontFamily:AF.display,...(s||{})})
 const STATES=["Florida","California","New York","Texas","Illinois","Washington","Colorado","Georgia","Ohio","Pennsylvania","Arizona","Massachusetts"]
 const COMPANIES=["Gensler","HLB Lighting","AECOM","Arup","WSP","Lumenpulse","Stantec","HDR","Arcadis","Lam Partners","Luxartmedia","Atelier Ten","Self-employed"]
 const PLANS=["free","t1","t2","t3"]
-const A_PLAN_LABELS ={free:"Free",t1:"Exam Prep",t2:"Course",t3:"Course+Exam"}
+const A_PLAN_LABELS ={free:"Free",t1:"Course",t2:"Course+Exam",t3:"Course+Exam"}
 const PLAN_COLORS={free:AT.inkMute,t1:AT.blue,t2:AT.green,t3:AT.purple}
 const STATUS_COLORS={active:AT.green,past_due:AT.amber,canceled:AT.red,trialing:AT.blue,free:AT.inkMute}
 
