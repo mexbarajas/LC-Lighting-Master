@@ -214,6 +214,8 @@ export async function POST(request) {
       examAddon = true
     } else if (plan === 'team' && planType && TEAM_PLAN_TYPES[planType]) {
       examAddon = TEAM_PLAN_TYPES[planType].hasExam
+    } else if (PLANS[plan]) {
+      examAddon = PLANS[plan].includesExam ?? false
     }
 
     // ── UPSERT SUBSCRIPTION ────────────────────────────────────

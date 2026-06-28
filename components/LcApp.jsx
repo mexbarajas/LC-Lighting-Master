@@ -5651,7 +5651,7 @@ const adisp = s => ({fontFamily:AF.display,...(s||{})})
 const STATES=["Florida","California","New York","Texas","Illinois","Washington","Colorado","Georgia","Ohio","Pennsylvania","Arizona","Massachusetts"]
 const COMPANIES=["Gensler","HLB Lighting","AECOM","Arup","WSP","Lumenpulse","Stantec","HDR","Arcadis","Lam Partners","Luxartmedia","Atelier Ten","Self-employed"]
 const PLANS=["free","t1","t2","t3"]
-const A_PLAN_LABELS ={free:"Free",t1:"Course",t2:"Course+Exam",t3:"Course+Exam"}
+const A_PLAN_LABELS ={free:"Free",t1:"Exam Prep",t2:"Course",t3:"Course+Exam"}
 const PLAN_COLORS={free:AT.inkMute,t1:AT.blue,t2:AT.green,t3:AT.purple}
 const STATUS_COLORS={active:AT.green,past_due:AT.amber,canceled:AT.red,trialing:AT.blue,free:AT.inkMute}
 
