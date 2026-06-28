@@ -5,12 +5,15 @@ import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 import { buildPriceToPlanMap } from '@/lib/pricing';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+let _stripe, _supabase;
+function getStripe() {
+  if (!_stripe) _stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+  return _stripe;
+}
+function getSupabase() {
+  if (!_supabase) _supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+  return _supabase;
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -21,7 +24,7 @@ export async function POST(req) {
 
   let event;
   try {
-    event = stripe.webhooks.constructEvent(
+    event = getStripe().webhooks.constructEvent(
       body,
       sig,
       process.env.STRIPE_WEBHOOK_SECRET
@@ -67,7 +70,7 @@ async function handleTeamPurchase(session, paymentIntent, metadata) {
     return NextResponse.json({ error: 'Incomplete metadata' }, { status: 400 });
   }
 
-  const { data: existing } = await supabase
+  const { data: existing } = await getSupabase()
     .from('teams')
     .select('id')
     .eq('stripe_ref', paymentIntent)
@@ -82,7 +85,7 @@ async function handleTeamPurchase(session, paymentIntent, metadata) {
   expiry.setFullYear(expiry.getFullYear() + 1);
   const accessExpiry = expiry.toISOString().split('T')[0];
 
-  const { data: team, error: teamErr } = await supabase
+  const { data: team, error: teamErr } = await getSupabase()
     .from('teams')
     .insert({
       owner_id:         user_id,
@@ -105,7 +108,7 @@ async function handleTeamPurchase(session, paymentIntent, metadata) {
 
   const hasExamAccess = plan_type === 'course_exam';
 
-  const { error: memberErr } = await supabase
+  const { error: memberErr } = await getSupabase()
     .from('team_members')
     .insert({
       team_id:            team.id,
@@ -135,7 +138,7 @@ async function handleTeamExamAddon(session, paymentIntent, metadata) {
     return NextResponse.json({ error: 'Incomplete metadata' }, { status: 400 });
   }
 
-  const { data: existing } = await supabase
+  const { data: existing } = await getSupabase()
     .from('team_members')
     .select('member_exam_add_on_paid, member_exam_add_on_payment_id')
     .eq('id', team_member_id)
@@ -149,7 +152,7 @@ async function handleTeamExamAddon(session, paymentIntent, metadata) {
     return NextResponse.json({ received: true });
   }
 
-  const { data: member, error: memberErr } = await supabase
+  const { data: member, error: memberErr } = await getSupabase()
     .from('team_members')
     .select('license_type, has_exam_access, status')
     .eq('id', team_member_id)
@@ -172,7 +175,7 @@ async function handleTeamExamAddon(session, paymentIntent, metadata) {
     return NextResponse.json({ error: 'Member already has exam access; manual review required' }, { status: 400 });
   }
 
-  const { error: updateErr } = await supabase
+  const { error: updateErr } = await getSupabase()
     .from('team_members')
     .update({
       has_exam_access:               true,
@@ -202,7 +205,7 @@ async function handleIndividualPlan(session, paymentIntent) {
     return NextResponse.json({ error: 'Missing user_id' }, { status: 400 });
   }
 
-  const { data: existing } = await supabase
+  const { data: existing } = await getSupabase()
     .from('subscriptions')
     .select('stripe_payment_intent, plan')
     .eq('user_id', userId)
@@ -217,7 +220,7 @@ async function handleIndividualPlan(session, paymentIntent) {
 
   if (!plan) {
     try {
-      const lineItems = await stripe.checkout.sessions.listLineItems(session.id, { limit: 5 });
+      const lineItems = await getStripe().checkout.sessions.listLineItems(session.id, { limit: 5 });
       const priceId   = lineItems.data?.[0]?.price?.id;
       const priceMap  = buildPriceToPlanMap();
       plan = priceMap[priceId] || null;
@@ -233,7 +236,7 @@ async function handleIndividualPlan(session, paymentIntent) {
 
   const examAddon = ['t2', 't3'].includes(plan);
 
-  const { error: upsertErr } = await supabase
+  const { error: upsertErr } = await getSupabase()
     .from('subscriptions')
     .upsert(
       {
