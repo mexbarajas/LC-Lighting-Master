@@ -1012,7 +1012,7 @@ function Pricing({onSignUp}){
       dim:false,dark:false,
       desc:"All 12 modules structured around the LC exam blueprint. Certificate + 24 CEU hours.",
       includes:["All 12 modules · 74 lessons","Audio narration every lesson","Bookmarks & notes hub","Certificate of completion","24 CEU credit hours"],
-      addon:"+ LC Preparation Test add-on for $200",
+      addon:"+ Or get both bundled in Tier 3 — $595 (save $50)",
       cta:"Start Full Course →",
     },
     {
@@ -1525,7 +1525,7 @@ const LEGAL_DOCS = {
       {h:"1. Our commitment", body:"We want you to feel confident purchasing LC · Lighting Master. If the platform is not right for you, we offer a straightforward refund process. All refund requests should be submitted to admin@luxartmedia.com with your account email and reason."},
       {h:"2. 14-day money-back guarantee — individual plans", body:"Individual subscribers (Tier 1, Tier 2, Tier 3) may request a full refund within 14 days of purchase, no questions asked, provided they have completed fewer than 3 full lessons. Once 3 or more lessons have been completed, the guarantee no longer applies and refunds are issued at our discretion. To claim: email admin@luxartmedia.com within 14 days of purchase with subject line \"Refund Request\"."},
       {h:"3. Team plans", body:"Team plan purchases are refundable within 14 days provided no team members have accessed the platform. Once any seat has been activated (first login by any team member), team plans are non-refundable. If you purchase a team plan and need to cancel before activation, contact admin@luxartmedia.com immediately."},
-      {h:"4. Exam add-on", body:"The practice exam add-on ($200) is refundable within 14 days of purchase if fewer than 2 exam sessions have been started. Once 2 or more sessions have been completed, the add-on is non-refundable."},
+      {h:"4. LC Preparation Test (Tier 1)", body:"The LC Preparation Test plan ($250) is refundable within 14 days of purchase if fewer than 2 exam sessions have been started. Once 2 or more sessions have been completed, this plan is non-refundable."},
       {h:"5. Seasonal and promotional pricing", body:"Purchases made at a promotional or seasonal discount (Early Bird, Last-Minute October pricing) are subject to the same refund terms above. The refund amount is always the amount actually paid, not the standard list price."},
       {h:"6. Renewals and re-purchases", body:"Access expires on December 31 of the year of purchase. If you re-purchase for the following year, refund eligibility resets. If you purchase and your access window has already expired, contact us immediately — we will extend your access or issue a full refund within 24 hours."},
       {h:"7. Chargebacks", body:"We ask that you contact us before initiating a chargeback with your card issuer. Unresolved chargebacks result in immediate account suspension and may affect future purchase eligibility. We respond to all billing disputes within 2 business days."},
@@ -3422,7 +3422,7 @@ function FreePlanGrid({startCheckout, checkoutLoading, checkoutError}){
   return(
     <div>
       <h3 style={{fontFamily:F.display,fontWeight:700,fontSize:22,color:C.ink,margin:'0 0 4px'}}>Choose your path to LC certification</h3>
-      <p style={{fontFamily:F.body,fontSize:13,color:C.inkMute,margin:'0 0 22px'}}>One-time payment. Lifetime access. Pick the half you need — or get both and save $50.</p>
+      <p style={{fontFamily:F.body,fontSize:13,color:C.inkMute,margin:'0 0 22px'}}>One-time payment. Access through Dec 31. Pick the half you need — or get both and save $50.</p>
 
       <div style={{display:'flex',flexWrap:'wrap',gap:16,marginBottom:16}}>
 
@@ -3721,7 +3721,7 @@ function AccountPage({ user, setUser, setRoute, access }) {
               )}
             </div>
           </div>
-          {_pk==='free' && <FreePlanGrid startCheckout={startCheckout} checkoutLoading={checkoutLoading} checkoutError={checkoutError} />}
+          {_pk==='free' && <PricingCard userId={user?.id} userEmail={user?.email} />}
           {isPaid&&(
             <div style={{background:C.paper,border:`1px solid ${C.rule}`,borderRadius:4,padding:"24px 28px"}}>
               <div style={mono({fontSize:9,letterSpacing:"0.18em",textTransform:"uppercase",color:C.inkMute,marginBottom:10})}>Questions about billing?</div>
