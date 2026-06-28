@@ -2808,7 +2808,7 @@ const LC_MEDIA = {
 
 const LC_AUDIO = {
   "1.1": "https://res.cloudinary.com/dreuglb2j/video/upload/v1782159502/Lesson_101_flxcqt.mp4",
-  "1.2": "https://res.cloudinary.com/dreuglb2j/video/upload/v1780937194/Lesson_102_lrftbl.mp4",
+  "1.2": "https://res.cloudinary.com/dreuglb2j/video/upload/v1782680931/Lesson_102_the_4_photometric_Quantities_of_Light_srwmlq.mp4",
   "1.3": "https://res.cloudinary.com/dreuglb2j/video/upload/v1780937199/Lesson_103_nccty5.mp4",
   "1.4": "https://res.cloudinary.com/dreuglb2j/video/upload/v1780937207/Lesson_104_azebuk.mp4",
   "1.5": "https://res.cloudinary.com/dreuglb2j/video/upload/v1780938829/Lesson_105_ocp78s.mp4",
