@@ -2309,7 +2309,7 @@ function CertPage() {
         {/* LEFT: certificate */}
         <div style={{position:'relative'}}>
           <div style={{pointerEvents:isUnlocked?'auto':'none'}}>
-            <Certificate studentName={isUnlocked ? studentName : ''} />
+            <Certificate studentName={isUnlocked ? studentName : ''} issuedDate={isUnlocked ? issuedDate : undefined} />
           </div>
           {!isUnlocked && (
             <div style={{position:'absolute',inset:0,background:'rgba(248,243,236,0.9)',backdropFilter:'blur(3px)',borderRadius:4,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:10}}>

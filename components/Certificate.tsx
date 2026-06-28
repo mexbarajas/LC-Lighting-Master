@@ -4,15 +4,22 @@ import { useRef, useState, useCallback } from 'react'
 
 interface CertificateProps {
   studentName: string
+  issuedDate?: string
 }
 
 const CERT_BG =
   'https://res.cloudinary.com/dreuglb2j/image/upload/v1781724634/certificate_bx5krp.png'
 
-const NAME_Y = 0.70
-const NAME_VW = 2.5
-const NAME_SCALE = 0.025
+// Vertical position of the recipient name (fraction of canvas height)
+// 0.50 = just below the vertical midpoint, in the AWARDED TO zone
+const NAME_Y = 0.50
+
+// Date value position — bottom-left DATE slot in the footer bar
+const DATE_X = 0.232
+const DATE_Y = 0.893
+
 const MAX_LEN = 60
+const SERIF   = '"Cormorant Garamond", Georgia, serif'
 
 function cleanName(raw: string): string {
   return Array.from(raw ?? '')
@@ -34,7 +41,23 @@ function safeFilename(name: string): string {
   return `LC_Certificate_${base || 'student'}.png`
 }
 
-export default function Certificate({ studentName }: CertificateProps) {
+// Shrink font size until text fits within maxWidth
+function fitText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  maxWidth: number,
+  startSize: number
+): number {
+  let size = startSize
+  ctx.font = `700 ${size}px ${SERIF}`
+  while (ctx.measureText(text).width > maxWidth && size > 24) {
+    size -= 2
+    ctx.font = `700 ${size}px ${SERIF}`
+  }
+  return size
+}
+
+export default function Certificate({ studentName, issuedDate }: CertificateProps) {
   const wrapRef = useRef<HTMLDivElement>(null)
   const [busy, setBusy] = useState(false)
 
@@ -50,26 +73,37 @@ export default function Certificate({ studentName }: CertificateProps) {
       const img = new Image()
       img.crossOrigin = 'anonymous'
       await new Promise<void>((res, rej) => {
-        img.onload = () => res()
+        img.onload  = () => res()
         img.onerror = () => rej(new Error('Certificate image failed to load'))
         img.src = CERT_BG
       })
 
       const canvas = document.createElement('canvas')
-      canvas.width = img.naturalWidth
+      canvas.width  = img.naturalWidth
       canvas.height = img.naturalHeight
       const ctx = canvas.getContext('2d')!
       ctx.drawImage(img, 0, 0)
 
-      ctx.fillStyle = '#0D3135'
-      ctx.textAlign = 'center'
+      ctx.fillStyle    = '#0D3135'
       ctx.textBaseline = 'middle'
-      ctx.font = `700 ${img.naturalWidth * NAME_SCALE}px "Cormorant Garamond", Georgia, serif`
+
+      // ── Recipient name — auto-shrink to fit 66% of canvas width ──
+      ctx.textAlign = 'center'
+      const maxNameWidth = canvas.width * 0.66
+      const startSize    = Math.round(canvas.width * 0.038)
+      fitText(ctx, name, maxNameWidth, startSize)
       ctx.fillText(name, canvas.width / 2, canvas.height * NAME_Y)
 
-      const link = document.createElement('a')
-      link.download = safeFilename(name)
-      link.href = canvas.toDataURL('image/png')
+      // ── Completion date ──
+      const dateStr = issuedDate ||
+        new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+      ctx.font      = `400 ${Math.round(canvas.width * 0.012)}px ${SERIF}`
+      ctx.textAlign = 'center'
+      ctx.fillText(dateStr, canvas.width * DATE_X, canvas.height * DATE_Y)
+
+      const link     = document.createElement('a')
+      link.download  = safeFilename(name)
+      link.href      = canvas.toDataURL('image/png')
       link.click()
     } catch (err) {
       console.error('[Certificate] download failed:', err)
@@ -77,7 +111,7 @@ export default function Certificate({ studentName }: CertificateProps) {
     } finally {
       setBusy(false)
     }
-  }, [name])
+  }, [name, issuedDate])
 
   if (!name) {
     return (
@@ -97,17 +131,18 @@ export default function Certificate({ studentName }: CertificateProps) {
           draggable={false}
           className="w-full h-auto block rounded shadow-lg"
         />
+        {/* Preview overlay — matches NAME_Y */}
         <div
           className="absolute pointer-events-none"
           style={{
-            top: `${NAME_Y * 100}%`,
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
+            top:        `${NAME_Y * 100}%`,
+            left:       '50%',
+            transform:  'translate(-50%, -50%)',
             whiteSpace: 'nowrap',
-            fontFamily: '"Cormorant Garamond", Georgia, serif',
+            fontFamily: SERIF,
             fontWeight: 700,
-            fontSize: `${NAME_VW}vw`,
-            color: '#0D3135',
+            fontSize:   '2.2vw',
+            color:      '#0D3135',
           }}
         >
           {name}
