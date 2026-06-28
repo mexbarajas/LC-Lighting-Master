@@ -25,6 +25,17 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* ── Responsive nav ── */
+.nav-hamburger { display: none; }
+
+@media (max-width: 768px) {
+  .nav-inner     { padding: 0 20px !important; gap: 0 !important; }
+  .nav-links     { display: none !important; }
+  .nav-auth      { display: none !important; }
+  .nav-hamburger { display: flex !important; }
+}
+
+/* ── Feature grid ── */
 .features-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

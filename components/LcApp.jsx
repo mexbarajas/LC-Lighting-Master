@@ -681,6 +681,7 @@ function AuthModal({mode, onClose, onAuth, initialError=null, onErrorShown=()=>{
 ══════════════════════════════════════════ */
 function Nav({onSignIn,onSignUp}){
   const [scrolled,setScrolled] = useState(false)
+  const [mobileOpen,setMobileOpen] = useState(false)
   useEffect(()=>{
     const h=()=>setScrolled(window.scrollY>60)
     window.addEventListener("scroll",h)
@@ -689,14 +690,19 @@ function Nav({onSignIn,onSignUp}){
   const lc = scrolled?C.inkSoft:"rgba(249,244,237,0.82)"
   const lhb = scrolled?C.creamWarm:"rgba(249,244,237,0.12)"
   const lhc = scrolled?C.ink:"#fff"
+  function handleNavScroll(id){ setMobileOpen(false); scrollTo(id) }
+  const menuBg = scrolled?"rgba(253,250,246,0.98)":"rgba(28,50,40,0.97)"
+  const menuRule = scrolled?C.rule:"rgba(249,244,237,0.1)"
+  const menuText = scrolled?C.ink:"rgba(249,244,237,0.92)"
   return(
     <header style={{position:"fixed",top:0,left:0,right:0,zIndex:100,
       background:scrolled?"rgba(253,250,246,0.97)":"rgba(47,74,63,0.35)",
       backdropFilter:"blur(12px)",
       borderBottom:scrolled?`1px solid ${C.rule}`:"1px solid rgba(249,244,237,0.08)",
       transition:"background 280ms, border-color 280ms"}}>
-      <div style={{maxWidth:1180,margin:"0 auto",padding:"0 32px",
+      <div className="nav-inner" style={{maxWidth:1180,margin:"0 auto",padding:"0 32px",
         display:"flex",alignItems:"center",height:68,gap:32}}>
+        {/* Logo */}
         <div style={{display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
           <img src="/brand/logo-transparent.png" alt="LC Lighting Master"
             style={{width:32,height:32,flexShrink:0,borderRadius:7,
@@ -712,7 +718,8 @@ function Nav({onSignIn,onSignUp}){
             </div>
           </div>
         </div>
-        <nav style={{display:"flex",alignItems:"center",gap:2,flex:1}}>
+        {/* Desktop nav links */}
+        <nav className="nav-links" style={{display:"flex",alignItems:"center",gap:2,flex:1}}>
           {[["Features","features"],["Curriculum","curriculum"],["Pricing","pricing"],["FAQ","faq"]].map(([label,id])=>(
             <button key={label} onClick={()=>scrollTo(id)}
               style={{fontFamily:F.display,fontWeight:600,fontSize:13,color:lc,
@@ -724,7 +731,8 @@ function Nav({onSignIn,onSignUp}){
             </button>
           ))}
         </nav>
-        <div style={{display:"flex",alignItems:"center",gap:8}}>
+        {/* Desktop auth buttons */}
+        <div className="nav-auth" style={{display:"flex",alignItems:"center",gap:8}}>
           <button onClick={onSignIn}
             style={{fontFamily:F.display,fontWeight:600,fontSize:13,background:"none",
               border:"none",color:lc,cursor:"pointer",padding:"7px 13px",borderRadius:99,
@@ -737,7 +745,54 @@ function Nav({onSignIn,onSignUp}){
             Try free →
           </Btn>
         </div>
+        {/* Hamburger — mobile only */}
+        <button className="nav-hamburger" onClick={()=>setMobileOpen(o=>!o)}
+          aria-label="Toggle menu"
+          style={{marginLeft:"auto",background:"none",border:"none",cursor:"pointer",
+            padding:"8px",display:"flex",flexDirection:"column",gap:5}}>
+          <span style={{display:"block",width:22,height:2,borderRadius:2,
+            background:scrolled?C.ink:"#fff",
+            transition:"transform 200ms, opacity 200ms",
+            transform:mobileOpen?"rotate(45deg) translate(5px,5px)":"none"}}/>
+          <span style={{display:"block",width:22,height:2,borderRadius:2,
+            background:scrolled?C.ink:"#fff",
+            transition:"opacity 200ms",opacity:mobileOpen?0:1}}/>
+          <span style={{display:"block",width:22,height:2,borderRadius:2,
+            background:scrolled?C.ink:"#fff",
+            transition:"transform 200ms",
+            transform:mobileOpen?"rotate(-45deg) translate(5px,-5px)":"none"}}/>
+        </button>
       </div>
+      {/* Mobile dropdown */}
+      {mobileOpen&&(
+        <div style={{background:menuBg,backdropFilter:"blur(12px)",
+          borderTop:`1px solid ${menuRule}`,padding:"8px 20px 24px"}}>
+          {[["Features","features"],["Curriculum","curriculum"],["Pricing","pricing"],["FAQ","faq"]].map(([label,id])=>(
+            <button key={label} onClick={()=>handleNavScroll(id)}
+              style={{display:"block",width:"100%",textAlign:"left",
+                fontFamily:F.display,fontWeight:600,fontSize:16,color:menuText,
+                padding:"14px 0",background:"none",border:"none",
+                borderBottom:`1px solid ${menuRule}`,cursor:"pointer"}}>
+              {label}
+            </button>
+          ))}
+          <div style={{display:"flex",gap:10,marginTop:20}}>
+            <button onClick={()=>{setMobileOpen(false);onSignIn()}}
+              style={{flex:1,fontFamily:F.display,fontWeight:600,fontSize:14,
+                background:"none",
+                border:`1.5px solid ${scrolled?C.ruleStrong:"rgba(249,244,237,0.35)"}`,
+                color:scrolled?C.ink:"#fff",borderRadius:99,padding:"11px",cursor:"pointer"}}>
+              Sign in
+            </button>
+            <button onClick={()=>{setMobileOpen(false);onSignUp()}}
+              style={{flex:1,fontFamily:F.display,fontWeight:700,fontSize:14,
+                background:C.accent,border:"none",color:"#fff",
+                borderRadius:99,padding:"11px",cursor:"pointer"}}>
+              Try free →
+            </button>
+          </div>
+        </div>
+      )}
     </header>
   )
 }
