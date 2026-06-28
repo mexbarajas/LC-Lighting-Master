@@ -6160,9 +6160,21 @@ function UserDetail({user,onBack,onUpdate}){
     setSaved(true)
     setTimeout(()=>setSaved(false),2000)
   }
-  function applyOverride(){
-    onUpdate({...user,plan:planOverride})
-    alert(`Plan updated to ${A_PLAN_LABELS[planOverride]} for ${user.firstName} ${user.lastName}`)
+  async function applyOverride(){
+    try {
+      const res = await fetch('/api/admin/user/override', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: user.id, plan: planOverride }),
+      })
+      let d = {}
+      try { d = await res.json() } catch {}
+      if (!res.ok) { alert(d.error || 'Failed to save override.'); return }
+      onUpdate({ ...user, plan: planOverride })
+      alert(`Plan updated to ${A_PLAN_LABELS[planOverride]} for ${user.firstName} ${user.lastName}`)
+    } catch {
+      alert('Network error — could not save plan override.')
+    }
   }
   function toggleFlag(){onUpdate({...user,flagged:!user.flagged})}
   function toggleSuspend(){
