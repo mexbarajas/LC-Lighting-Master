@@ -248,7 +248,7 @@ export default function PricingCard({ userId, userEmail, onContactUs }) {
 
       <p style={{ fontFamily: FONT.body, fontSize: 13, color: C.inkMute,
         textAlign: 'center', margin: '16px 0 24px', lineHeight: 1.6 }}>
-        All plans include a <strong style={{ color: C.inkSoft }}>free trial</strong> — Module 01 in full + 10 LC practice questions. No card required.
+        All plans include a <strong style={{ color: C.inkSoft }}>free trial</strong> — Module 01 in full. No card required.
       </p>
 
       {/* Student discount — request flow */}

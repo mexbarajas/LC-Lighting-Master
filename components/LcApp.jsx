@@ -1173,7 +1173,7 @@ function Pricing({onSignUp}){
               ))}
             </div>
             <p style={{textAlign:"center",fontFamily:F.body,fontSize:13,color:C.inkMute,marginTop:20,lineHeight:1.7}}>
-              All plans include a <strong style={{color:C.inkSoft}}>free trial</strong> — Module 01 in full + 10 LC practice questions. No card required.
+              All plans include a <strong style={{color:C.inkSoft}}>free trial</strong> — Module 01 in full. No card required.
             </p>
           </div>
         )}
