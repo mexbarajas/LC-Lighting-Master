@@ -1003,7 +1003,7 @@ function Pricing({onSignUp}){
       id:"t1",label:"LC Preparation Test",tag:"Tier 1",price:T1_PRICE,
       badge:null,dim:false,dark:false,
       desc:"Already studied? Use our LC practice engine as your final accuracy check before exam day.",
-      includes:["50 LC practice questions","13 topic breakdown","25-sec timed exam","Speed bonuses & streaks","Per-topic accuracy report","Unlimited attempts"],
+      includes:["180 LC practice questions","13 topic breakdown","25-sec timed exam","Speed bonuses & streaks","Per-topic accuracy report","Unlimited attempts"],
       cta:"Get LC Preparation Test →",
     },
     {
