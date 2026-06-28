@@ -829,12 +829,10 @@ function Features(){
             Built by lighting professionals, for lighting professionals.
           </p>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:1,
+        <div className="features-grid" style={{background:C.rule,
           border:`1px solid ${C.rule}`,borderRadius:4,overflow:"hidden"}}>
           {features.map((f,i)=>(
             <div key={i} style={{background:C.paper,padding:"32px 28px",
-              borderRight:i%3<2?`1px solid ${C.rule}`:"none",
-              borderBottom:i<3?`1px solid ${C.rule}`:"none",
               transition:"background 160ms",position:"relative"}}
               onMouseEnter={e=>e.currentTarget.style.background=C.creamWarm}
               onMouseLeave={e=>e.currentTarget.style.background=C.paper}>
