@@ -17,18 +17,26 @@ import {
 } from '@/lib/pricing'
 import { checkOrigin, originError } from '@/lib/csrf'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
+const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null
 
 const VALID_PLANS = ['t1', 't2', 't3', 'team', 'exam_addon', 'team_member_exam_addon']
 
 // Stripe Price IDs for individual plans — set in Vercel env vars
+// Placeholder values (price_FILL_*) are treated as unset; route falls back to price_data
+function isRealPriceId(id) {
+  return typeof id === 'string' && /^price_[A-Za-z0-9]{14,}$/.test(id)
+}
 const PRICE_IDS = {
-  t1: process.env.STRIPE_PRICE_T1,
-  t2: process.env.STRIPE_PRICE_T2,
-  t3: process.env.STRIPE_PRICE_T3,
+  t1: isRealPriceId(process.env.STRIPE_PRICE_T1) ? process.env.STRIPE_PRICE_T1 : null,
+  t2: isRealPriceId(process.env.STRIPE_PRICE_T2) ? process.env.STRIPE_PRICE_T2 : null,
+  t3: isRealPriceId(process.env.STRIPE_PRICE_T3) ? process.env.STRIPE_PRICE_T3 : null,
 }
 
 export async function POST(request) {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    console.error('[stripe/checkout] STRIPE_SECRET_KEY missing')
+    return new Response(JSON.stringify({ error: 'Stripe not configured (secret key missing).' }), { status: 500, headers: { 'Content-Type': 'application/json' } })
+  }
   if (!checkOrigin(request)) return originError()
 
   const contentType = request.headers.get('content-type') || ''
@@ -162,10 +170,9 @@ export async function POST(request) {
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     )
   } catch (err) {
-    // Log internally without exposing Stripe internals to the client
-    console.error('Stripe checkout error:', err.type || err.code || 'unknown')
+    console.error('[stripe/checkout] ERROR:', err?.message, err?.type, err?.code, err)
     return new Response(
-      JSON.stringify({ error: 'Checkout unavailable. Please try again or contact support.' }),
+      JSON.stringify({ error: 'Checkout failed: ' + (err?.message || 'unknown error') }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     )
   }
