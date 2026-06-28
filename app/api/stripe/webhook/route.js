@@ -175,14 +175,18 @@ export async function POST(request) {
       expectedAmount = planData.amount
     }
 
-    if (session.amount_total !== expectedAmount) {
+    // Validate against amount_subtotal (pre-discount) so coupon codes are allowed
+    // while still ensuring the product was priced correctly by our server
+    const amountToCheck = session.amount_subtotal ?? session.amount_total
+    if (amountToCheck !== expectedAmount) {
       console.error('Amount mismatch in webhook:', {
         plan,
         planType,
         seats,
-        expected: expectedAmount,
-        actual:   session.amount_total,
-        customer: session.customer,
+        expected:        expectedAmount,
+        amount_subtotal: session.amount_subtotal,
+        amount_total:    session.amount_total,
+        customer:        session.customer,
       })
       return new Response('Amount mismatch', { status: 400 })
     }
