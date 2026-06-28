@@ -151,7 +151,7 @@ function CertSvg({ firstName, lastName, issuedDate, domain = 'lightingmasterlc.c
         position: 'absolute', inset: 0,
         display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center',
-        padding: '52px 110px 40px',
+        padding: '28px 110px 56px',
       }
     },
 
