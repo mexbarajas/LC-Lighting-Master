@@ -130,7 +130,8 @@ export default function PricingCard({ userId, userEmail, onContactUs }) {
           </p>
           <div style={{ marginBottom: 18 }}>
             {['180 LC practice questions', '13 topic breakdown',
-              '25-sec timed exam engine', 'Speed bonuses & streaks', 'Unlimited attempts']
+              '25-sec timed exam', 'Speed bonuses & streaks',
+              'Per-topic accuracy report', 'Unlimited attempts']
               .map((f, i) => <FeatureRow key={i} item={f} dark={false} />)}
           </div>
           <button onClick={() => handleCheckout('t1')}
@@ -144,7 +145,7 @@ export default function PricingCard({ userId, userEmail, onContactUs }) {
             }}
             onMouseEnter={e => { e.currentTarget.style.background = C.accent; e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = C.accent }}
             onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = C.inkSoft; e.currentTarget.style.borderColor = C.ruleStrong }}>
-            {loading === 't1' ? 'Redirecting…' : `Get LC Preparation Test — ${fmt(t1.amount)} →`}
+            {loading === 't1' ? 'Redirecting…' : 'Get LC Preparation Test →'}
           </button>
         </div>
 
@@ -176,10 +177,14 @@ export default function PricingCard({ userId, userEmail, onContactUs }) {
             margin: '0 0 14px', lineHeight: 1.65, flex: 1 }}>
             All 12 modules structured around the LC exam blueprint. Certificate + 24 CEU hours.
           </p>
-          <div style={{ marginBottom: 14 }}>
+          <div style={{ marginBottom: 8 }}>
             {['All 12 modules · 74 lessons', 'Audio narration every lesson',
               'Bookmarks & notes hub', 'Certificate of completion', '24 CEU credit hours']
               .map((f, i) => <FeatureRow key={i} item={f} dark={false} />)}
+          </div>
+          <div style={{ fontFamily: FONT.body, fontSize: 10.5, color: C.inkMute,
+            fontStyle: 'italic', marginBottom: 14 }}>
+            + Or get both bundled in Tier 3 — $595 (save $50)
           </div>
           <button onClick={() => handleCheckout('t2')}
             disabled={loading === 't2'}
@@ -192,7 +197,7 @@ export default function PricingCard({ userId, userEmail, onContactUs }) {
             }}
             onMouseEnter={e => { e.currentTarget.style.background = C.accent; e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = C.accent }}
             onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = C.inkSoft; e.currentTarget.style.borderColor = C.ruleStrong }}>
-            {loading === 't2' ? 'Redirecting…' : `Enroll in Full Course — ${fmt(t2.amount)} →`}
+            {loading === 't2' ? 'Redirecting…' : 'Start Full Course →'}
           </button>
         </div>
 
@@ -226,8 +231,8 @@ export default function PricingCard({ userId, userEmail, onContactUs }) {
             The complete package — all 12 modules plus the LC practice exam bundled together.
           </p>
           <div style={{ marginBottom: 18 }}>
-            {['Everything in Full Course', 'Exam engine bundled',
-              '180 LC practice questions', 'Unlimited exam attempts',
+            {['Everything in Full Course', 'LC Preparation Test included',
+              '50 LC practice questions', 'Unlimited exam attempts',
               'Topic accuracy analytics', 'Priority support']
               .map((f, i) => <FeatureRow key={i} item={f} dark={true} />)}
           </div>
@@ -240,10 +245,15 @@ export default function PricingCard({ userId, userEmail, onContactUs }) {
               cursor: loading === 't3' ? 'wait' : 'pointer',
               transition: 'opacity 0.15s', opacity: loading === 't3' ? 0.55 : 1,
             }}>
-            {loading === 't3' ? 'Redirecting…' : `Enroll + Exam Prep — ${fmt(t3.amount)} →`}
+            {loading === 't3' ? 'Redirecting…' : 'Start Course + Exam →'}
           </button>
         </div>
       </div>
+
+      <p style={{ fontFamily: FONT.body, fontSize: 13, color: C.inkMute,
+        textAlign: 'center', margin: '16px 0 24px', lineHeight: 1.6 }}>
+        All plans include a <strong style={{ color: C.inkSoft }}>free trial</strong> — Module 01 in full + 10 LC practice questions. No card required.
+      </p>
 
       {/* Student discount — request flow */}
       <div style={{
