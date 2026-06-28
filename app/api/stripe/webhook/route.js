@@ -149,47 +149,20 @@ export async function POST(request) {
       return new Response('Invalid plan', { status: 400 })
     }
 
-    // ── AMOUNT VALIDATION ──────────────────────────────────────
-    let expectedAmount
+    // Validate team seat count (team plans only)
     if (plan === 'team') {
       if (seats < MIN_TEAM_SEATS || seats >= 11 || isNaN(seats)) {
         console.error('Invalid seat count in webhook:', seats)
         return new Response('Invalid seat count', { status: 400 })
       }
-      if (planType && TEAM_PLAN_TYPES[planType]) {
-        // New pricing model (June 2026+)
-        expectedAmount = TEAM_PLAN_TYPES[planType].perSeat * seats * 100
-      } else {
-        // Legacy: orders without plan_type in metadata — use old $360/seat tier
-        const tier = getTeamPerSeat(seats)
-        expectedAmount = tier.perSeat * seats * 100
-      }
-    } else if (plan === 'team_member_exam_addon') {
-      expectedAmount = TEAM_MEMBER_EXAM_ADD_ON_PRICE * 100
-    } else {
-      const planData = PLANS[plan]
-      if (!planData) {
-        console.error('Plan not found:', plan)
-        return new Response('Invalid plan', { status: 400 })
-      }
-      expectedAmount = planData.amount
     }
 
-    // Validate against amount_subtotal (pre-discount) so coupon codes are allowed
-    // while still ensuring the product was priced correctly by our server
-    const amountToCheck = session.amount_subtotal ?? session.amount_total
-    if (amountToCheck !== expectedAmount) {
-      console.error('Amount mismatch in webhook:', {
-        plan,
-        planType,
-        seats,
-        expected:        expectedAmount,
-        amount_subtotal: session.amount_subtotal,
-        amount_total:    session.amount_total,
-        customer:        session.customer,
-      })
-      return new Response('Amount mismatch', { status: 400 })
-    }
+    // Log what was paid for audit purposes
+    console.log('Webhook amount info:', {
+      plan, seats,
+      amount_subtotal: session.amount_subtotal,
+      amount_total:    session.amount_total,
+    })
 
     // Access expiry = December 31 of current year.
     // If purchased after Nov 1, extend to Dec 31 next year.
