@@ -175,16 +175,12 @@ export default function PricingCard({ userId, userEmail, onContactUs }) {
           </div>
           <p style={{ fontFamily: FONT.body, fontSize: 12, color: C.inkMute,
             margin: '0 0 14px', lineHeight: 1.65, flex: 1 }}>
-            All 12 modules structured around the LC exam blueprint. Certificate + 24 CEU hours.
+            All 12 modules structured around the LC exam blueprint. Certificate + 24 CEU hours. Exam not included.
           </p>
-          <div style={{ marginBottom: 8 }}>
+          <div style={{ marginBottom: 14 }}>
             {['All 12 modules · 74 lessons', 'Audio narration every lesson',
               'Bookmarks & notes hub', 'Certificate of completion', '24 CEU credit hours']
               .map((f, i) => <FeatureRow key={i} item={f} dark={false} />)}
-          </div>
-          <div style={{ fontFamily: FONT.body, fontSize: 10.5, color: C.inkMute,
-            fontStyle: 'italic', marginBottom: 14 }}>
-            + Or get both bundled in Tier 3 — $595 (save $50)
           </div>
           <button onClick={() => handleCheckout('t2')}
             disabled={loading === 't2'}

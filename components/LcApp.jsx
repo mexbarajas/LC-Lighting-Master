@@ -1063,9 +1063,8 @@ function Pricing({onSignUp}){
       id:"t2",label:"Full Course",tag:"Tier 2",price:T2_PRICE,
       badge:"Most popular",badgeColor:C.accent,
       dim:false,dark:false,
-      desc:"All 12 modules structured around the LC exam blueprint. Certificate + 24 CEU hours.",
+      desc:"All 12 modules structured around the LC exam blueprint. Certificate + 24 CEU hours. Exam not included.",
       includes:["All 12 modules · 74 lessons","Audio narration every lesson","Bookmarks & notes hub","Certificate of completion","24 CEU credit hours"],
-      addon:"+ Or get both bundled in Tier 3 — $595 (save $50)",
       cta:"Start Full Course →",
     },
     {
@@ -1317,7 +1316,7 @@ function Pricing({onSignUp}){
                     Per member
                   </div>
                   {(teamPlanType==="course_only"
-                    ? ["All 12 modules · 74 lessons","Audio narration every lesson","Bookmarks, notes & progress tracking","Certificate of completion","24 CEU credit hours","Exam add-on available for $99/member"]
+                    ? ["All 12 modules · 74 lessons","Audio narration every lesson","Bookmarks, notes & progress tracking","Certificate of completion","24 CEU credit hours"]
                     : ["All 12 modules · 74 lessons","Audio narration every lesson","LC practice exam · 180 questions","Up to 5 exam attempts","Bookmarks, notes & progress tracking","Certificate of completion","24 CEU credit hours"]
                   ).map((item,i,arr)=>(
                     <div key={i} style={{display:"flex",alignItems:"flex-start",gap:8,padding:"5px 0",
