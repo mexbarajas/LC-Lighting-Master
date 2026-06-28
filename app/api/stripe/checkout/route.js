@@ -17,7 +17,9 @@ import {
 } from '@/lib/pricing'
 import { checkOrigin, originError } from '@/lib/csrf'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
+const stripe = process.env.STRIPE_SECRET_KEY
+  ? new Stripe(process.env.STRIPE_SECRET_KEY)
+  : null
 
 const VALID_PLANS = ['t1', 't2', 't3', 'team', 'exam_addon', 'team_member_exam_addon']
 
@@ -134,6 +136,14 @@ export async function POST(request) {
 
   const appUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://lightingmasterlc.com'
 
+  if (!process.env.STRIPE_SECRET_KEY) {
+    console.error('Stripe checkout failed: STRIPE_SECRET_KEY is not configured')
+    return new Response(
+      JSON.stringify({ error: 'Payment system is not configured. Please contact support.' }),
+      { status: 503, headers: { 'Content-Type': 'application/json' } }
+    )
+  }
+
   // Use a pre-created Stripe Price ID for t1/t2/t3 if available, otherwise fall back
   // to dynamic price_data (used for team plans, exam_addon, team_member_exam_addon)
   const priceId = PRICE_IDS[plan]
@@ -162,8 +172,7 @@ export async function POST(request) {
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     )
   } catch (err) {
-    // Log internally without exposing Stripe internals to the client
-    console.error('Stripe checkout error:', err.type || err.code || 'unknown')
+    console.error('Stripe checkout error:', err.type || err.code || 'unknown', err.message)
     return new Response(
       JSON.stringify({ error: 'Checkout unavailable. Please try again or contact support.' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
