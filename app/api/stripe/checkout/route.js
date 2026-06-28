@@ -24,10 +24,14 @@ const stripe = process.env.STRIPE_SECRET_KEY
 const VALID_PLANS = ['t1', 't2', 't3', 'team', 'exam_addon', 'team_member_exam_addon']
 
 // Stripe Price IDs for individual plans — set in Vercel env vars
+function validPriceId(val) {
+  return typeof val === 'string' && val.startsWith('price_') ? val : null
+}
+
 const PRICE_IDS = {
-  t1: process.env.STRIPE_PRICE_T1,
-  t2: process.env.STRIPE_PRICE_T2,
-  t3: process.env.STRIPE_PRICE_T3,
+  t1: validPriceId(process.env.STRIPE_PRICE_T1),
+  t2: validPriceId(process.env.STRIPE_PRICE_T2),
+  t3: validPriceId(process.env.STRIPE_PRICE_T3),
 }
 
 export async function POST(request) {
@@ -172,9 +176,18 @@ export async function POST(request) {
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     )
   } catch (err) {
-    console.error('Stripe checkout error:', err.type || err.code || 'unknown', err.message)
+    const stripeMsg = err.message || 'unknown'
+    const stripeType = err.type || err.code || 'unknown'
+    console.error('Stripe checkout error:', stripeType, stripeMsg)
+    console.error('Stripe checkout debug:', JSON.stringify({
+      plan,
+      hasPriceId: !!priceId,
+      priceId: priceId ? `${priceId.slice(0, 10)}...` : null,
+      unitAmount,
+      quantity,
+    }))
     return new Response(
-      JSON.stringify({ error: 'Checkout unavailable. Please try again or contact support.' }),
+      JSON.stringify({ error: `Checkout unavailable: ${stripeMsg}` }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     )
   }
