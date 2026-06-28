@@ -12,7 +12,7 @@ const CERT_BG =
 
 // Vertical position of the recipient name (fraction of canvas height)
 // 0.50 = just below the vertical midpoint, in the AWARDED TO zone
-const NAME_Y = 0.50
+const NAME_Y = 0.60
 
 // Date value position — bottom-left DATE slot in the footer bar
 const DATE_X = 0.232
