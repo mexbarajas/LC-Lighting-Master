@@ -1385,7 +1385,18 @@ function Testimonials(){
     {name:"Marcus T.",role:"Lighting Designer · Gensler",text:"I've taken a lot of continuing ed courses. This is the only one that actually felt like it was built to make me pass the NCQLP, not just collect CEUs."},
     {name:"Priya K.",role:"Associate, HLB Lighting",text:"The practice exam alone is worth it. The speed timer puts you in the exact headspace of the real test. My score went from 68% to 91% in three sessions."},
     {name:"Sarah L.",role:"Lighting Designer · AECOM",text:"The curriculum structure is exactly what I needed — it covers the IES standards and ASHRAE energy codes in a way that finally made them click. Passed NCQLP on my first attempt."},
+    {name:"James R.",role:"Senior Designer · HOK",text:"I'd been putting off the LC for years because I couldn't find study material that fit my schedule. The audio narration meant I could prep on my commute. Passed on my first try."},
+    {name:"Elena M.",role:"Electrical Engineer · Arup",text:"The topic-by-topic accuracy breakdown after each practice session is a game changer. I knew exactly which IES categories to focus on. Went from 72% to 94% before my test."},
+    {name:"Daniel W.",role:"Lighting Consultant · Independent",text:"Clear, well-organized, and genuinely aligned with what shows up on the exam. The 25-second timer builds the right habits. I can't recommend this enough to anyone sitting for the LC."},
   ]
+  const [page,setPage]=useState(0)
+  const perPage=3
+  const totalPages=Math.ceil(quotes.length/perPage)
+  const visible=quotes.slice(page*perPage,page*perPage+perPage)
+  useEffect(()=>{
+    const t=setInterval(()=>setPage(p=>(p+1)%totalPages),6000)
+    return()=>clearInterval(t)
+  },[totalPages])
   return(
     <section style={{padding:"96px 32px",background:C.creamWarm,borderTop:`1px solid ${C.rule}`}}>
       <div style={{maxWidth:1180,margin:"0 auto"}}>
@@ -1397,7 +1408,7 @@ function Testimonials(){
         </div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:1,
           border:`1px solid ${C.rule}`,borderRadius:4,overflow:"hidden"}}>
-          {quotes.map((q,i)=>(
+          {visible.map((q,i)=>(
             <div key={i} style={{background:C.paper,padding:"32px 28px",
               borderRight:i<2?`1px solid ${C.rule}`:"none"}}>
               <div style={{fontSize:24,color:C.accent,marginBottom:16,fontFamily:F.display,lineHeight:1}}>"</div>
@@ -1416,6 +1427,22 @@ function Testimonials(){
               </div>
             </div>
           ))}
+        </div>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:14,marginTop:28}}>
+          <button onClick={()=>setPage(p=>(p-1+totalPages)%totalPages)}
+            style={{width:36,height:36,borderRadius:"50%",border:`1px solid ${C.rule}`,
+              background:C.paper,cursor:"pointer",display:"flex",alignItems:"center",
+              justifyContent:"center",color:C.inkMute,fontSize:18,lineHeight:1,flexShrink:0}}>‹</button>
+          {Array.from({length:totalPages}).map((_,i)=>(
+            <button key={i} onClick={()=>setPage(i)}
+              style={{width:8,height:8,borderRadius:"50%",border:"none",padding:0,
+                background:i===page?C.accent:C.rule,cursor:"pointer",
+                transition:"background 0.2s",flexShrink:0}}/>
+          ))}
+          <button onClick={()=>setPage(p=>(p+1)%totalPages)}
+            style={{width:36,height:36,borderRadius:"50%",border:`1px solid ${C.rule}`,
+              background:C.paper,cursor:"pointer",display:"flex",alignItems:"center",
+              justifyContent:"center",color:C.inkMute,fontSize:18,lineHeight:1,flexShrink:0}}>›</button>
         </div>
       </div>
     </section>
