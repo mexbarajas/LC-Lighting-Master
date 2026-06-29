@@ -5218,15 +5218,21 @@ function FeedbackPage({ user, userSubscription }) {
     }
     if (!email.trim()) { setError('Please enter your email so we can reply.'); return }
     setSending(true); setError('')
-    const { error: dbError } = await supabase.from('feedback').insert({
-      user_id: user?.id || null,
-      category,
-      subject: subject.trim(),
-      message: message.trim(),
-      user_email: email.trim(),
-      plan: userSubscription?.plan || 'free',
-    })
-    if (dbError) {
+    try {
+      const res = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id:    user?.id || null,
+          category,
+          subject:    subject.trim(),
+          message:    message.trim(),
+          user_email: email.trim(),
+          plan:       userSubscription?.plan || 'free',
+        }),
+      })
+      if (!res.ok) throw new Error('Server error')
+    } catch {
       setError('Failed to send. Please try again or email admin@luxartmedia.com directly.')
       setSending(false)
       return
