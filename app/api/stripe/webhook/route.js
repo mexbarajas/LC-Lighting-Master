@@ -109,7 +109,7 @@ export async function POST(request) {
     }
 
     let userId    = session.metadata?.user_id
-    const plan    = session.metadata?.plan
+    let plan      = session.metadata?.plan
     const planType = session.metadata?.plan_type || null  // populated for team plans
     const seats   = parseInt(session.metadata?.seats || '1')
 
@@ -182,6 +182,28 @@ export async function POST(request) {
       if (existing && existing.stripe_payment_intent && existing.plan !== 'free') {
         console.log(`Duplicate webhook ignored — payment already processed: ${session.payment_intent}`)
         return new Response('Already processed', { status: 200 })
+      }
+    }
+
+    // Cumulative upgrade: T1 + T2 = T3 (purchases stack, never downgrade)
+    if (['t1', 't2', 't3'].includes(plan)) {
+      const { data: existingSub } = await supabase
+        .from('subscriptions')
+        .select('plan, exam_addon')
+        .eq('user_id', userId)
+        .maybeSingle()
+
+      if (existingSub) {
+        const prev           = existingSub.plan
+        const prevHasExam    = ['t1', 't3'].includes(prev) || existingSub.exam_addon === true
+        const prevHasCourse  = ['t2', 't3'].includes(prev)
+        const newHasExam     = ['t1', 't3'].includes(plan)
+        const newHasCourse   = ['t2', 't3'].includes(plan)
+
+        if ((prevHasExam || newHasExam) && (prevHasCourse || newHasCourse)) {
+          console.log(`Plan upgrade: ${prev} + ${plan} → t3 (cumulative)`)
+          plan = 't3'
+        }
       }
     }
 
