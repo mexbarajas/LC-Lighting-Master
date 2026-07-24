@@ -2891,7 +2891,7 @@ const LC_AUDIO = {
   "1.3": "https://res.cloudinary.com/dreuglb2j/video/upload/v1780937199/Lesson_103_nccty5.mp4",
   "1.4": "https://res.cloudinary.com/dreuglb2j/video/upload/v1780937207/Lesson_104_azebuk.mp4",
   "1.5": "https://res.cloudinary.com/dreuglb2j/video/upload/v1780938829/Lesson_105_ocp78s.mp4",
-  "1.6": "https://res.cloudinary.com/dreuglb2j/video/upload/v1780938836/Lesson_106_athpck.mp4",
+  "1.6": "https://res.cloudinary.com/dreuglb2j/video/upload/v1784899991/Lesson_106_athpck.mp4",
   "2.1": "https://res.cloudinary.com/dreuglb2j/video/upload/v1780938833/Lesson_201_tjdswg.mp4",
   "2.2": "https://res.cloudinary.com/dreuglb2j/video/upload/v1780938861/Lesson_202_li9jyz.mp4",
   "2.3": "https://res.cloudinary.com/dreuglb2j/video/upload/v1780938826/Lesson_203_gsjlaf.mp4",
