@@ -867,7 +867,7 @@ function Features(){
   const features=[
     {icon:"📐",title:"Structured 12-module curriculum",body:"Progress from photometry fundamentals through design process, codes, sustainability, and exam strategy — structured around the LC exam blueprint."},
     {icon:"🎧",title:"Audio narration for every lesson",body:"Each lesson has a built-in TTS audio player. Study on your commute, on site, or at your desk — learning doesn't stop when you close your laptop."},
-    {icon:"⚡",title:"Timed LC practice exam",body:"50 questions across 13 topics with a 25-second clock, speed bonuses, and streak multipliers. See exactly which topics need work before exam day."},
+    {icon:"⚡",title:"Timed LC practice exam",body:"Questions across all topics with a 25-second clock, speed bonuses, and streak multipliers. See exactly which topics need work before exam day."},
     {icon:"📌",title:"Bookmarks & notes hub",body:"Flag lessons for review, write field notes as you study, and search across all 74 lessons from one screen. Your study history follows you session to session."},
     {icon:"🏆",title:"Certificate of completion",body:"Earn a verifiable certificate when you complete all 12 modules and pass the practice exam at 85%+ accuracy. 24 CEU credit hours included."},
     {icon:"👥",title:"Team & studio plans",body:"Training a whole studio? Team plans include a shared admin dashboard, per-seat progress tracking, consolidated billing, and full Course + Exam access for every member."},
@@ -1454,12 +1454,12 @@ function FAQ(){
   const [open,setOpen] = useState(null)
   const faqs=[
     ["Who is this for?","LC · Lighting Master is built for North American lighting designers preparing for the Lighting Certified (LC) exam — whether sitting it for the first time or retaking it."],
-    ["How long do I have access?","Free accounts get unlimited access to Module 01 and 10 LC practice questions — no time limit, no card required. Paid plans unlock everything: Full Course gives you 6 months from purchase, Course + Exam gives you 12 months."],
+    ["How long do I have access?","Free accounts get unlimited access to Module 01  — no time limit, no card required. Paid plans unlock everything: Full Course gives you 6 months from purchase, Course + Exam gives you 12 months."],
     ["Does this replace the official LC exam?","No — LC · Lighting Master is an independent preparation and practice tool. The official Lighting Certified (LC) exam is administered separately. We are not affiliated with or endorsed by the credentialing organization."],
     ["What's included in the practice exam?","50 timed multiple-choice questions across 13 topics, aligned with the LC exam topic blueprint. A 25-second timer, speed bonuses, streak multipliers, and per-topic accuracy analytics after each session."],
     ["Is there a team or studio plan?","Yes — Team plans give every member full Course + Exam access, plus a shared team dashboard showing each designer's module progress and exam scores. The team admin manages seats, invites members by email, and handles billing from one place. Pricing starts at $1,800 for 3–5 seats (~$360/seat) and $2,800 for 6–10 seats (~$280/seat). Studios of 10+ can contact us for custom pricing."],
     ["What CEU hours does this cover?","24 CEU credit hours across all 12 modules. The certificate of completion documents your hours."],
-    ["Can I try before I buy?","Yes — your free account unlocks Module 01 (Theory, Light, Sight & Color) in full, plus 10 LC practice questions from the test engine. No credit card, no time limit. Upgrade when you're ready to unlock the remaining 11 modules and full exam."],
+    ["Can I try before I buy?","Yes — your free account unlocks Module 01 (Theory, Light, Sight & Color) in full. No credit card, no time limit. Upgrade when you're ready to unlock the remaining 11 modules and full exam."],
   ]
   return(
     <section id="faq" style={{padding:"96px 32px",background:C.cream,borderTop:`1px solid ${C.rule}`}}>
@@ -2808,7 +2808,7 @@ const LC_MEDIA = {
     "https://res.cloudinary.com/dreuglb2j/image/upload/v1780595957/105_pxh0ew.png",
     "https://res.cloudinary.com/dreuglb2j/image/upload/v1780867246/10505_ii1zw9.png"
   ],
-  "1.6":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780595957/106_kzy9sm.png",
+  "1.6":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780606825/1006_eavxmy.png",
   "2.1":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780595964/201_qtqfiq.png",
   "2.2":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780595963/202_u1phtz.png",
   "2.3":  "https://res.cloudinary.com/dreuglb2j/image/upload/v1780595963/203_n3ypvk.png",
