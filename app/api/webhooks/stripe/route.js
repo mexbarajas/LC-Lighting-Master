@@ -5,16 +5,23 @@ import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 import { buildPriceToPlanMap } from '@/lib/pricing';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
-
 export const dynamic = 'force-dynamic';
 
+// Clients are created per request, not at module load, so `next build`
+// can evaluate this file without env vars present.
+function getClients() {
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  );
+  return { stripe, supabase };
+}
+
 export async function POST(req) {
+  const { stripe, supabase } = getClients();
+
   const body = await req.text();
   const headersList = await headers();
   const sig = headersList.get('stripe-signature');
@@ -43,19 +50,19 @@ export async function POST(req) {
 
   try {
     if (metadata.type === 'team_purchase') {
-      return await handleTeamPurchase(session, paymentIntent, metadata);
+      return await handleTeamPurchase(supabase, session, paymentIntent, metadata);
     }
     if (metadata.type === 'team_exam_addon') {
-      return await handleTeamExamAddon(session, paymentIntent, metadata);
+      return await handleTeamExamAddon(supabase, session, paymentIntent, metadata);
     }
-    return await handleIndividualPlan(session, paymentIntent);
+    return await handleIndividualPlan(supabase, stripe, session, paymentIntent);
   } catch (err) {
     console.error('[webhook] unhandled error:', err);
     return NextResponse.json({ received: true, warning: 'handler threw' });
   }
 }
 
-async function handleTeamPurchase(session, paymentIntent, metadata) {
+async function handleTeamPurchase(supabase, session, paymentIntent, metadata) {
   const { user_id, seats: seatsStr, plan_type, price_per_seat: ppsStr, total: totalStr } = metadata;
 
   const seats        = parseInt(seatsStr, 10);
@@ -127,7 +134,7 @@ async function handleTeamPurchase(session, paymentIntent, metadata) {
   return NextResponse.json({ received: true });
 }
 
-async function handleTeamExamAddon(session, paymentIntent, metadata) {
+async function handleTeamExamAddon(supabase, session, paymentIntent, metadata) {
   const { user_id, team_member_id, team_id } = metadata;
 
   if (!user_id || !team_member_id || !team_id) {
@@ -194,7 +201,7 @@ async function handleTeamExamAddon(session, paymentIntent, metadata) {
   return NextResponse.json({ received: true });
 }
 
-async function handleIndividualPlan(session, paymentIntent) {
+async function handleIndividualPlan(supabase, stripe, session, paymentIntent) {
   const userId = session.metadata?.user_id;
 
   if (!userId) {
