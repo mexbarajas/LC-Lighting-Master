@@ -255,7 +255,7 @@ function MemberDrawer({ member, onClose }) {
             {member.has_exam_access && (
               <div style={{ marginBottom: 28 }}>
                 <div style={{ fontFamily: F.mono, fontSize: 9, letterSpacing: '0.18em', textTransform: 'uppercase', color: C.inkMute, marginBottom: 14 }}>
-                  Exam History ({fmt(member.exam_attempts)}/5 attempts used)
+                  Exam History ({fmt(member.exam_attempts)} attempts)
                 </div>
                 {(!detail?.exam_sessions?.length) ? (
                   <div style={{ fontFamily: F.body, fontSize: 13, color: C.inkMute, fontStyle: 'italic' }}>No exam attempts yet.</div>
@@ -275,7 +275,7 @@ function MemberDrawer({ member, onClose }) {
                     })}
                   </div>
                 )}
-                {fmt(member.exam_attempts) >= 5 && (
+                {false && (
                   <div style={{ marginTop: 12, padding: '10px 14px', background: '#fde8ec', borderRadius: 6, fontFamily: F.body, fontSize: 13, color: C.red }}>
                     This member has used all 5 exam attempts.
                   </div>

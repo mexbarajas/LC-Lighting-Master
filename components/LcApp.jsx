@@ -1317,7 +1317,7 @@ function Pricing({onSignUp}){
                   </div>
                   {(teamPlanType==="course_only"
                     ? ["All 12 modules · 74 lessons","Audio narration every lesson","Bookmarks, notes & progress tracking","Certificate of completion","24 CEU credit hours"]
-                    : ["All 12 modules · 74 lessons","Audio narration every lesson","LC practice exam · 180 questions","Up to 5 exam attempts","Bookmarks, notes & progress tracking","Certificate of completion","24 CEU credit hours"]
+                    : ["All 12 modules · 74 lessons","Audio narration every lesson","LC practice exam · 180 questions","Unlimited exam attempts","Bookmarks, notes & progress tracking","Certificate of completion","24 CEU credit hours"]
                   ).map((item,i,arr)=>(
                     <div key={i} style={{display:"flex",alignItems:"flex-start",gap:8,padding:"5px 0",
                       borderBottom:i<arr.length-1?`1px solid ${C.rule}`:"none"}}>
@@ -2442,7 +2442,6 @@ function ExamPage({ setRoute, user, access }) {
 
   async function startSession() {
     if (!canAccess) return
-    if (attemptsUsed >= 5) { setScreen('max_attempts'); return }
     setLoading(true)
     setError(null)
     try {
@@ -2659,7 +2658,7 @@ function ExamPage({ setRoute, user, access }) {
   // ── START ──
   if (screen === 'start') return (
     <div style={{padding:'48px 36px',maxWidth:600}}>
-      <div style={mono({fontSize:9,letterSpacing:'0.18em',textTransform:'uppercase',color:C.accent,marginBottom:12})}>Practice Exam · {attemptsUsed}/5 attempts used</div>
+      <div style={mono({fontSize:9,letterSpacing:'0.18em',textTransform:'uppercase',color:C.accent,marginBottom:12})}>Practice Exam · {attemptsUsed} attempts completed</div>
       {resumeData && (
         <div style={{background:`${C.forest}10`,border:`1px solid ${C.forest}`,borderRadius:10,padding:'18px 22px',marginBottom:24}}>
           <div style={{fontFamily:F.display,fontWeight:700,fontSize:15,color:C.forest,marginBottom:6}}>
@@ -2760,7 +2759,7 @@ function ExamPage({ setRoute, user, access }) {
         <h2 style={{fontFamily:F.display,fontWeight:700,fontSize:36,color:passed?C.forest:C.accent,margin:'0 0 4px'}}>{results.finalScore}%</h2>
         <div style={{fontFamily:F.display,fontWeight:600,fontSize:16,color:C.inkMute,marginBottom:24}}>{passed?'🎉 Passed — you are ready!':'Keep studying — 85% required to pass'}</div>
         <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',border:`1px solid ${C.rule}`,borderRadius:6,overflow:'hidden',marginBottom:32}}>
-          {[['Score',`${results.finalScore}%`],['Correct',`${results.correctCount}/${results.total}`],['Attempts',`${attemptsUsed}/5`]].map(([k,v],i)=>(
+          {[['Score',`${results.finalScore}%`],['Correct',`${results.correctCount}/${results.total}`],['Attempts',`${attemptsUsed}`]].map(([k,v],i)=>(
             <div key={k} style={{padding:'18px 20px',borderRight:i<2?`1px solid ${C.rule}`:'none',background:C.paper}}>
               <div style={mono({fontSize:9,letterSpacing:'0.16em',textTransform:'uppercase',color:C.inkMute,marginBottom:6})}>{k}</div>
               <div style={{fontFamily:F.display,fontWeight:700,fontSize:22,color:C.ink}}>{v}</div>
@@ -2782,7 +2781,7 @@ function ExamPage({ setRoute, user, access }) {
           ))}
         </div>
         <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
-          {attemptsUsed<5 ? (
+          {true ? (
             <button onClick={()=>{setScreen('start');setResults(null);setQuestions([]);setAnswers({});setIdx(0)}} style={{fontFamily:F.display,fontWeight:700,fontSize:14,background:C.accent,color:'#fff',border:'none',borderRadius:99,padding:'12px 24px',cursor:'pointer'}}>Retake exam →</button>
           ) : (
             <button onClick={()=>setScreen('max_attempts')} style={{fontFamily:F.display,fontWeight:600,fontSize:13,background:'transparent',color:C.inkMute,border:`1px solid ${C.rule}`,borderRadius:99,padding:'11px 22px',cursor:'pointer'}}>Request more attempts</button>

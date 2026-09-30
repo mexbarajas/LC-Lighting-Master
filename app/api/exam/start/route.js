@@ -59,7 +59,7 @@ export async function POST(req) {
 
     if ((completedCount || 0) >= EXAM_ATTEMPT_LIMIT) {
       return NextResponse.json(
-        { error: 'MAX_ATTEMPTS', attempts: completedCount, limit: EXAM_ATTEMPT_LIMIT },
+        { error: 'MAX_ATTEMPTS', attempts: completedCount, limit: null },
         { status: 403 }
       )
     }
@@ -137,7 +137,7 @@ export async function POST(req) {
       sessionId:    newSession.id,
       mode,
       attemptsUsed: completedCount || 0,
-      attemptLimit: EXAM_ATTEMPT_LIMIT,
+      attemptLimit: null,
       questions,
       orderedQids,
     })
