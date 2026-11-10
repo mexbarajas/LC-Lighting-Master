@@ -21,6 +21,10 @@ const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SEC
 
 const VALID_PLANS = ['t1', 't2', 't3', 'team', 'exam_addon', 'team_member_exam_addon']
 
+// Plans where the "Add promotion code" box is shown on the Stripe checkout page
+// (student discount codes). Team plans and team member add-ons are excluded.
+const PROMO_CODE_PLANS = ['t1', 't2', 't3']
+
 // Stripe Price IDs for individual plans — set in Vercel env vars
 // Placeholder values (price_FILL_*) are treated as unset; route falls back to price_data
 function isRealPriceId(id) {
@@ -137,7 +141,8 @@ export async function POST(request) {
     unitAmount  = planData.amount
     productName = planData.name
     quantity    = 1
-    // Student discounts applied manually via Stripe coupon codes sent by email
+    // Student discounts: customers enter a Stripe promotion code (e.g. STUDENT25)
+    // in the "Add promotion code" box on the Stripe checkout page (see allow_promotion_codes below).
   }
 
   const appUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://lightingmasterlc.com'
@@ -154,6 +159,7 @@ export async function POST(request) {
       payment_method_types: ['card'],
       mode: 'payment',
       customer_email: email,
+      ...(PROMO_CODE_PLANS.includes(plan) ? { allow_promotion_codes: true } : {}),
       metadata: {
         user_id:  user.id,
         plan,
