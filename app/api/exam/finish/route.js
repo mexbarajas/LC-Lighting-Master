@@ -38,14 +38,36 @@ export async function POST(req) {
     // Verify session ownership
     const { data: examSession } = await SERVICE
       .from('exam_sessions')
-      .select('id, user_id, status, questions_attempted')
+      .select('id, user_id, status, questions_attempted, question_ids, score, correct_count, speed_bonus, topic_breakdown')
       .eq('id', sessionId)
       .eq('user_id', userId)
       .single()
 
     if (!examSession) return NextResponse.json({ error: 'Session not found' }, { status: 404 })
 
+    // Already scored: return the saved result instead of re-scoring. Keeps a
+    // retried request (e.g. after a network blip) working, and stops a
+    // finished session being replayed with different answers.
+    if (examSession.status === 'completed') {
+      return NextResponse.json({
+        finalScore:     examSession.score,
+        correctCount:   examSession.correct_count,
+        total:          examSession.questions_attempted,
+        speedBonus:     examSession.speed_bonus,
+        topicBreakdown: examSession.topic_breakdown,
+      })
+    }
+
+    if (typeof answers !== 'object' || Array.isArray(answers)) {
+      return NextResponse.json({ error: 'Invalid answers' }, { status: 400 })
+    }
+
     const total = examSession.questions_attempted
+    // Only questions that belong to this session can be scored.
+    const sessionDbIds = Array.isArray(examSession.question_ids)
+      ? new Set(examSession.question_ids.map(Number))
+      : null
+    const MAX_SPEED_BONUS_PER_QUESTION = 250 // matches the client formula
     let correctCount = 0
     let totalSpeedBonus = 0
     const topicBreakdown = {}
@@ -55,20 +77,28 @@ export async function POST(req) {
     for (const [qid, a] of Object.entries(answers)) {
       const match = allIds?.find(q => q.qid === qid)
       if (!match) continue
+      if (sessionDbIds && sessionDbIds.size > 0 && !sessionDbIds.has(Number(match.id))) continue
       const { data: ansArr } = await SERVICE
         .rpc('get_question_answer', { p_id: Number(match.id) })
       const row = ansArr?.[0]
       if (!row) continue
-      const isCorrect = a.answer === row.correct
-      if (isCorrect) correctCount++
-      totalSpeedBonus += (a.speedBonus || 0)
+      const isCorrect = a?.answer === row.correct
+      if (isCorrect) {
+        correctCount++
+        // Client-supplied bonus is clamped to a number in [0, 250] and only
+        // counts on a correct answer, as in the client formula.
+        const bonus = Number(a?.speedBonus)
+        if (Number.isFinite(bonus)) {
+          totalSpeedBonus += Math.round(Math.min(Math.max(bonus, 0), MAX_SPEED_BONUS_PER_QUESTION))
+        }
+      }
       const topic = row.topic
       if (!topicBreakdown[topic]) topicBreakdown[topic] = { correct: 0, total: 0 }
       topicBreakdown[topic].total++
       if (isCorrect) topicBreakdown[topic].correct++
     }
 
-    const finalScore = Math.round((correctCount / total) * 100)
+    const finalScore = total > 0 ? Math.min(100, Math.round((correctCount / total) * 100)) : 0
 
     await SERVICE
       .from('exam_sessions')
@@ -83,6 +113,7 @@ export async function POST(req) {
         current_idx:     total,
       })
       .eq('id', sessionId)
+      .neq('status', 'completed') // guards against a concurrent double-finish
 
     return NextResponse.json({
       finalScore,

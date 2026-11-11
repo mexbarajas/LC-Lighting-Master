@@ -1,10 +1,21 @@
 import { createServiceClient } from '@/lib/supabase/service'
-import { sanitizeEmailInput } from '@/lib/html-escape'
+import { createClient } from '@/lib/supabase/server'
+import { createRateLimiter } from '@/lib/rate-limit'
+import { sanitizeEmailInput, escapeHtml } from '@/lib/html-escape'
 
 const VALID_CATEGORIES = ['bug', 'feature', 'content', 'discount', 'billing', 'other']
 const ADMIN_EMAIL = 'admin@luxartmedia.com'
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+// Each submission emails the admin, so cap per client IP (per-instance, in-memory).
+const feedbackLimiter = createRateLimiter(3600000, 10)
 
 export async function POST(request) {
+  const ip = (request.headers.get('x-forwarded-for') || '').split(',')[0].trim() || 'unknown'
+  if (!feedbackLimiter(`feedback:${ip}`).allowed) {
+    return new Response(JSON.stringify({ error: 'Too many submissions. Please try again later.' }), { status: 429 })
+  }
+
   let body
   try {
     const text = await request.text()
@@ -14,28 +25,45 @@ export async function POST(request) {
     return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400 })
   }
 
-  const { user_id, category, subject, message, user_email, plan } = body
+  const { category, subject, message, user_email, plan } = body || {}
 
   if (!VALID_CATEGORIES.includes(category)) {
     return new Response(JSON.stringify({ error: 'Invalid category.' }), { status: 400 })
   }
-  if (!subject?.trim() || !message?.trim() || message.trim().length < 10) {
+  if (typeof subject !== 'string' || typeof message !== 'string' || !subject.trim() || !message.trim() || message.trim().length < 10) {
     return new Response(JSON.stringify({ error: 'Subject and message are required.' }), { status: 400 })
   }
-  if (!user_email?.trim()) {
+  if (typeof user_email !== 'string' || !user_email.trim()) {
     return new Response(JSON.stringify({ error: 'Email is required.' }), { status: 400 })
   }
 
   const safeSubject = sanitizeEmailInput(subject, 200)
   const safeMessage = sanitizeEmailInput(message, 5000)
-  const safeEmail   = user_email.trim().toLowerCase()
-  const safePlan    = plan || 'free'
+  const safeEmail   = user_email.trim().toLowerCase().slice(0, 254)
+  if (!EMAIL_REGEX.test(safeEmail)) {
+    return new Response(JSON.stringify({ error: 'Invalid email format.' }), { status: 400 })
+  }
+  // Plan is display-only context: keep it a short plain string. It is escaped
+  // wherever it is rendered into the admin email below.
+  const safePlan = (typeof plan === 'string' && plan.trim() ? plan.trim() : 'free').slice(0, 30)
+
+  // Attribute the feedback to the logged-in user from the session, never from
+  // the request body (otherwise anyone could file feedback as someone else).
+  // Anonymous submissions are still allowed.
+  let sessionUserId = null
+  try {
+    const authClient = await createClient()
+    const { data: { user } } = await authClient.auth.getUser()
+    sessionUserId = user?.id || null
+  } catch {
+    sessionUserId = null
+  }
 
   const supabase = createServiceClient()
 
   // Insert into feedback table
   const { error: dbError } = await supabase.from('feedback').insert({
-    user_id:    user_id || null,
+    user_id:    sessionUserId,
     category,
     subject:    subject.trim(),
     message:    message.trim(),
@@ -71,8 +99,8 @@ export async function POST(request) {
             <h2 style="color:#16120e">New Feedback Submission</h2>
             <table style="width:100%;border-collapse:collapse">
               <tr><td style="padding:8px 0;color:#8a7a6a;font-size:13px;width:100px">Category</td><td style="padding:8px 0;font-size:13px">${categoryLabel}</td></tr>
-              <tr><td style="padding:8px 0;color:#8a7a6a;font-size:13px">Email</td><td style="padding:8px 0;font-size:13px"><a href="mailto:${safeEmail}">${safeEmail}</a></td></tr>
-              <tr><td style="padding:8px 0;color:#8a7a6a;font-size:13px">Plan</td><td style="padding:8px 0;font-size:13px">${safePlan}</td></tr>
+              <tr><td style="padding:8px 0;color:#8a7a6a;font-size:13px">Email</td><td style="padding:8px 0;font-size:13px"><a href="mailto:${escapeHtml(safeEmail)}">${escapeHtml(safeEmail)}</a></td></tr>
+              <tr><td style="padding:8px 0;color:#8a7a6a;font-size:13px">Plan</td><td style="padding:8px 0;font-size:13px">${escapeHtml(safePlan)}</td></tr>
               <tr><td style="padding:8px 0;color:#8a7a6a;font-size:13px">Subject</td><td style="padding:8px 0;font-size:13px">${safeSubject}</td></tr>
             </table>
             <hr style="border:none;border-top:1px solid #e4d9ca;margin:16px 0"/>
