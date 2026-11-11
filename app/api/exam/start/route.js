@@ -33,19 +33,43 @@ export async function POST(req) {
     // Subscription check
     const { data: sub } = await SERVICE
       .from('subscriptions')
-      .select('plan, status, exam_addon')
+      .select('plan, status, exam_addon, current_period_end')
       .eq('user_id', userId)
       .maybeSingle()
 
     const { data: teamMem } = await SERVICE
       .from('team_members')
-      .select('status, has_exam_access')
+      .select('status, has_exam_access, team_id')
       .eq('user_id', userId)
       .maybeSingle()
 
-    const planHasExam  = sub && ['t1', 't2', 't3'].includes(sub.plan) && sub.status === 'active'
-    const addonHasExam = sub && sub.exam_addon === true && sub.status === 'active'
-    const teamHasExam  = teamMem?.status === 'active' && teamMem?.has_exam_access === true
+    // Expiry is enforced only when a valid date is present and has clearly
+    // passed. A missing/unparseable date keeps access, which matches the rule
+    // the app UI already uses (refreshSubscription in components/LcApp.jsx).
+    const startOfToday = new Date(new Date().toDateString()).getTime()
+    const isPast = (value, cutoffMs) => {
+      if (!value) return false
+      const t = new Date(value).getTime()
+      return !Number.isNaN(t) && t < cutoffMs
+    }
+
+    const subActive = !!sub && sub.status === 'active' && !isPast(sub.current_period_end, Date.now())
+
+    // t2 is course-only (includesExam: false in lib/pricing.js). Exam access
+    // comes from t1/t3 or from the exam add-on flag.
+    const planHasExam  = subActive && ['t1', 't3'].includes(sub.plan)
+    const addonHasExam = subActive && sub.exam_addon === true
+
+    let teamHasExam = teamMem?.status === 'active' && teamMem?.has_exam_access === true
+    if (teamHasExam && teamMem.team_id) {
+      const { data: team } = await SERVICE
+        .from('teams')
+        .select('access_expiry')
+        .eq('id', teamMem.team_id)
+        .maybeSingle()
+      if (isPast(team?.access_expiry, startOfToday)) teamHasExam = false
+    }
+
     if (!planHasExam && !addonHasExam && !teamHasExam) {
       return NextResponse.json({ error: 'Exam access required' }, { status: 403 })
     }
