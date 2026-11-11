@@ -24,13 +24,13 @@
 
 **Secrets Exposed:**
 ```
-1. NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpvanFwd3dndXJvd3dkZWhyY2F5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0ODA0MTgsImV4cCI6MjA5NjA1NjQxOH0.r5_6v09Slhys4_tGRZk7taEUsWuZ4RiLqB-ylLDcrCY
+1. NEXT_PUBLIC_SUPABASE_ANON_KEY=[REDACTED-JWT]
 
    Type: Supabase Anonymous JWT Token
    Privilege: PUBLIC (but can query Supabase)
    Impact: If RLS misconfigured, full data access
    
-2. SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpvanFwd3dndXJvd3dkZWhyY2F5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MDQ4MDQxOCwiZXhwIjoyMDk2MDU2NDE4fQ.LHCc7shgwKhjdJFx21FIm-7zsozlaPNy_grReg3OPxE
+2. SUPABASE_SERVICE_ROLE_KEY=[REDACTED-JWT]
 
    Type: Supabase Service Role JWT (HIGHEST PRIVILEGE)
    Privilege: Admin level — bypasses ALL RLS policies
@@ -44,7 +44,7 @@
    Impact: CRITICAL — Can create charges, refund, access customers, payment methods
    Risk: Fraudulent transactions, payment manipulation
    
-4. STRIPE_WEBHOOK_SECRET=whsec_lsCCCB1nQvGbul4ptRf1m5jH7FS2mgZb
+4. STRIPE_WEBHOOK_SECRET=whsec_[REDACTED]
 
    Type: Stripe Webhook Signing Secret
    Privilege: Can sign webhook payloads
@@ -453,7 +453,7 @@ if (event.type === 'checkout.session.completed') {
 
 **Attack Scenario:**
 ```
-1. Attacker obtains webhook secret (whsec_lsCCCB1nQvGbul4ptRf1m5jH7FS2mgZb)
+1. Attacker obtains webhook secret (whsec_[REDACTED])
 2. Crafts fake webhook: 
    {
      type: 'checkout.session.completed',

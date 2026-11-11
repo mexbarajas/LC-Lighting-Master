@@ -46,7 +46,7 @@
 ### Step 1.4: Verify Webhook Secret (Should Already Be Correct)
 1. Still in **Developers** → **API keys** tab
 2. Scroll down to find **Webhook signing secret**
-3. It should be `whsec_lsCCCB1nQvGbul4ptRf1m5jH7FS2mgZb`
+3. It should be `whsec_[REDACTED]`
 4. If it's different, note it — you'll need it for Vercel environment variables
 
 ---
@@ -89,7 +89,7 @@
 1. Click **Add New** button
 2. Fill in:
    - **Name:** `ADMIN_PASSWORD_HASH`
-   - **Value:** `$2b$12$jWZ95Fw2r5ldkpcSU80fyOlbiXonE19XN2Y0ZQeeGsvkaMJsvsYz2`
+   - **Value:** `[REDACTED-BCRYPT-HASH]`
    - **Environments:** ✅ All three
 3. Click **Save**
 
@@ -192,7 +192,7 @@ ALTER TABLE public.subscriptions
 Add these two lines (or update if they already exist):
 
 ```
-ADMIN_PASSWORD_HASH=$2b$12$jWZ95Fw2r5ldkpcSU80fyOlbiXonE19XN2Y0ZQeeGsvkaMJsvsYz2
+ADMIN_PASSWORD_HASH=[REDACTED-BCRYPT-HASH]
 ADMIN_JWT_SECRET=09e714c43544be5af33d23c0ce1357595a8bf8dc9b85511c598c69eb3b824ce4
 ```
 
@@ -369,7 +369,7 @@ Go through this list and confirm everything:
    - **Password:** `Maestrodeluz00@`
    - **Notes:** 
      ```
-     ADMIN_PASSWORD_HASH: $2b$12$jWZ95Fw2r5ldkpcSU80fyOlbiXonE19XN2Y0ZQeeGsvkaMJsvsYz2
+     ADMIN_PASSWORD_HASH: [REDACTED-BCRYPT-HASH]
      ADMIN_JWT_SECRET: 09e714c43544be5af33d23c0ce1357595a8bf8dc9b85511c598c69eb3b824ce4
      Deployed: June 22, 2026
      ```
