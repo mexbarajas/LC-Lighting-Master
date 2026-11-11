@@ -44,6 +44,9 @@ next-env.d.ts
 .claude/
 
 # Backup files — keep locally, never commit
+*.bak
+*.bak_*
+*.backup
 *.backup.js
 *.backup.jsx
 *.backup.ts
