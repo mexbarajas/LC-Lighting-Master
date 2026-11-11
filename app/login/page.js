@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { safeInternalPath } from '@/lib/safe-redirect'
 
 export default async function LoginPage({ searchParams }) {
   const params = await searchParams
@@ -16,8 +17,8 @@ export default async function LoginPage({ searchParams }) {
     })
 
     const nextUrl = formData.get('next')
-    // Security: only allow relative paths to prevent open-redirect
-    const safeNext = (nextUrl && nextUrl.startsWith('/')) ? nextUrl : '/dashboard'
+    // Security: only allow same-site relative paths (blocks //evil.com and /\evil.com)
+    const safeNext = safeInternalPath(nextUrl, '/dashboard')
 
     if (error) {
       const qs = `error=${encodeURIComponent(error.message)}${safeNext !== '/dashboard' ? `&next=${encodeURIComponent(safeNext)}` : ''}`

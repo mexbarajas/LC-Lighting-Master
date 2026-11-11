@@ -1,11 +1,21 @@
 import { NextResponse } from 'next/server'
-import { sanitizeEmailInput } from '@/lib/html-escape'
+import { sanitizeEmailInput, escapeHtml } from '@/lib/html-escape'
 import { sanitizeEmailHeaderField } from '@/lib/email-validation'
+import { createRateLimiter } from '@/lib/rate-limit'
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
+// Each submission sends an email to the admin, so cap per client IP. Per-instance
+// (in-memory) like the other limiters here: blunts scripted floods, not a hard guarantee.
+const contactLimiter = createRateLimiter(3600000, 10)
+
 export async function POST(req: Request) {
   try {
+    const ip = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || 'unknown'
+    if (!contactLimiter(`contact:${ip}`).allowed) {
+      return NextResponse.json({ error: 'Too many messages. Please try again later.' }, { status: 429 })
+    }
+
     let body
     try {
       body = await req.json()
@@ -50,7 +60,7 @@ export async function POST(req: Request) {
             <h2 style="color:#16120e">New Contact Form Submission</h2>
             <table style="width:100%;border-collapse:collapse">
               <tr><td style="padding:8px 0;color:#8a7a6a;font-size:13px;width:80px">Name</td><td style="padding:8px 0;font-size:13px">${name}</td></tr>
-              <tr><td style="padding:8px 0;color:#8a7a6a;font-size:13px">Email</td><td style="padding:8px 0;font-size:13px"><a href="mailto:${email}">${email}</a></td></tr>
+              <tr><td style="padding:8px 0;color:#8a7a6a;font-size:13px">Email</td><td style="padding:8px 0;font-size:13px"><a href="mailto:${escapeHtml(email)}">${escapeHtml(email)}</a></td></tr>
               <tr><td style="padding:8px 0;color:#8a7a6a;font-size:13px">Subject</td><td style="padding:8px 0;font-size:13px">${subject}</td></tr>
             </table>
             <hr style="border:none;border-top:1px solid #e4d9ca;margin:16px 0"/>

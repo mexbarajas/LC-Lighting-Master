@@ -46,6 +46,13 @@ export async function POST(req) {
   const paymentIntent = session.payment_intent;
   const metadata      = session.metadata || {};
 
+  // Never grant access for a session Stripe reports as genuinely unpaid.
+  // ('paid' and 'no_payment_required', e.g. a 100%-off promo, behave as before.)
+  if (session.payment_status === 'unpaid') {
+    console.warn('[webhook] skipping unpaid checkout session:', session.id);
+    return NextResponse.json({ received: true });
+  }
+
   console.log('[webhook] checkout.session.completed | type:', metadata.type || 'individual');
 
   try {
