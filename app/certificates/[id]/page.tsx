@@ -34,7 +34,6 @@ interface PageProps {
 interface CertRow {
   id: string
   student_name: string | null
-  full_name: string | null
   created_at: string
 }
 
@@ -54,7 +53,7 @@ export default async function CertificatePage({ params }: PageProps) {
   //    misconfigured, the explicit user_id filter prevents cross-user reads.
   const { data, error } = await supabase
     .from('certificates')
-    .select('id, student_name, full_name, created_at')
+    .select('id, student_name, created_at')
     .eq('id', id)
     .eq('user_id', user.id)
     .single<CertRow>()
@@ -62,10 +61,10 @@ export default async function CertificatePage({ params }: PageProps) {
   // 4. Missing OR not-owned → identical 404. No existence leak.
   if (error || !data) notFound()
 
-  // 5. Display Name source of truth: full_name first, then student_name,
-  //    then the auth metadata. Never the email local-part.
+  // 5. Display Name source of truth: the stored student_name first, then the
+  //    auth metadata. Never the email local-part. (The certificates table has
+  //    no full_name column; selecting it made every lookup fail with a 404.)
   const displayName =
-    data.full_name?.trim() ||
     data.student_name?.trim() ||
     (user.user_metadata?.full_name as string | undefined)?.trim() ||
     ''
