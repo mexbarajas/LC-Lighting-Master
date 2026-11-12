@@ -64,6 +64,7 @@
 
 import Stripe from 'stripe'
 import { createServiceClient } from '@/lib/supabase/service'
+import { escapeHtml } from '@/lib/html-escape'
 import {
   PLANS,
   TEAM_PLAN_TYPES,
@@ -75,6 +76,128 @@ import {
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET
 const VALID_PLANS = ['t1', 't2', 't3', 'team', 'exam_addon', 'team_member_exam_addon']
+
+// ── REFUND / CHARGEBACK HELPERS ───────────────────────────────
+
+// Best-effort email to the admin. Never throws and never affects the webhook response.
+async function notifyAdmin(subject, lines) {
+  try {
+    const apiKey = process.env.BREVO_API_KEY
+    if (!apiKey) return
+    const adminEmail = 'admin@luxartmedia.com'
+    await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'api-key': apiKey },
+      body: JSON.stringify({
+        sender: { name: 'LC Lighting Master', email: process.env.BREVO_SENDER_EMAIL || adminEmail },
+        to: [{ email: adminEmail, name: 'Luxart Admin' }],
+        subject: String(subject).replace(/[\r\n]/g, ' ').slice(0, 200),
+        htmlContent: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto">
+          <h2 style="color:#16120e">${escapeHtml(String(subject))}</h2>
+          ${lines.map(l => `<p style="font-size:14px;line-height:1.5;margin:6px 0">${escapeHtml(String(l))}</p>`).join('')}
+          <p style="font-size:11px;color:#8a7a6a;margin-top:16px">Sent from the LightingMasterLC Stripe webhook</p>
+        </div>`,
+      }),
+    })
+  } catch (err) {
+    console.error('notifyAdmin failed:', err?.message)
+  }
+}
+
+// Revokes the individual subscription for a refunded / disputed payment.
+// Matching order: customer id, payment intent, then email (only if exactly one user has it).
+// Returns how the user was matched, or null.
+async function revokeSubscription(supabase, { customer, paymentIntent, email }, status) {
+  const payload = {
+    plan:               'free',
+    status,
+    current_period_end: null,
+    exam_addon:         false,
+    updated_at:         new Date().toISOString(),
+  }
+
+  if (customer) {
+    const { data, error } = await supabase
+      .from('subscriptions').update(payload).eq('stripe_customer_id', customer).select()
+    if (!error && data?.length > 0) return 'customer'
+  }
+
+  if (paymentIntent) {
+    const { data, error } = await supabase
+      .from('subscriptions').update(payload).eq('stripe_payment_intent', paymentIntent).select()
+    if (!error && data?.length > 0) return 'payment_intent'
+  }
+
+  if (email) {
+    const { data: candidates, error: countErr } = await supabase
+      .from('subscriptions').select('user_id').eq('email', email.toLowerCase())
+    if (!countErr && candidates && candidates.length === 1) {
+      const { error, data } = await supabase
+        .from('subscriptions').update(payload).eq('user_id', candidates[0].user_id).select()
+      if (!error && data?.length > 0) return 'email'
+    } else if (candidates && candidates.length > 1) {
+      console.warn('⚠ Revoke: email match is ambiguous (multiple users), skipping email lookup', {
+        email, matches: candidates.length,
+      })
+    }
+  }
+  return null
+}
+
+// A refunded / disputed payment can also have paid for a team or a team-member exam add-on.
+// Teams record the payment intent in teams.stripe_ref; add-ons in team_members.member_exam_add_on_payment_id.
+async function revokeTeamAccess(supabase, paymentIntent) {
+  if (!paymentIntent) return { teams: 0, addons: 0 }
+  // Every team access check compares access_expiry with today, so yesterday ends access everywhere.
+  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
+
+  const { data: teams, error: teamErr } = await supabase
+    .from('teams').update({ access_expiry: yesterday }).eq('stripe_ref', paymentIntent).select('id')
+  if (teamErr) console.error('Revoke: team expiry update error:', teamErr)
+
+  const { data: addons, error: addonErr } = await supabase
+    .from('team_members')
+    .update({ has_exam_access: false, exam_access_source: 'none', member_exam_add_on_paid: false })
+    .eq('member_exam_add_on_payment_id', paymentIntent)
+    .select('id')
+  if (addonErr) console.error('Revoke: team add-on update error:', addonErr)
+
+  return { teams: teams?.length || 0, addons: addons?.length || 0 }
+}
+
+async function handleRevocation(kind, status, { customer, paymentIntent, email, amount, currency }) {
+  const supabase = createServiceClient()
+  const matchedBy = await revokeSubscription(supabase, { customer, paymentIntent, email }, status)
+  const team = await revokeTeamAccess(supabase, paymentIntent)
+  const handled = !!matchedBy || team.teams > 0 || team.addons > 0
+
+  const money = (typeof amount === 'number')
+    ? `${(amount / 100).toFixed(2)} ${(currency || '').toUpperCase()}`.trim()
+    : 'unknown amount'
+  const details = [
+    `Amount: ${money}`,
+    `Email: ${email || 'unknown'}`,
+    `Payment: ${paymentIntent || 'unknown'}`,
+    `Customer: ${customer || 'none'}`,
+  ]
+
+  if (handled) {
+    console.log(`✓ ${kind}: access revoked`, { matchedBy, ...team, paymentIntent })
+    await notifyAdmin(`${kind} processed — access revoked`, [
+      ...details,
+      `Individual plan revoked: ${matchedBy ? `yes (matched by ${matchedBy.replace('_', ' ')})` : 'no'}`,
+      `Teams ended: ${team.teams} · Team exam add-ons removed: ${team.addons}`,
+      ...(matchedBy === 'email' ? ['Note: matched by email only — check this is the right purchase.'] : []),
+    ])
+  } else {
+    console.error(`✗ ${kind}: could not find access to revoke`, { customer, paymentIntent, email })
+    await notifyAdmin(`ACTION NEEDED: ${kind} could not be matched to a user`, [
+      ...details,
+      'No account or team matched this payment. Please review it in Stripe and the admin panel.',
+    ])
+  }
+  return handled
+}
 
 export async function POST(request) {
   const body = await request.text()
@@ -176,10 +299,13 @@ export async function POST(request) {
     if (session.payment_intent) {
       const { data: existing } = await supabase
         .from('subscriptions')
-        .select('stripe_payment_intent, plan')
+        .select('stripe_payment_intent, plan, status')
         .eq('stripe_payment_intent', session.payment_intent)
         .maybeSingle()
-      if (existing && existing.stripe_payment_intent && existing.plan !== 'free') {
+      // A refunded / disputed payment keeps its payment intent with plan 'free'. A replayed
+      // checkout event for it must not grant access again.
+      const wasRevoked = existing && (existing.status === 'refunded' || existing.status === 'disputed')
+      if (existing && existing.stripe_payment_intent && (existing.plan !== 'free' || wasRevoked)) {
         console.log(`Duplicate webhook ignored — payment already processed: ${session.payment_intent}`)
         return new Response('Already processed', { status: 200 })
       }
@@ -261,6 +387,7 @@ export async function POST(request) {
             ...(planType ? { plan_type: planType } : {}),
             ...(perSeat  ? { price_per_seat: perSeat, seats_purchased: seats, total_team_price: perSeat * seats } : {}),
             seat_count: seats,
+            ...(session.payment_intent ? { stripe_ref: session.payment_intent } : {}),
           })
           .eq('id', existingMembership.team_id)
         if (teamUpdErr) console.error('Webhook: team update error:', teamUpdErr)
@@ -302,6 +429,7 @@ export async function POST(request) {
             price_per_seat:    perSeat,
             total_team_price:  perSeat ? perSeat * seats : null,
             access_expiry:     expiry.toISOString(),
+            stripe_ref:        session.payment_intent || null,
           })
           .select('id')
           .single()
@@ -362,7 +490,6 @@ export async function POST(request) {
     console.log('Refund event:', {
       customer:       charge.customer,
       paymentIntent:  charge.payment_intent,
-      receiptEmail:   charge.receipt_email,
       isFullRefund,
       amountRefunded: charge.amount_refunded,
       amount:         charge.amount,
@@ -372,96 +499,41 @@ export async function POST(request) {
       return new Response('Partial refund — no action', { status: 200 })
     }
 
-    const supabase    = createServiceClient()
-    let updated       = false
-    const revokePayload = {
-      plan:               'free',
-      status:             'refunded',
-      current_period_end: null,
-      exam_addon:         false,
-      updated_at:         new Date().toISOString(),
-    }
-
-    // Try 1: match by stripe_customer_id
-    if (charge.customer) {
-      const { data, error } = await supabase
-        .from('subscriptions')
-        .update(revokePayload)
-        .eq('stripe_customer_id', charge.customer)
-        .select()
-      if (!error && data?.length > 0) {
-        updated = true
-        console.log('✓ Refund: matched by customer ID', charge.customer)
-      }
-    }
-
-    // Try 2: match by stripe_payment_intent
-    if (!updated && charge.payment_intent) {
-      const { data, error } = await supabase
-        .from('subscriptions')
-        .update(revokePayload)
-        .eq('stripe_payment_intent', charge.payment_intent)
-        .select()
-      if (!error && data?.length > 0) {
-        updated = true
-        console.log('✓ Refund: matched by payment intent', charge.payment_intent)
-      }
-    }
-
-    // Try 3: match by email (ONLY if exactly one match to prevent bulk revocation)
-    if (!updated && charge.receipt_email) {
-      const { data: candidates, error: countErr } = await supabase
-        .from('subscriptions')
-        .select('user_id')
-        .eq('email', charge.receipt_email.toLowerCase())
-
-      if (!countErr && candidates && candidates.length === 1) {
-        const { error, data } = await supabase
-          .from('subscriptions')
-          .update(revokePayload)
-          .eq('user_id', candidates[0].user_id)
-          .select()
-        if (!error && data?.length > 0) {
-          updated = true
-          console.log('✓ Refund: matched by email (single user)', charge.receipt_email)
-        }
-      } else if (candidates && candidates.length > 1) {
-        console.warn('⚠ Refund: email match is ambiguous (multiple users), skipping email lookup', {
-          email:   charge.receipt_email,
-          matches: candidates.length,
-        })
-      }
-    }
-
-    if (!updated) {
-      console.error('✗ Refund: could not find user to revoke', {
-        customer:      charge.customer,
-        paymentIntent: charge.payment_intent,
-        email:         charge.receipt_email,
-      })
-      // TODO: Send alert to admin for manual investigation
-      // For now, return 200 so Stripe doesn't keep retrying
-    }
+    await handleRevocation('Refund', 'refunded', {
+      customer:      charge.customer,
+      paymentIntent: charge.payment_intent,
+      email:         charge.receipt_email || charge.billing_details?.email || null,
+      amount:        charge.amount,
+      currency:      charge.currency,
+    })
   }
 
   // ── DISPUTE / CHARGEBACK HANDLER ────────────────────────────
+  // A dispute object carries the charge and payment intent ids, not the customer.
   if (event.type === 'charge.dispute.created') {
-    const dispute    = event.data.object
-    const customerId = dispute.customer
-
-    if (customerId) {
-      const supabase = createServiceClient()
-      await supabase
-        .from('subscriptions')
-        .update({
-          plan:       'free',
-          status:     'disputed',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('stripe_customer_id', customerId)
-
-      console.log(`⚠ Dispute created — access suspended for customer ${customerId}`)
+    const dispute = event.data.object
+    const ref = {
+      customer:      dispute.customer || null,
+      paymentIntent: dispute.payment_intent || null,
+      email:         null,
+      amount:        dispute.amount,
+      currency:      dispute.currency,
     }
+
+    // Fill in the customer / email from the charge so the email fallback can work too.
+    if (dispute.charge) {
+      try {
+        const charge = await stripe.charges.retrieve(dispute.charge)
+        ref.customer      = ref.customer || charge.customer || null
+        ref.paymentIntent = ref.paymentIntent || charge.payment_intent || null
+        ref.email         = charge.receipt_email || charge.billing_details?.email || null
+      } catch (err) {
+        console.error('Dispute: could not load charge', dispute.charge, err?.message)
+      }
+    }
+
+    console.log('Dispute event:', { dispute: dispute.id, paymentIntent: ref.paymentIntent, customer: ref.customer })
+    await handleRevocation('Chargeback', 'disputed', ref)
   }
 
   return new Response('OK', { status: 200 })
