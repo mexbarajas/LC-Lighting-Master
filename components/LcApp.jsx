@@ -2360,7 +2360,7 @@ function CertPage() {
 function ExamPage({ setRoute, user, access }) {
   const supabase = createClient()
 
-  const [screen, setScreen] = useState('start')   // start | exam | results | max_attempts
+  const [screen, setScreen] = useState('start')   // start | exam | results
   const [mode, setMode] = useState('full')
   const [sessionId, setSessionId] = useState(null)
   const [attemptsUsed, setAttemptsUsed] = useState(0)
@@ -2381,10 +2381,6 @@ function ExamPage({ setRoute, user, access }) {
 
   // Results
   const [results, setResults] = useState(null)
-
-  // Retake
-  const [retakeReason, setRetakeReason] = useState('')
-  const [retakeSubmitted, setRetakeSubmitted] = useState(false)
 
   const [resumeData, setResumeData] = useState(null)  // null | resume payload
   const [checkingResume, setCheckingResume] = useState(true)
@@ -2452,7 +2448,6 @@ function ExamPage({ setRoute, user, access }) {
       })
       const data = await res.json()
       if (!res.ok) {
-        if (data.error === 'MAX_ATTEMPTS') { setScreen('max_attempts'); return }
         throw new Error(data.error || 'Failed to start')
       }
       setSessionId(data.sessionId)
@@ -2586,17 +2581,6 @@ function ExamPage({ setRoute, user, access }) {
     }
   }
 
-  async function submitRetake() {
-    try {
-      const res = await fetch('/api/exam/retake', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason: retakeReason }),
-      })
-      if (res.ok) setRetakeSubmitted(true)
-    } catch (e) { console.error(e) }
-  }
-
   // ── PAYWALL ──
   async function handleExamPurchase() {
     setCheckoutLoading(true)
@@ -2633,25 +2617,6 @@ function ExamPage({ setRoute, user, access }) {
         {checkoutLoading ? 'Opening checkout…' : 'Get Practice Exam — $250 →'}
       </button>
       {checkoutError && <p style={{fontFamily:F.body,fontSize:13,color:C.red,marginTop:12}}>{checkoutError}</p>}
-    </div>
-  )
-
-  // ── MAX ATTEMPTS ──
-  if (screen === 'max_attempts') return (
-    <div style={{padding:'60px 36px',maxWidth:520}}>
-      <h2 style={{fontFamily:F.display,fontWeight:700,fontSize:26,color:C.ink,margin:'0 0 12px'}}>5 attempts used</h2>
-      <p style={{fontFamily:F.body,fontSize:14,color:C.inkMute,lineHeight:1.75,margin:'0 0 24px'}}>You have used all 5 exam attempts. Request more below — reviewed within 1 business day.</p>
-      {retakeSubmitted ? (
-        <div style={{background:`${C.forest}12`,border:`1px solid ${C.forest}`,borderRadius:8,padding:'20px 24px'}}>
-          <div style={{fontFamily:F.display,fontWeight:700,fontSize:15,color:C.forest,marginBottom:6}}>✓ Request submitted</div>
-          <div style={{fontFamily:F.body,fontSize:13,color:C.inkMute}}>We will email you at {user?.email}</div>
-        </div>
-      ) : (
-        <div style={{display:'flex',flexDirection:'column',gap:12}}>
-          <textarea value={retakeReason} onChange={e=>setRetakeReason(e.target.value)} placeholder="Optional reason" rows={4} style={{fontFamily:F.body,fontSize:13,color:C.ink,background:C.paper,border:`1px solid ${C.rule}`,borderRadius:6,padding:'12px 14px',resize:'vertical'}}/>
-          <button onClick={submitRetake} style={{fontFamily:F.display,fontWeight:700,fontSize:14,background:C.accent,color:'#fff',border:'none',borderRadius:99,padding:'12px 24px',cursor:'pointer'}}>Request more attempts →</button>
-        </div>
-      )}
     </div>
   )
 
@@ -2781,11 +2746,7 @@ function ExamPage({ setRoute, user, access }) {
           ))}
         </div>
         <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
-          {true ? (
             <button onClick={()=>{setScreen('start');setResults(null);setQuestions([]);setAnswers({});setIdx(0)}} style={{fontFamily:F.display,fontWeight:700,fontSize:14,background:C.accent,color:'#fff',border:'none',borderRadius:99,padding:'12px 24px',cursor:'pointer'}}>Retake exam →</button>
-          ) : (
-            <button onClick={()=>setScreen('max_attempts')} style={{fontFamily:F.display,fontWeight:600,fontSize:13,background:'transparent',color:C.inkMute,border:`1px solid ${C.rule}`,borderRadius:99,padding:'11px 22px',cursor:'pointer'}}>Request more attempts</button>
-          )}
           <button onClick={()=>setRoute('cert')} style={{fontFamily:F.display,fontWeight:600,fontSize:13,background:'transparent',color:C.inkMute,border:`1px solid ${C.rule}`,borderRadius:99,padding:'11px 22px',cursor:'pointer'}}>View certificate →</button>
         </div>
       </div>
