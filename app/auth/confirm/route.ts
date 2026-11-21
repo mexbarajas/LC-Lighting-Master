@@ -2,6 +2,7 @@ import { type EmailOtpType } from '@supabase/supabase-js'
 import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { safeInternalPath } from '@/lib/safe-redirect'
+import { claimSingleSession } from '@/lib/single-session'
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
@@ -12,8 +13,11 @@ export async function GET(request: NextRequest) {
 
   if (token_hash && type) {
     const supabase = await createClient()
-    const { error } = await supabase.auth.verifyOtp({ type, token_hash })
+    const { data, error } = await supabase.auth.verifyOtp({ type, token_hash })
     if (!error) {
+      // An email link (confirm sign-up, reset password) signs the user in here too, so
+      // this login becomes the account's only active one.
+      await claimSingleSession(supabase, data.session)
       // When confirming email for a team invite, append ?confirmed=true so the
       // join page can auto-trigger acceptance without requiring a button click.
       const redirectPath = next.includes('/team/join')
