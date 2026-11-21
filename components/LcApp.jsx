@@ -438,7 +438,9 @@ function AuthModal({mode, onClose, onAuth, initialError=null, onErrorShown=()=>{
       const u = data.user
       const { data:sub } = await supabase.from("subscriptions").select("*").eq("user_id", u.id).single()
       const sessionToken = crypto.randomUUID()
-      sessionStorage.setItem('lc_session_token', sessionToken)
+      // localStorage is shared by every tab on this device and survives closing the tab,
+      // so reopening the site on the same device is not mistaken for "another device".
+      localStorage.setItem('lc_session_token', sessionToken)
       await supabase.from('subscriptions').update({ session_token: sessionToken, session_created_at: new Date().toISOString() }).eq('user_id', u.id)
       setLoading(false)
       onAuth({ id:u.id, name:u.user_metadata?.name||siEmail.split("@")[0], email:u.email,
@@ -5424,10 +5426,18 @@ function LearnerRoot({isAdmin=false, authReady=false, onAdminClick=()=>{}}){
       if(!session) return
       const u = session.user
       const { data:sub } = await supabase.from("subscriptions").select("*").eq("user_id", u.id).single()
-      const storedToken = sessionStorage.getItem('lc_session_token')
+      // One-time move of a token saved by the old code (per-tab sessionStorage).
+      let storedToken = localStorage.getItem('lc_session_token') || sessionStorage.getItem('lc_session_token')
+      if(storedToken) localStorage.setItem('lc_session_token', storedToken)
+      sessionStorage.removeItem('lc_session_token')
+      // Only one active login per account: if this device holds no token, or an older
+      // one, a different login is the active one, so this browser signs out.
       if(sub?.session_token && storedToken !== sub.session_token){
-        await supabase.auth.signOut()
-        sessionStorage.removeItem('lc_session_token')
+        // scope 'local' signs out only this browser. The default ('global') also ended
+        // the session on the device that just signed in, which then failed its next
+        // token refresh with "Refresh Token Not Found".
+        await supabase.auth.signOut({ scope: 'local' })
+        localStorage.removeItem('lc_session_token')
         setSessionConflict('Your session was ended because another device signed in to this account. Please log in again.')
         setAuthMode('signin')
         return
@@ -5521,6 +5531,7 @@ function LearnerRoot({isAdmin=false, authReady=false, onAdminClick=()=>{}}){
 
   async function handleSignOut(){
     if(user?.id){
+      localStorage.removeItem('lc_session_token')
       sessionStorage.removeItem('lc_session_token')
       await supabase.from('subscriptions').update({ session_token: null }).eq('user_id', user.id)
     }
