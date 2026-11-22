@@ -1,5 +1,6 @@
 import { Geist } from 'next/font/google'
 import Script from 'next/script'
+import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
 const geist = Geist({ subsets: ['latin'] })
@@ -311,7 +312,10 @@ export default function RootLayout({ children }) {
           `}
         </Script>
       </head>
-      <body className={geist.className} style={{ margin: 0, padding: 0 }}>{children}</body>
+      <body className={geist.className} style={{ margin: 0, padding: 0 }}>
+        {children}
+        <Analytics />
+      </body>
     </html>
   )
 }
