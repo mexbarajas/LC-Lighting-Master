@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { safeInternalPath } from '@/lib/safe-redirect'
+import { claimSingleSession } from '@/lib/single-session'
 
 export default async function LoginPage({ searchParams }) {
   const params = await searchParams
@@ -11,7 +12,7 @@ export default async function LoginPage({ searchParams }) {
     'use server'
 
     const supabase = await createClient()
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email:    formData.get('email'),
       password: formData.get('password'),
     })
@@ -24,6 +25,9 @@ export default async function LoginPage({ searchParams }) {
       const qs = `error=${encodeURIComponent(error.message)}${safeNext !== '/dashboard' ? `&next=${encodeURIComponent(safeNext)}` : ''}`
       redirect(`/login?${qs}`)
     }
+
+    // This login becomes the account's only active one; all other logins are signed out.
+    await claimSingleSession(supabase, data.session)
 
     redirect(safeNext)
   }

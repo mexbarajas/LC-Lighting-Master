@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react"
 import DOMPurify from 'dompurify'
 import { createClient } from '@/lib/supabase/client'
+import { claimSingleSession, checkSingleSession } from '@/lib/single-session'
 import { TEAM_PER_SEAT } from '@/lib/pricing'
 import PricingCard from '@/components/PricingCard'
 import Certificate from '@/components/Certificate'
@@ -437,9 +438,8 @@ function AuthModal({mode, onClose, onAuth, initialError=null, onErrorShown=()=>{
       setLockoutUntil(null)
       const u = data.user
       const { data:sub } = await supabase.from("subscriptions").select("*").eq("user_id", u.id).single()
-      const sessionToken = crypto.randomUUID()
-      sessionStorage.setItem('lc_session_token', sessionToken)
-      await supabase.from('subscriptions').update({ session_token: sessionToken, session_created_at: new Date().toISOString() }).eq('user_id', u.id)
+      // This login becomes the account's only active one; all other logins are signed out.
+      await claimSingleSession(supabase, data.session)
       setLoading(false)
       onAuth({ id:u.id, name:u.user_metadata?.name||siEmail.split("@")[0], email:u.email,
                company:u.user_metadata?.company||"", state:u.user_metadata?.state||"",
@@ -3607,8 +3607,10 @@ function AccountPage({ user, setUser, setRoute, access }) {
     setPwBusy(true)
     try {
       const { data: { user: u } } = await supabase.auth.getUser()
-      const { error: verifyErr } = await supabase.auth.signInWithPassword({ email: u.email, password: currentPw })
+      const { data: verifyData, error: verifyErr } = await supabase.auth.signInWithPassword({ email: u.email, password: currentPw })
       if (verifyErr) { setPwErr('Current password is incorrect.'); return }
+      // Checking the password started a new login in this browser; keep it the active one.
+      await claimSingleSession(supabase, verifyData.session)
       const { error: updErr } = await supabase.auth.updateUser({ password: newPw })
       if (updErr) throw updErr
       setPwMsg('Password updated.')
@@ -5376,6 +5378,8 @@ function FeedbackPage({ user, userSubscription }) {
 /* ══════════════════════════════════════════
    ROOT — wires landing ↔ auth ↔ app
 ══════════════════════════════════════════ */
+const SESSION_ENDED_MSG = 'Your session was ended because this account signed in on another device or browser. Please log in again.'
+
 function LearnerRoot({isAdmin=false, authReady=false, onAdminClick=()=>{}}){
   const [page, setPage] = useState("landing")   // landing | app
   const [authMode, setAuthMode] = useState(null) // null | signin | signup
@@ -5423,15 +5427,14 @@ function LearnerRoot({isAdmin=false, authReady=false, onAdminClick=()=>{}}){
     supabase.auth.getSession().then(async ({ data:{ session } })=>{
       if(!session) return
       const u = session.user
-      const { data:sub } = await supabase.from("subscriptions").select("*").eq("user_id", u.id).single()
-      const storedToken = sessionStorage.getItem('lc_session_token')
-      if(sub?.session_token && storedToken !== sub.session_token){
-        await supabase.auth.signOut()
-        sessionStorage.removeItem('lc_session_token')
-        setSessionConflict('Your session was ended because another device signed in to this account. Please log in again.')
+      // One active login per account: if another browser or device signed in after
+      // this one, this browser is signed out.
+      if(!(await checkSingleSession(supabase, session))){
+        setSessionConflict(SESSION_ENDED_MSG)
         setAuthMode('signin')
         return
       }
+      const { data:sub } = await supabase.from("subscriptions").select("*").eq("user_id", u.id).single()
       setUser({ id:u.id, name:u.user_metadata?.name||u.email.split("@")[0], email:u.email,
                 company:u.user_metadata?.company||"", state:u.user_metadata?.state||"",
                 plan:sub?.plan||"free", examAddon:sub?.exam_addon||false })
@@ -5442,6 +5445,26 @@ function LearnerRoot({isAdmin=false, authReady=false, onAdminClick=()=>{}}){
       if(event==="SIGNED_OUT"){ setUser(null); setPage("landing") }
     })
     return ()=>subscription.unsubscribe()
+  },[])
+
+  // Re-check the one-login rule while the page stays open: every minute, and whenever
+  // the tab comes back into view, so a browser that was replaced is signed out promptly.
+  useEffect(()=>{
+    let busy = false
+    async function recheck(){
+      if(busy || document.visibilityState !== 'visible') return
+      busy = true
+      try{
+        const { data:{ session } } = await supabase.auth.getSession()
+        if(session && !(await checkSingleSession(supabase, session))){
+          setSessionConflict(SESSION_ENDED_MSG)
+          setAuthMode('signin')
+        }
+      }catch{} finally { busy = false }
+    }
+    const timer = setInterval(recheck, 60000)
+    document.addEventListener('visibilitychange', recheck)
+    return ()=>{ clearInterval(timer); document.removeEventListener('visibilitychange', recheck) }
   },[])
 
   useEffect(()=>{
@@ -5521,7 +5544,6 @@ function LearnerRoot({isAdmin=false, authReady=false, onAdminClick=()=>{}}){
 
   async function handleSignOut(){
     if(user?.id){
-      sessionStorage.removeItem('lc_session_token')
       await supabase.from('subscriptions').update({ session_token: null }).eq('user_id', user.id)
     }
     await supabase.auth.signOut()
